@@ -10,8 +10,6 @@ A `Temporal.PlainTime` represents a wall-clock time, with a precision in nanosec
 For example, it could be used to represent an event that happens daily at a certain time, no matter what time zone.
 
 `Temporal.PlainTime` refers to a time with no associated calendar date; if you need to refer to a specific time on a specific day, use `Temporal.PlainDateTime`.
-A `Temporal.PlainTime` can be converted into a `Temporal.ZonedDateTime` by combining it with a `Temporal.PlainDate` and `Temporal.TimeZone` using the `toZonedDateTime()` method.
-It can also be combined with a `Temporal.PlainDate` to yield a "zoneless" `Temporal.PlainDateTime` using the `toPlainDateTime()` method.
 
 ## Constructor
 
@@ -29,7 +27,7 @@ It can also be combined with a `Temporal.PlainDate` to yield a "zoneless" `Tempo
 **Returns:** a new `Temporal.PlainTime` object.
 
 Use this constructor if you have the correct parameters for the time already as individual number values in the ISO 8601 calendar.
-Otherwise, `Temporal.PlainTime.from()`, which accepts more kinds of input and allows controlling the overflow behaviour, is probably more convenient.
+Otherwise, `Temporal.PlainTime.from()`, which accepts more kinds of input and allows controlling the overflow behavior, is probably more convenient.
 
 All values are given as reckoned in the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates).
 
@@ -42,16 +40,16 @@ time = new Temporal.PlainTime(13, 37); // => 13:37:00
 
 ## Static methods
 
-### Temporal.PlainTime.**from**(_thing_: any, _options_?: object) : Temporal.PlainTime
+### Temporal.PlainTime.**from**(_item_: Temporal.PlainTime | object | string, _options_?: object) : Temporal.PlainTime
 
 **Parameters:**
 
-- `thing`: The value representing the desired time.
+- `item`: a value convertible to a `Temporal.PlainTime`.
 - `options` (optional object): An object with properties representing options for constructing the time.
   The following options are recognized:
-  - `overflow` (optional string): How to deal with out-of-range values if `thing` is an object.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+  - `overflow` (optional string): How to deal with out-of-range values if `item` is an object.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainTime` object.
 
@@ -62,19 +60,22 @@ Any missing ones will be assumed to be 0.
 
 If the `calendar` property is present, it must be the string `'iso8601'` or the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates), for future compatibility.
 
-Any non-object value will be converted to a string, which is expected to be in ISO 8601 format.
-If the string designates a date or a time zone, they will be ignored.
+If the value is not an object, it must be a string, which is expected to be in ISO 8601 format.
+If the string designates a date, it will be ignored.
+Time zone or UTC offset information will also be ignored, with one exception: if a string contains a `Z` in place of a numeric UTC offset, then a `RangeError` will be thrown because interpreting these strings as a local time is usually a bug. `Temporal.Instant.from` should be used instead to parse these strings, and the result's `toZonedDateTimeISO` method can be used to obtain a timezone-local date and time.
 
-The `overflow` option works as follows, if `thing` is an object:
+In unusual cases of needing date or time components of `Z`-terminated timestamp strings (e.g. daily rollover of a UTC-timestamped log file), use the time zone `'UTC'`. For example, the following code returns a "UTC time": `Temporal.Instant.from(item).toZonedDateTimeISO('UTC').toPlainTime()`.
 
-- In `constrain` mode (the default), any out-of-range values are clamped to the nearest in-range value.
-- In `reject` mode, the presence of out-of-range values will cause the function to throw a `RangeError`.
+The `overflow` option works as follows, if `item` is an object:
 
-The `overflow` option is ignored if `thing` is a string.
+- In `'constrain'` mode (the default), any out-of-range values are clamped to the nearest in-range value.
+- In `'reject'` mode, the presence of out-of-range values will cause the function to throw a `RangeError`.
+
+The `overflow` option is ignored if `item` is a string.
 
 > **NOTE**: Although Temporal does not deal with leap seconds, times coming from other software may have a `second` value of 60.
-> In the default `constrain` mode, this will be converted to 59.
-> In `reject` mode, the constructor will throw, so if you have to interoperate with times that may contain leap seconds, don't use `reject`.
+> In the default `'constrain'` mode, this will be converted to 59.
+> In `'reject'` mode, the constructor will throw, so if you have to interoperate with times that may contain leap seconds, don't use `'reject'`.
 > However, if parsing an ISO 8601 string with a seconds component of `:60`, then it will always result in a `second` value of 59, in accordance with POSIX.
 
 Example usage:
@@ -82,8 +83,8 @@ Example usage:
 <!-- prettier-ignore-start -->
 ```javascript
 time = Temporal.PlainTime.from('03:24:30'); // => 03:24:30
+time = Temporal.PlainTime.from('032430'); // => 03:24:30
 time = Temporal.PlainTime.from('1995-12-07T03:24:30'); // => 03:24:30
-time = Temporal.PlainTime.from('1995-12-07T03:24:30Z'); // => 03:24:30
 time = Temporal.PlainTime.from('1995-12-07T03:24:30+01:00[Europe/Brussels]');
   // => 03:24:30
   // (same as above; time zone is ignored)
@@ -198,13 +199,9 @@ time.nanosecond;  // => 205
 ```
 <!-- prettier-ignore-end -->
 
-### time.**calendar**: Temporal.Calendar
-
-The value of the `calendar` read-only property is always the ISO 8601 calendar, for future compatibility.
-
 ## Methods
 
-### time.**with**(_timeLike_: object | string, _options_?: object) : Temporal.PlainTime
+### time.**with**(_timeLike_: object, _options_?: object) : Temporal.PlainTime
 
 **Parameters:**
 
@@ -212,8 +209,8 @@ The value of the `calendar` read-only property is always the ISO 8601 calendar, 
 - `options` (optional object): An object with properties representing options for the operation.
   The following options are recognized:
   - `overflow` (string): How to deal with out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainTime` object.
 
@@ -300,14 +297,14 @@ time.subtract({ minutes: 5, nanoseconds: 800 }); // => 19:34:09.068345405
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time after `time` and until `other`.
 
 This method computes the difference between the two times represented by `time` and `other`, optionally rounds it, and returns it as a `Temporal.Duration` object.
 If `other` is earlier than `time` then the resulting duration will be negative.
-The returned `Temporal.Duration`, when added to `time` with the same `options`, will yield `other`.
+If using the default `options`, adding the returned `Temporal.Duration` to `time` will yield `other`.
 
 If `other` is not a `Temporal.PlainTime` object, then it will be converted to one as if it were passed to `Temporal.PlainTime.from()`.
 
@@ -320,9 +317,6 @@ A value of `'auto'` means `'hour'`.
 You can round the result using the `smallestUnit`, `roundingIncrement`, and `roundingMode` options.
 These behave as in the `Temporal.Duration.round()` method.
 The default is to do no rounding.
-
-Computing the difference between two times in different calendar systems is not supported.
-If you need to do this, choose the calendar in which the computation takes place by converting one of the times with `time.withCalendar()`.
 
 Usage example:
 
@@ -354,7 +348,7 @@ time.until(Temporal.PlainTime.from('22:39:09.068346205'), { smallestUnit: 'secon
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time before `time` and since `other`.
@@ -363,8 +357,7 @@ This method computes the difference between the two times represented by `time` 
 If `other` is later than `time` then the resulting duration will be negative.
 
 This method is similar to `Temporal.PlainTime.prototype.until()`, but reversed.
-The returned `Temporal.Duration`, when subtracted from `time` using the same `options`, will yield `other`.
-Using default options, `time1.since(time2)` yields the same result as `time1.until(time2).negated()`.
+If using the default `options`, subtracting the returned `Temporal.Duration` from `time` will yield `other`, and `time1.since(time2)` will yield the same result as `time1.until(time2).negated()`.
 
 Usage example:
 
@@ -374,25 +367,28 @@ time.since(Temporal.PlainTime.from('19:39:09.068346205')); // => PT34M11.9030518
 time.since(Temporal.PlainTime.from('22:39:09.068346205')); // => -PT2H25M48.096948106S
 ```
 
-### time.**round**(_options_: object) : Temporal.PlainTime
+### time.**round**(_roundTo_: string | object) : Temporal.PlainTime
 
 **Parameters:**
 
-- `options` (object): An object with properties representing options for the operation.
-  The following options are recognized:
-  - `smallestUnit` (required string): The unit to round to.
+- `roundTo` (string | object): A required string or object to control the operation.
+  - If a string is provided, the resulting `Temporal.PlainTime` object will be rounded to that unit.
     Valid values are `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-  - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
-    The default is 1.
-  - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
-    The default is `'halfExpand'`.
+    A string parameter is treated the same as an object whose `smallestUnit` property value is that string.
+  - If an object is passed, the following properties are recognized:
+    - `smallestUnit` (required string): The unit to round to.
+      Valid values are `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+    - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
+      The default is 1.
+    - `roundingMode` (string): How to handle the remainder.
+      Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
+      The default is `'halfExpand'`.
 
-**Returns:** a new `Temporal.PlainTime` object which is `time` rounded to `roundingIncrement` of `smallestUnit`.
+**Returns:** a new `Temporal.PlainTime` object which is `time` rounded to `roundTo` (if a string parameter is used) or `roundingIncrement` of `smallestUnit` (if an object parameter is used).
 
 Rounds `time` to the given unit and increment, and returns the result as a new `Temporal.PlainTime` object.
 
-The `smallestUnit` option determines the unit to round to.
+The `smallestUnit` option (or the value of `roundTo` if a string parameter is used) determines the unit to round to.
 For example, to round to the nearest minute, use `smallestUnit: 'minute'`.
 This option is required.
 
@@ -406,11 +402,19 @@ Instead of 60 minutes, use 1 hour.)
 
 The `roundingMode` option controls how the rounding is performed.
 
-- `ceil`: Always round up, towards 23:59:59.999999999.
-- `floor`, `trunc`: Always round down, 00:00.
-  (These two modes behave the same, but are both included for consistency with `Temporal.Duration.round()`, where they are not the same.)
-- `halfExpand`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
-  When there is a tie, round up, like `ceil`.
+- `'ceil'`, `'expand'`: Always round up, towards 23:59:59.999999999.
+- `'floor'`, `'trunc'`: Always round down, towards 00:00.
+- `'halfCeil'`, `'halfExpand'`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
+  When there is a tie, round up, like `'ceil'`.
+- `'halfFloor'`, `'halfTrunc'`: Round to the nearest of the allowed values, like `'halfExpand'`, but when there is a tie, round down, like `'floor'`.
+- `'halfEven'`: Round to the nearest of the allowed values, but when there is a tie, round towards the value that is an even multiple of `roundingIncrement`.
+  For example, with a `roundingIncrement` of 2, the number 7 would round up to 8 instead of down to 6, because 8 is an even multiple of 2 (2 × 4 = 8, and 4 is even), whereas 6 is an odd multiple (2 × 3 = 6, and 3 is odd).
+
+Several pairs of modes behave the same as each other, but are both included for consistency with `Temporal.Duration.round()`, where they are not the same.
+
+The default rounding mode is `'halfExpand'` to match how rounding is often taught in school.
+Note that this is different than the `'trunc'` default used by `until` and `since` options because rounding up would be an unexpected default for those operations.
+Other properties behave identically between these methods.
 
 Example usage:
 
@@ -467,7 +471,7 @@ time.equals(time); // => true
     This option overrides `fractionalSecondDigits` if both are given.
     Valid values are `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
   - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'ceil'`, `'floor'`, `'trunc'`, and `'halfExpand'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`.
 
 **Returns:** a string in the ISO 8601 time format representing `time`.
@@ -507,7 +511,7 @@ time.toString({ fractionalSecondDigits: 5, roundingMode: 'halfExpand' });
 
 This method overrides `Object.prototype.toLocaleString()` to provide a human-readable, language-sensitive representation of `time`.
 
-The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat).
+The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters).
 
 > **NOTE**: Unlike in [`Temporal.Instant.prototype.toLocaleString()`](./instant.md#toLocaleString), `locales.timeZone` will have no effect, because `Temporal.PlainTime` carries no time zone information and is just a wall-clock time.
 
@@ -564,80 +568,3 @@ JSON.parse(str, reviver);
 This method overrides `Object.prototype.valueOf()` and always throws an exception.
 This is because it's not possible to compare `Temporal.PlainTime` objects with the relational operators `<`, `<=`, `>`, or `>=`.
 Use `Temporal.PlainTime.compare()` for this, or `time.equals()` for equality.
-
-### time.**toZonedDateTime**(_item_: object) : Temporal.ZonedDateTime
-
-**Parameters:**
-
-- `item` (object): an object with properties to be added to `time`. The following properties are recognized:
-  - `plainDate` (required `Temporal.PlainDate` or value convertible to one): a date used to merge into a `Temporal.ZonedDateTime` along with `time`.
-  - `timeZone` (required `Temporal.TimeZone` or value convertible to one, or an object implementing the [time zone protocol](./timezone.md#custom-time-zones)): the time zone in which to interpret `time` and `plainDate`.
-
-**Returns:** a `Temporal.ZonedDateTime` object that represents the clock `time` on the calendar `plainDate` projected into `timeZone`.
-
-This method can be used to convert `Temporal.PlainTime` into a `Temporal.ZonedDateTime`, by supplying the time zone and date.
-
-For a list of IANA time zone names, see the current version of the [IANA time zone database](https://www.iana.org/time-zones).
-A convenient list is also available [on Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), although it might not reflect the latest official status.
-
-In addition to the `timeZone`, the converted object carries a copy of all the relevant fields of `time` and `plainDate`.
-This method produces identical results to [`Temporal.PlainDate.from(plainDate).toZonedDateTime(time)`](./plaindate.md#toZonedDateTime).
-
-If `plainDate` is not a `Temporal.PlainDate` object, then it will be converted to one as if it were passed to `Temporal.PlainDate.from()`.
-
-In the case of ambiguity caused by DST or other time zone changes, the earlier time will be used for backward transitions and the later time for forward transitions.
-When interoperating with existing code or services, this matches the behavior of legacy `Date` as well as libraries like moment.js, Luxon, and date-fns.
-This mode also matches the behavior of cross-platform standards like [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545).
-
-During "skipped" clock time like the hour after DST starts in the Spring, this method interprets invalid times using the pre-transition time zone offset.
-This behavior avoids exceptions when converting non-existent date/time values to `Temporal.ZonedDateTime`, but it also means that values during these periods will result in a different `Temporal.PlainTime` value in "round-trip" conversions to `Temporal.ZonedDateTime` and back again.
-
-For usage examples and a more complete explanation of how this disambiguation works, see [Resolving ambiguity](./ambiguity.md).
-
-If the result is outside the range that `Temporal.ZonedDateTime` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then a `RangeError` will be thrown.
-
-Usage example:
-
-```javascript
-plainTime = Temporal.PlainTime.from('15:23:30.003');
-plainDate = Temporal.PlainDate.from('2006-08-24');
-plainTime.toZonedDateTime({ timeZone: 'America/Los_Angeles', plainDate });
-// => 2006-08-24T15:23:30.003-07:00[America/Los_Angeles]
-```
-
-### time.**toPlainDateTime**(_date_: Temporal.PlainDate | object | string) : Temporal.PlainDateTime
-
-**Parameters:**
-
-- `date` (`Temporal.PlainDate` or value convertible to one): A calendar date on which to place `time`.
-
-**Returns:** a `Temporal.PlainDateTime` object that represents the wall-clock time `time` on the calendar date `date`.
-
-This method can be used to convert `Temporal.PlainTime` into a `Temporal.PlainDateTime`, by supplying the calendar date to use.
-The converted object carries a copy of all the relevant fields of `date` and `time`.
-
-This has identical results to [`Temporal.PlainDate.from(date).toPlainDateTime(time)`](./plaindate.md#toPlainDateTime).
-
-If `date` is not a `Temporal.PlainDate` object, then it will be converted to one as if it were passed to `Temporal.PlainDate.from()`.
-
-Usage example:
-
-```javascript
-time = Temporal.PlainTime.from('15:23:30.003');
-date = Temporal.PlainDate.from('2006-08-24');
-time.toPlainDateTime(date); // => 2006-08-24T15:23:30.003
-```
-
-### time.**getISOFields**(): { isoHour: number, isoMinute: number, isoSecond: number, isoMillisecond: number, isoMicrosecond: number, isoNanosecond: number, calendar: Temporal.Calendar }
-
-**Returns:** a plain object with properties expressing `time` in the ISO 8601 calendar.
-
-This method is present for forward compatibility with custom calendars.
-
-Usage example:
-
-```javascript
-time = Temporal.PlainTime.from('03:20:00');
-f = time.getISOFields();
-f.isoHour; // => 3
-```

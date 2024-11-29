@@ -1,2 +1,24 @@
-# Blocked on https://github.com/tc39/test262/pull/3188
-built-ins/Temporal/Calendar/prototype/fields/long-input.js
+# Caused by https://issues.chromium.org/issues/40893567
+# Remove these lines after that bug is fixed.
+staging/Intl402/Temporal/old/date-time-format.js
+staging/Intl402/Temporal/old/datetime-toLocaleString.js
+staging/Intl402/Temporal/old/instant-toLocaleString.js
+staging/Intl402/Temporal/old/time-toLocaleString.js
+intl402/DateTimeFormat/prototype/format/temporal-objects-resolved-time-zone.js
+intl402/DateTimeFormat/prototype/format/timedatestyle-en.js
+
+# These are caught by the default test glob, but are unrelated to Temporal.
+# They rely on Intl.DateTimeFormat supporting offset time zones.
+intl402/DateTimeFormat/prototype/format/offset-timezone-gmt-same.js
+intl402/DateTimeFormat/prototype/formatToParts/offset-timezone-correct.js
+intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js
+intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js
+
+# Temporal test262 runner does not support $262.createRealm()
+intl402/DateTimeFormat/proto-from-ctor-realm.js
+
+# https://github.com/tc39/ecma402/issues/402
+intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js
+
+# Fails until CLDR 46 (released 2024-10-24) makes its way into a Node.js release
+staging/Intl402/Temporal/old/non-iso-calendars.js

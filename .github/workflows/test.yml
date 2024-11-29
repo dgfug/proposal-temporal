@@ -5,79 +5,55 @@ on:
     branches:
       - main
 jobs:
-  test-polyfill-node16:
+  test-polyfill:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v16.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16.x
-    - run: npm ci
-    - run: npm run codecov:tests
-      env:
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-  test-polyfill-node14:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v14.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 14.x
-    - run: npm ci
-    - run: npm run test-demitasse
-  test-polyfill-node12:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v12.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 12.x
-    - run: npm ci
-    - run: npm run test-demitasse
+      - uses: actions/checkout@v3
+      - name: use node.js v20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - run: npm ci
+      - run: npm run test-demitasse
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
   test-test262:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: true
-    - name: use node.js v16.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16.x
-    - run: npm ci
-    - run: npm run codecov:test262
-      env:
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-  test-cookbook-node16:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: use node.js v20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - run: npm run codecov:test262
+      - uses: codecov/codecov-action@v4
+        with:
+          files: coverage/test262.lcov
+          working-directory: polyfill
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  test-cookbook:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v16.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16.x
-    - run: npm ci
-    - run: npm run test-cookbook
-  test-cookbook-node14:
+      - uses: actions/checkout@v3
+      - name: use node.js v20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - run: npm ci
+      - run: npm run test-cookbook
+  test-validstrings:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v14.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 14.x
-    - run: npm ci
-    - run: npm run test-cookbook
-  test-cookbook-node12:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: use node.js v12.x
-      uses: actions/setup-node@v1
-      with:
-        node-version: 12.x
-    - run: npm ci
-    - run: npm run test-cookbook
+      - uses: actions/checkout@v3
+      - name: use node.js v20.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - run: npm ci
+      - run: |
+          cd polyfill
+          npm install
+          node test/validStrings.mjs

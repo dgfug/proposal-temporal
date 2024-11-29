@@ -2,7 +2,9 @@
 
 This doc describes a design for first-class support for non-Gregorian [calendars](https://en.wikipedia.org/wiki/Calendar) in Temporal. Although most of this document is based on Temporal.PlainDate, most of this applies to Temporal.PlainDateTime, Temporal.PlainYearMonth, Temporal.PlainMonthDay, and Temporal.PlainTime as well.
 
-The approach described in this document was largely adopted, so this document has been superseded by the [`Temporal.Calendar` documentation](./calendar.md).
+The approach described in this document was largely adopted, but most of
+this document's information is nonetheless obsolete, due to removing the
+Temporal.Calendar interface.
 
 ## Data Model
 
@@ -673,7 +675,7 @@ All of the following APIs would gain an internal slot for the calendar.
 - Temporal.PlainYearMonth
 - Temporal.PlainMonthDay
 
-### New behaviour of Temporal.PlainMonthDay.withYear
+### New behavior of Temporal.PlainMonthDay.withYear
 
 In some calendars (such as the Japanese imperial calendar) a year is not enough information to be able to convert Temporal.PlainMonthDay to Temporal.PlainDate.
 Temporal.PlainMonthDay.withYear, which previously took a number argument (the year), can now be passed an object which must have properties that provide the needed information.

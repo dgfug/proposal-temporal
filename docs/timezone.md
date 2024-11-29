@@ -1,393 +1,363 @@
-# Temporal.TimeZone
+# Time Zones and Resolving Ambiguity
 
 <details>
   <summary><strong>Table of Contents</strong></summary>
 <!-- toc -->
 </details>
 
-A `Temporal.TimeZone` is a representation of a time zone: either an [IANA time zone](https://www.iana.org/time-zones), including information about the time zone such as the offset between the local time and UTC at a particular time, and daylight saving time (DST) changes; or simply a particular UTC offset with no DST.
+## Understanding Clock Time vs. Exact Time
 
-Since `Temporal.Instant` and `Temporal.PlainDateTime` do not contain any time zone information, a `Temporal.TimeZone` object is required to convert between the two.
+The core concept in Temporal is the distinction between **wall-clock time** (also called "local time" or "clock time") which depends on the time zone of the clock and **exact time** (also called "UTC time") which is the same everywhere.
 
-## Custom time zones
+Wall-clock time is controlled by local governmental authorities, so it can abruptly change.
+When Daylight Saving Time (DST) starts or if a country moves to another time zone, then local clocks will instantly change.
+Exact time however has a consistent global definition and is represented by a special time zone called [UTC](https://en.wikipedia.org/wiki/Coordinated_Universal_Time) (from Wikipedia):
 
-For specialized applications where you need to do calculations in a time zone that is not built in, you can implement a custom time zone.
-There are two ways to do this.
+> **Coordinated Universal Time (or UTC)** is the primary time standard by which the world regulates clocks and time.
+> It is within about 1 second of mean solar time at 0° longitude, and is not adjusted for daylight saving time.
+> It is effectively a successor to Greenwich Mean Time (GMT).
 
-The recommended way is to create a class inheriting from `Temporal.TimeZone`.
-You must use one of the built-in time zones as the "base time zone".
-In the class's constructor, call `super()` with the identifier of the base time zone.
-The class must override `toString()` to return its own identifier.
-Overriding `getOffsetNanosecondsFor()`, `getPossibleInstantsFor()`, `getNextTransition()`, and `getPreviousTransition()` is optional.
-If you don't override the optional members, then they will behave as in the base time zone.
-You don't need to override any other methods such as `getOffsetStringFor()` because they will call `getOffsetNanosecondsFor()`, `getPossibleInstantsFor()`, and `toString()` internally.
+Every wall-clock time is defined using a **UTC Offset**: the amount of exact time that a particular clock is set ahead or behind UTC.
+For example, on January 19, 2020 in California, the UTC Offset (or "offset" for short) was `-08:00` which means that wall-clock time in San Francisco was 8 hours behind UTC, so 10:00AM locally on that day was 18:00 UTC.
+However the same calendar date and wall-clock time India would have an offset of `+05:30`: 5½ hours later than UTC.
 
-The other, more difficult, way to create a custom time zone is to create a plain object implementing the `Temporal.TimeZone` protocol, without subclassing.
-The object must have at least `getOffsetNanosecondsFor()`, `getPossibleInstantsFor()`, and `toString()` methods.
-Any object with those three methods will return the correct output from any Temporal property or method.
-However, most other code will assume that custom time zones act like built-in `Temporal.TimeZone` objects.
-To interoperate with libraries or other code that you didn't write, then you should implement all the other `Temporal.TimeZone` members as well: `id`, `getOffsetStringFor()`, `getPlainDateTimeFor()`, `getInstantFor()`, `getNextTransition()`, `getPreviousTransition()`, and `toJSON()`.
-Your object must not have a `timeZone` property, so that it can be distinguished in `Temporal.TimeZone.from()` from other Temporal objects that have a time zone.
+[ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) and [RFC 3339](https://tools.ietf.org/html/rfc3339) define standard representations for exact times as a date and time value, e.g. `2020-09-06T17:35:24.485Z`. The `Z` suffix indicates that this is an exact UTC time.
 
-The identifier of a custom time zone must consist of one or more components separated by slashes (`/`), as described in the [tzdata documentation](https://htmlpreview.github.io/?https://github.com/eggert/tz/blob/master/theory.html#naming).
-Each component must consist of between one and 14 characters.
-Valid characters are ASCII letters, `.`, `-`, and `_`.
-`-` may not appear as the first character of a component, and a component may not be a single dot `.` or two dots `..`.
+Temporal has two types that store exact time: `Temporal.Instant` (which only stores exact time and no other information) and `Temporal.ZonedDateTime` which stores exact time, a time zone, and a calendar system
 
-## Constructor
+Another way to represent exact time is using a single number representing temporal distance from the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC.
+For example, `Temporal.Instant` (an exact-time type) can be constructed using only a `BigInt` value of nanoseconds since epoch, ignoring leap seconds.
 
-### **new Temporal.TimeZone**(_timeZoneIdentifier_: string) : Temporal.TimeZone
+Another term developers often encounter is "timestamp".
+This most often refers to an exact time represented by the number of seconds since Unix epoch.
+Temporal avoids using this terminology, however, because of historical ambiguity surrounding the term "timestamp".
+For example, many databases have a type called `TIMESTAMP`, but its meaning varies: in [MySQL](https://dev.mysql.com/doc/refman/8.0/en/datetime.html), it is an exact time; in [Oracle Database](https://docs.oracle.com/cd/B19306_01/server.102/b14225/ch4datetime.htm#i1006050), it is the number of seconds since the *wall-clock time* 00:00 on January 1, 1970 (a quantity one might call a "local timestamp"); and in [Microsoft SQL Server](https://docs.microsoft.com/en-us/answers/questions/238819/purpose-to-use-timestamp-datatype-in-sql-server.html), it is a monotonically increasing value unrelated to date and time.
 
-**Parameters:**
+## Understanding Time Zones, Offset Changes, and DST
 
-- `timeZoneIdentifier` (string): A description of the time zone; either its IANA name, or a UTC offset.
+A **Time Zone** defines the rules that control how local wall-clock time relates to UTC. You can think of a time zone as a function that accepts an exact time and returns a UTC offset, and a corresponding function for conversions in the opposite direction. (See [below](#ambiguity-due-to-dst-or-other-time-zone-offset-changes) for why exact → local conversions are 1:1, but local → exact conversions can be ambiguous.)
 
-**Returns:** a new `Temporal.TimeZone` object.
+Temporal uses the [**IANA Time Zone Database**](https://en.wikipedia.org/wiki/Tz_database) (or "TZ database"), which you can think of as a global repository of time zone functions. Each IANA time zone has:
 
-For a list of IANA time zone names, see the current version of the [IANA time zone database](https://www.iana.org/time-zones).
-A convenient list is also available [on Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), although it might not reflect the latest official status.
+- A **time zone ID** that usually refers to a geographic area anchored by a city (e.g. `Europe/Paris` or `Africa/Kampala`) but can also denote single-offset time zones like `UTC` (a consistent `+00:00` offset) or `Etc/GMT+5` (which for historical reasons is a negative offset `-05:00`).
+- A **time zone definition** defines the offset for any UTC value since January 1, 1970. You can think of these definitions as a table that maps UTC date/time ranges (including future ranges) to specific offsets.
+  In some time zones, temporary offset changes happen twice each year due to **Daylight Saving Time (DST)** starting in the Spring and ending each Fall.
+  Offsets can also change permanently due to political changes, e.g. a country switching time zones.
 
-The string `timeZoneIdentifier` is canonicalized before being used to determine the time zone.
-For example, values like `+01` will be understood to mean `+01:00`, and capitalization will be corrected.
-If no time zone can be determined from `timeZoneIdentifier`, then a `RangeError` is thrown.
+The IANA Time Zone Database is updated several times per year in response to political changes around the world.
+Each update contains changes to time zone definitions.
+These changes usually affect only future date/time values, but occasionally fixes are made to past ranges too, for example when new historical sources are discovered about early-20th century timekeeping.
 
-Use this constructor directly if you have a string that is known to be a correct time zone identifier.
-If you have an ISO 8601 date-time string, `Temporal.TimeZone.from()` is probably more convenient.
+## Wall-Clock Time, Exact Time, and Time Zones in Temporal
 
-Example usage:
+In Temporal:
 
+- The [`Temporal.Instant`](./instant.md) type represents exact time only.
+- The [`Temporal.PlainDateTime`](./plaindatetime.md) type represents calendar date and wall-clock time, as do other narrower types: [`Temporal.PlainDate`](./plaindate.md), [`Temporal.PlainTime`](./plaintime.md), [`Temporal.PlainYearMonth`](./plainyearmonth.md), and [`Temporal.PlainMonthDay`](./plainmonthday.md).
+  These types all carry a calendar system, which by default is `'iso8601'` (the ISO 8601 calendar) but can be overridden for other calendars like `'islamic'` or `'japanese'`.
+- The time zone identifier represents a time zone function that converts between exact time and wall-clock time and vice-versa.
+- The [`Temporal.ZonedDateTime`](./zoneddatetime.md) type encapsulates all of the types above: an exact time (like a [`Temporal.Instant`](./instant.md)), its wall-clock equivalent (like a [`Temporal.PlainDateTime`](./plaindatetime.md)), and the time zone that links the two.
+
+There are two ways to get a human-readable calendar date and clock time from a `Temporal` type that stores exact time.
+
+- If the exact time is already represented by a [`Temporal.ZonedDateTime`](./zoneddatetime.md) instance then the wall-clock time values are trivially available using the properties and methods of that type, e.g. [`.year`](./zoneddatetime.md#year), [`.hour`](./zoneddatetime.md#hour), or [`.toLocaleString()`](./zoneddatetime.md#toLocaleString).
+- However, if the exact time is represented by a [`Temporal.Instant`](./instant.md), use a time zone and optional calendar to create a [`Temporal.ZonedDateTime`](./zoneddatetime.md). Example:
+
+<!-- prettier-ignore-start -->
 ```javascript
-tz = new Temporal.TimeZone('UTC');
-tz = new Temporal.TimeZone('Africa/Cairo');
-tz = new Temporal.TimeZone('america/VANCOUVER');
-tz = new Temporal.TimeZone('Asia/Katmandu'); // alias of Asia/Kathmandu
-tz = new Temporal.TimeZone('-04:00');
-tz = new Temporal.TimeZone('+0645');
-/* WRONG */ tz = new Temporal.TimeZone('local'); // => throws, not a time zone
+instant = Temporal.Instant.from('2019-09-03T08:34:05Z');
+formatOptions = {
+  era: 'short',
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric'
+};
+
+zdt = instant.toZonedDateTimeISO('Asia/Tokyo');
+  // => 2019-09-03T17:34:05+09:00[Asia/Tokyo]
+zdt.toLocaleString('en-us', { ...formatOptions, calendar: zdt.calendar });
+  // => 'Sep 3, 2019 AD, 5:34:05 PM'
+zdt.year;
+  // => 2019
+zdt.toLocaleString('ja-jp', formatOptions);
+  // => '西暦2019年9月3日 17:34:05'
+
+zdt = zdt.withCalendar('japanese');
+  // => 2019-09-03T17:34:05+09:00[Asia/Tokyo][u-ca=japanese]
+zdt.toLocaleString('en-us', { ...formatOptions, calendar: zdt.calendar });
+  // => 'Sep 3, 1 Reiwa, 5:34:05 PM'
+zdt.eraYear;
+  // => 1
 ```
+<!-- prettier-ignore-end -->
 
-#### Difference between IANA time zones and UTC offsets
+Conversions from calendar date and/or wall clock time to exact time are also supported:
 
-The returned time zone object behaves slightly differently depending on whether an IANA time zone name (e.g. `Europe/Berlin`) is given, or a UTC offset (e.g. `+01:00`).
-IANA time zones may have DST transitions, and UTC offsets do not.
-For example:
-
+<!-- prettier-ignore-start -->
 ```javascript
-tz1 = new Temporal.TimeZone('-08:00');
-tz2 = new Temporal.TimeZone('America/Vancouver');
-inst = Temporal.ZonedDateTime.from({ year: 2020, month: 1, day: 1, timeZone: tz2 }).toInstant();
-tz2.getPreviousTransition(inst); // => 2019-11-03T09:00:00Z
-tz1.getNextTransition(inst); // => null
+// Convert various local time types to an exact time type by providing a time zone
+date = Temporal.PlainDate.from('2019-12-17');
+// If time is omitted, local time defaults to start of day
+zdt = date.toZonedDateTime('Asia/Tokyo');
+  // => 2019-12-17T00:00:00+09:00[Asia/Tokyo]
+zdt = date.toZonedDateTime({ timeZone: 'Asia/Tokyo', plainTime: '10:00' });
+  // => 2019-12-17T10:00:00+09:00[Asia/Tokyo]
+time = Temporal.PlainTime.from('14:35');
+zdt = time.toZonedDateTime({ timeZone: 'Asia/Tokyo', plainDate: Temporal.PlainDate.from('2020-08-27') });
+  // => 2020-08-27T14:35:00+09:00[Asia/Tokyo]
+dateTime = Temporal.PlainDateTime.from('2019-12-17T07:48');
+zdt = dateTime.toZonedDateTime('Asia/Tokyo');
+  // => 2019-12-17T07:48:00+09:00[Asia/Tokyo]
+
+// Get the exact time in seconds, milliseconds or nanoseconds since the UNIX epoch.
+inst = zdt.toInstant();
+epochNano = inst.epochNanoseconds; // => 1576536480000000000n
+epochMilli = inst.epochMilliseconds; // => 1576536480000
+epochSecs = Math.floor(inst.epochMilliseconds / 1000); // => 1576536480
 ```
+<!-- prettier-ignore-end -->
 
-## Static methods
+## Ambiguity Due to DST or Other Time Zone Offset Changes
 
-### Temporal.TimeZone.**from**(_thing_: any) : Temporal.TimeZone
+Usually, a time zone definition provides a bidirectional 1:1 mapping between any particular local date and clock time and its corresponding UTC date and time. However, near a time zone offset transition there can be **time ambiguity** where it's not clear what offset should be used to convert a wall-clock time into an exact time. This ambiguity leads to two possible UTC times for one clock time.
 
-**Parameters:**
+- When offsets change in a backward direction, the same clock time will be repeated.
+  For example, 1:30AM happened twice on Sunday, 4 November 2018 in California.
+  The "first" 1:30AM on that date was in Pacific Daylight Time (offset `-07:00`).
+  30 exact minutes later, DST ended and Pacific Standard Time (offset `-08:00`) became active.
+  After 30 more exact minutes, the "second" 1:30AM happened.
+  This means that "1:30AM on Sunday, 4 November 2018" is not sufficient to know _which_ 1:30AM it is.
+  The clock time is ambiguous.
+- When offsets change in a forward direction, local clock times are skipped.
+  For example, DST started on Sunday, 11 March 2018 in California.
+  When the clock advanced from 1:59AM to 2:00AM, local time immediately skipped to 3:00AM.
+  2:30AM didn't happen!
+  To avoid errors in this one-hour-per year case, most computing environments (including ECMAScript) will convert skipped clock times to exact times using either the offset before the transition or the offset after the transition.
 
-- `thing`: A time zone object, a Temporal object that carries a time zone, or a value from which to create a `Temporal.TimeZone`.
+In both cases, resolving the ambiguity when converting the local time into exact time requires choosing which of two possible offsets to use, or deciding to throw an exception.
 
-**Returns:** a time zone object.
+## Resolving Time Ambiguity in Temporal
 
-This static method creates a new time zone from another value.
-If the value is another `Temporal.TimeZone` object, or object implementing the time zone protocol, the same object is returned.
-If the value is another Temporal object that carries a time zone or an object with a `timeZone` property, such as `Temporal.ZonedDateTime`, the object's time zone is returned.
+In `Temporal`, if the exact time or time zone offset is known, then there is no ambiguity possible. For example:
 
-Any other value is converted to a string, which is expected to be either:
-
-- a string that is accepted by `new Temporal.TimeZone()`; or
-- a string in the ISO 8601 format including a time zone offset part.
-
-Note that the ISO 8601 string can optionally be extended with an IANA time zone name in square brackets appended to it.
-
-This function is often more convenient to use than `new Temporal.TimeZone()` because it handles a wider range of input.
-
-Usage examples:
-
+<!-- prettier-ignore-start -->
 ```javascript
-// IANA time zone names and UTC offsets
-tz = Temporal.TimeZone.from('UTC');
-tz = Temporal.TimeZone.from('Africa/Cairo');
-tz = Temporal.TimeZone.from('america/VANCOUVER');
-tz = Temporal.TimeZone.from('Asia/Katmandu'); // alias of Asia/Kathmandu
-tz = Temporal.TimeZone.from('-04:00');
-tz = Temporal.TimeZone.from('+0645');
-
-// ISO 8601 string with time zone offset part
-tz = Temporal.TimeZone.from('2020-01-14T00:31:00.065858086Z');
-tz = Temporal.TimeZone.from('2020-01-13T16:31:00.065858086-08:00');
-tz = Temporal.TimeZone.from('2020-01-13T16:31:00.065858086-08:00[America/Vancouver]');
-
-// Existing TimeZone object
-tz2 = Temporal.TimeZone.from(tz);
-
-/* WRONG */ tz = Temporal.TimeZone.from('local'); // => throws, not a time zone
-/* WRONG */ tz = Temporal.TimeZone.from('2020-01-14T00:31:00'); // => throws, ISO 8601 string without time zone offset part
-/* WRONG */ tz = Temporal.TimeZone.from('-08:00[America/Vancouver]'); // => throws, ISO 8601 string without date-time part
+// No ambiguity possible because source is exact time in UTC
+inst = Temporal.Instant.from('2020-09-06T17:35:24.485Z');
+  // => 2020-09-06T17:35:24.485Z
+// An offset can make a local time "exact" with no ambiguity possible.
+inst = Temporal.Instant.from('2020-09-06T10:35:24.485-07:00');
+  // => 2020-09-06T17:35:24.485Z
+zdt = Temporal.ZonedDateTime.from('2020-09-06T10:35:24.485-07:00[America/Los_Angeles]');
+  // => 2020-09-06T10:35:24.485-07:00[America/Los_Angeles]
+// if the source is an exact Temporal object, then no ambiguity is possible.
+zdt = inst.toZonedDateTimeISO('America/Los_Angeles');
+  // => 2020-09-06T10:35:24.485-07:00[America/Los_Angeles]
+inst2 = zdt.toInstant();
+  // => 2020-09-06T17:35:24.485Z
 ```
+<!-- prettier-ignore-end -->
 
-## Properties
+However, opportunities for ambiguity are present when creating an exact-time type (`Temporal.ZonedDateTime` or `Temporal.Instant`) from a non-exact source. For example:
 
-### timeZone.**id** : string
-
-The `id` property gives an unambiguous identifier for the time zone.
-Effectively, this is the canonicalized version of whatever `timeZoneIdentifier` was passed as a parameter to the constructor.
-
-When subclassing `Temporal.TimeZone`, this property doesn't need to be overridden because the default implementation gives the result of calling `toString()`.
-
-## Methods
-
-### timeZone.**getOffsetNanosecondsFor**(_instant_: Temporal.Instant | string) : number
-
-**Parameters:**
-
-- `instant` (`Temporal.Instant` or value convertible to one): The time for which to compute the time zone's UTC offset.
-
-**Returns:** The UTC offset at the given time, in nanoseconds.
-
-Since the UTC offset can change throughout the year in time zones that employ DST, this method queries the UTC offset at a particular time.
-
-Note that only `Temporal.TimeZone` objects constructed from an IANA time zone name may have DST transitions; those constructed from a UTC offset do not.
-If `timeZone` is a UTC offset time zone, the return value of this method is always the same regardless of `instant`.
-
-If `instant` is not a `Temporal.Instant` object, then it will be converted to one as if it were passed to `Temporal.Instant.from()`.
-
-Example usage:
-
+<!-- prettier-ignore-start -->
 ```javascript
-// Getting the UTC offset for a time zone at a particular time
-timestamp = Temporal.Instant.fromEpochSeconds(1553993100);
-tz = Temporal.TimeZone.from('Europe/Berlin');
-tz.getOffsetNanosecondsFor(timestamp); // => 3600000000000
+// Offset is not known. Ambiguity is possible!
+zdt = Temporal.PlainDate.from('2019-02-19').toZonedDateTime('America/Sao_Paulo'); // can be ambiguous
+zdt = Temporal.PlainDateTime.from('2019-02-19T00:00').toZonedDateTime('America/Sao_Paulo'); // can be ambiguous
 
-// TimeZone with a fixed UTC offset
-tz = Temporal.TimeZone.from('-08:00');
-tz.getOffsetNanosecondsFor(timestamp); // => -28800000000000
-// UTC is always 0 offset
-tz = Temporal.TimeZone.from('UTC');
-tz.getOffsetNanosecondsFor(timestamp); // => 0
+// Even if the offset is present in the source string, if the type (like PlainDateTime)
+// isn't an exact type then the offset is ignored when parsing so ambiguity is possible.
+dt = Temporal.PlainDateTime.from('2019-02-19T00:00-03:00');
+zdt = dt.toZonedDateTime('America/Sao_Paulo'); // can be ambiguous
 
-// Differences between DST and non-DST
-tz = Temporal.TimeZone.from('Europe/London');
-tz.getOffsetNanosecondsFor('2020-08-06T15:00Z'); // => 3600000000000
-tz.getOffsetNanosecondsFor('2020-11-06T01:00Z'); // => 0
+// the offset is lost when converting from an exact type to a non-exact type
+zdt = Temporal.ZonedDateTime.from('2020-11-01T01:30-08:00[America/Los_Angeles]');
+  // => 2020-11-01T01:30:00-08:00[America/Los_Angeles]
+dt = zdt.toPlainDateTime(); // offset is lost!
+  // => 2020-11-01T01:30:00
+zdtAmbiguous = dt.toZonedDateTime('America/Los_Angeles'); // can be ambiguous
+  // => 2020-11-01T01:30:00-07:00[America/Los_Angeles]
+  // note that the offset is now -07:00 (Pacific Daylight Time) which is the "first" 1:30AM
+  // not -08:00 (Pacific Standard Time) like the original time which was the "second" 1:30AM
 ```
+<!-- prettier-ignore-end -->
 
-### timeZone.**getOffsetStringFor**(_instant_: Temporal.Instant | string) : string
-
-**Parameters:**
-
-- `instant` (`Temporal.Instant` or value convertible to one): The time for which to compute the time zone's UTC offset.
-
-**Returns**: a string indicating the UTC offset at the given time.
-
-This method is similar to `timeZone.getOffsetNanosecondsFor()`, but returns the offset formatted as a string, with sign, hours, and minutes.
-
-If `timeZone` is a UTC offset time zone, the return value of this method is effectively the same as `timeZone.id`.
-
-If `instant` is not a `Temporal.Instant` object, then it will be converted to one as if it were passed to `Temporal.Instant.from()`.
-
-When subclassing `Temporal.TimeZone`, this method doesn't need to be overridden because the default implementation creates an offset string using the result of calling `timeZone.getOffsetNanosecondsFor()`.
-
-Example usage:
-
-```javascript
-// Getting the UTC offset for a time zone at a particular time
-timestamp = Temporal.Instant.fromEpochSeconds(1553993100);
-tz = Temporal.TimeZone.from('Europe/Berlin');
-tz.getOffsetStringFor(timestamp); // => '+01:00'
-
-// TimeZone with a fixed UTC offset
-tz = Temporal.TimeZone.from('-08:00');
-tz.getOffsetStringFor(timestamp); // => '-08:00'
-```
-
-### timeZone.**getPlainDateTimeFor**(_instant_: Temporal.Instant | string, _calendar_?: object | string) : Temporal.PlainDateTime
-
-**Parameters:**
-
-- `instant` (`Temporal.Instant` or value convertible to one): An exact time to convert.
-- `calendar` (optional object or string): A `Temporal.Calendar` object, or a plain object, or a calendar identifier.
-  The default is to use the ISO 8601 calendar.
-
-**Returns:** A `Temporal.PlainDateTime` object indicating the calendar date and wall-clock time in `timeZone`, according to the reckoning of `calendar`, at the exact time indicated by `instant`.
-
-This method is one way to convert a `Temporal.Instant` to a `Temporal.PlainDateTime`.
-
-If `instant` is not a `Temporal.Instant` object, then it will be converted to one as if it were passed to `Temporal.Instant.from()`.
-
-When subclassing `Temporal.TimeZone`, this method doesn't need to be overridden because the default implementation creates a `Temporal.PlainDateTime` from `instant` using a UTC offset which is the result of calling `timeZone.getOffsetNanosecondsFor()`.
-
-Example usage:
-
-```javascript
-// Converting an exact time to a calendar date / wall-clock time
-timestamp = Temporal.Instant.fromEpochSeconds(1553993100);
-tz = Temporal.TimeZone.from('Europe/Berlin');
-tz.getPlainDateTimeFor(timestamp); // => 2019-03-31T01:45:00
-
-// What time was the Unix Epoch (timestamp 0) in Bell Labs (Murray Hill, New Jersey, USA)?
-epoch = Temporal.Instant.fromEpochSeconds(0);
-tz = Temporal.TimeZone.from('America/New_York');
-tz.getPlainDateTimeFor(epoch); // => 1969-12-31T19:00:00
-```
-
-### timeZone.**getInstantFor**(_dateTime_: Temporal.PlainDateTime | object | string, _options_?: object) : Temporal.Instant
-
-**Parameters:**
-
-- `dateTime` (`Temporal.PlainDateTime` or value convertible to one): A calendar date and wall-clock time to convert.
-- `options` (optional object): An object with properties representing options for the operation.
-  The following options are recognized:
-  - `disambiguation` (string): How to disambiguate if the date and time given by `dateTime` does not exist in the time zone, or exists more than once.
-    Allowed values are `'compatible'`, `'earlier'`, `'later'`, and `'reject'`.
-    The default is `'compatible'`.
-
-**Returns:** A `Temporal.Instant` object indicating the exact time in `timeZone` at the time of the calendar date and wall-clock time from `dateTime`.
-
-This method is one way to convert a `Temporal.PlainDateTime` to a `Temporal.Instant`.
-The result is identical to `dateTime.toZonedDateTime(timeZone, { disambiguation }).toInstant()`.
-
-If `dateTime` is not a `Temporal.PlainDateTime` object, then it will be converted to one as if it were passed to `Temporal.PlainDateTime.from()`.
-
-In the case of ambiguity, the `disambiguation` option controls what instant to return:
+To resolve this possible ambiguity, `Temporal` methods that create exact types from inexact sources accept a `disambiguation` option, which controls what exact time to return in the case of ambiguity:
 
 - `'compatible'` (the default): Acts like `'earlier'` for backward transitions and `'later'` for forward transitions.
-- `'earlier'`: The earlier of two possible times.
-- `'later'`: The later of two possible times.
-- `'reject'`: Throw a `RangeError` instead.
+- `'earlier'`: The earlier of two possible exact times will be returned.
+- `'later'`: The later of two possible exact times will be returned.
+- `'reject'`: A `RangeError` will be thrown.
 
 When interoperating with existing code or services, `'compatible'` mode matches the behavior of legacy `Date` as well as libraries like moment.js, Luxon, and date-fns.
 This mode also matches the behavior of cross-platform standards like [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545).
 
-During "skipped" clock time like the hour after DST starts in the Spring, this method interprets invalid times using the pre-transition time zone offset if `'compatible'` or `'later'` is used or the post-transition time zone offset if `'earlier'` is used.
-This behavior avoids exceptions when converting non-existent `Temporal.PlainDateTime` values to `Temporal.Instant`, but it also means that values during these periods will result in a different `Temporal.PlainDateTime` in "round-trip" conversions to `Temporal.Instant` and back again.
+Methods where this option is present include:
 
-For usage examples and a more complete explanation of how this disambiguation works and why it is necessary, see [Resolving ambiguity](./ambiguity.md).
+- [`Temporal.ZonedDateTime.from` with object argument](./zoneddatetime.md#from)
+- [`Temporal.ZonedDateTime.prototype.with`](./zoneddatetime.md#with)
+- [`Temporal.PlainDateTime.prototype.toZonedDateTime`](./plaindatetime.md#toZonedDateTime)
 
-If the result is earlier or later than the range that `Temporal.Instant` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then a `RangeError` will be thrown, no matter the value of `disambiguation`.
+## Examples: DST Disambiguation
 
-When subclassing `Temporal.TimeZone`, this method doesn't need to be overridden because the default implementation calls `timeZone.getPossibleInstantsFor()`, and if there is more than one possible instant, uses `disambiguation` to pick which one to return.
+> This explanation was adapted from the [moment-timezone documentation](https://github.com/moment/momentjs.com/blob/master/docs/moment-timezone/01-using-timezones/02-parsing-ambiguous-inputs.md).
 
-### timeZone.**getPossibleInstantsFor**(_dateTime_: Temporal.PlainDateTime | object | string) : array&lt;Temporal.Instant&gt;
+When entering DST, clocks move forward an hour.
+In reality, it is not time that is moving, it is the offset moving.
+Moving the offset forward gives the illusion that an hour has disappeared.
+If you watch your computer's digital clock, you can see it move from 1:58 to 1:59 to 3:00.
+It is easier to see what is actually happening when you include the offset.
 
-**Parameters:**
+```
+1:58 -08:00
+1:59 -08:00
+3:00 -07:00
+3:01 -07:00
+```
 
-- `dateTime` (`Temporal.PlainDateTime` or value convertible to one): A calendar date and wall-clock time to convert.
+The result is that any time between 1:59:59 and 3:00:00 never actually happened.
+In `'earlier'` mode, the exact time that is returned will be as if the post-change UTC offset had continued before the change, effectively skipping backwards by the amount of the DST gap (usually 1 hour).
+In `'later'` mode, the exact time that is returned will be as if the pre-change UTC offset had continued after the change, effectively skipping forwards by the amount of the DST gap.
+In `'compatible'` mode, the same time is returned as `'later'` mode, which matches the behavior of existing JavaScript code that uses legacy `Date`.
 
-**Returns:** An array of `Temporal.Instant` objects, which may be empty.
-
-This method returns an array of all the possible exact times that could correspond to the calendar date and wall-clock time indicated by `dateTime`.
-
-If `dateTime` is not a `Temporal.PlainDateTime` object, then it will be converted to one as if it were passed to `Temporal.PlainDateTime.from()`.
-
-Normally there is only one possible exact time corresponding to a wall-clock time, but around a daylight saving change, a wall-clock time may not exist, or the same wall-clock time may exist twice in a row.
-See [Resolving ambiguity](./ambiguity.md) for usage examples and a more complete explanation.
-
-Although this method is useful for implementing a custom time zone or custom disambiguation behaviour, usually you won't have to use this method; `Temporal.TimeZone.prototype.getInstantFor()` will be more convenient for most use cases.
-During "skipped" clock time like the hour after DST starts in the Spring, `Temporal.TimeZone.prototype.getInstantFor()` returns a `Temporal.Instant` (by default interpreting the `Temporal.PlainDateTime` using the pre-transition time zone offset), while this method returns zero results during those skipped periods.
-
-### timeZone.**getNextTransition**(_startingPoint_: Temporal.Instant | string) : Temporal.Instant
-
-**Parameters:**
-
-- `startingPoint` (`Temporal.Instant` or value convertible to one): Time after which to find the next DST transition.
-
-**Returns:** A `Temporal.Instant` object representing the next DST transition in this time zone, or `null` if no transitions later than `startingPoint` could be found.
-
-This method is used to calculate future DST transitions after `startingPoint` for this time zone.
-
-Note that if the time zone was constructed from a UTC offset, there will be no DST transitions.
-In that case, this method will return `null`.
-
-If `instant` is not a `Temporal.Instant` object, then it will be converted to one as if it were passed to `Temporal.Instant.from()`.
-
-When subclassing `Temporal.TimeZone`, this method should be overridden if the time zone changes offsets.
-Single-offset time zones can use the default implementation which returns `null`.
-
-Example usage:
-
+<!-- prettier-ignore-start -->
 ```javascript
-// How long until the next DST change from now, in the current location?
-tz = Temporal.Now.timeZone();
-now = Temporal.Now.instant();
-nextTransition = tz.getNextTransition(now);
-duration = nextTransition.since(now);
-duration.toLocaleString(); // output will vary
+// Different disambiguation modes for times in the skipped clock hour after DST starts in the Spring
+// Offset of -07:00 is Daylight Saving Time, while offset of -08:00 indicates Standard Time.
+props = { timeZone: 'America/Los_Angeles', year: 2020, month: 3, day: 8, hour: 2, minute: 30 };
+zdt = Temporal.ZonedDateTime.from(props, { disambiguation: 'compatible' });
+  // => 2020-03-08T03:30:00-07:00[America/Los_Angeles]
+zdt = Temporal.ZonedDateTime.from(props);
+  // => 2020-03-08T03:30:00-07:00[America/Los_Angeles]
+  // ('compatible' is the default)
+earlier = Temporal.ZonedDateTime.from(props, { disambiguation: 'earlier' });
+  // => 2020-03-08T01:30:00-08:00[America/Los_Angeles]
+  // (1:30 clock time; still in Standard Time)
+later = Temporal.ZonedDateTime.from(props, { disambiguation: 'later' });
+  // => 2020-03-08T03:30:00-07:00[America/Los_Angeles]
+  // ('later' is same as 'compatible' for backwards transitions)
+later.toPlainDateTime().since(earlier.toPlainDateTime());
+  // => PT2H
+  // (2 hour difference in clock time...
+later.since(earlier);
+  // => PT1H
+  // ... but 1 hour later in real-world time)
 ```
+<!-- prettier-ignore-end -->
 
-### timeZone.**getPreviousTransition**(_startingPoint_: Temporal.Instant | string) : Temporal.Instant
+Likewise, at the end of DST, clocks move backward an hour.
+In this case, the illusion is that an hour repeats itself.
+In `'earlier'` mode, the exact time will be the earlier instance of the duplicated wall-clock time.
+In `'later'` mode, the exact time will be the later instance of the duplicated time.
+In `'compatible'` mode, the same time is returned as `'earlier'` mode, which matches the behavior of existing JavaScript code that uses legacy `Date`.
 
-**Parameters:**
-
-- `startingPoint` (`Temporal.Instant` or value convertible to one): Time before which to find the previous DST transition.
-
-**Returns:** A `Temporal.Instant` object representing the previous DST transition in this time zone, or `null` if no transitions earlier than `startingPoint` could be found.
-
-This method is used to calculate past DST transitions before `startingPoint` for this time zone.
-
-Note that if the time zone was constructed from a UTC offset, there will be no DST transitions.
-In that case, this method will return `null`.
-
-If `instant` is not a `Temporal.Instant` object, then it will be converted to one as if it were passed to `Temporal.Instant.from()`.
-
-When subclassing `Temporal.TimeZone`, this method should be overridden if the time zone changes offsets.
-Single-offset time zones can use the default implementation which returns `null`.
-
-Example usage:
-
+<!-- prettier-ignore-start -->
 ```javascript
-// How long until the previous DST change from now, in the current location?
-tz = Temporal.Now.timeZone();
-now = Temporal.Now.instant();
-previousTransition = tz.getPreviousTransition(now);
-duration = now.since(previousTransition);
-duration.toLocaleString(); // output will vary
+// Different disambiguation modes for times in the repeated clock hour after DST ends in the Fall
+// Offset of -07:00 is Daylight Saving Time, while offset of -08:00 indicates Standard Time.
+props = { timeZone: 'America/Los_Angeles', year: 2020, month: 11, day: 1, hour: 1, minute: 30 };
+zdt = Temporal.ZonedDateTime.from(props, { disambiguation: 'compatible' });
+  // => 2020-11-01T01:30:00-07:00[America/Los_Angeles]
+zdt = Temporal.ZonedDateTime.from(props);
+  // => 2020-11-01T01:30:00-07:00[America/Los_Angeles]
+  // 'compatible' is the default.
+earlier = Temporal.ZonedDateTime.from(props, { disambiguation: 'earlier' });
+  // => 2020-11-01T01:30:00-07:00[America/Los_Angeles]
+  // 'earlier' is same as 'compatible' for backwards transitions.
+later = Temporal.ZonedDateTime.from(props, { disambiguation: 'later' });
+  // => 2020-11-01T01:30:00-08:00[America/Los_Angeles]
+  // Same clock time, but one hour later.
+  // -08:00 offset indicates Standard Time.
+later.toPlainDateTime().since(earlier.toPlainDateTime());
+  // => PT0S
+  // (same clock time...
+later.since(earlier);
+  // => PT1H
+  // ... but 1 hour later in real-world time)
 ```
+<!-- prettier-ignore-end -->
 
-### timeZone.**toString**() : string
+## Ambiguity Caused by Permanent Changes to a Time Zone Definition
 
-**Returns:** The string given by `timeZone.id`.
+Time zone definitions can change.
+Almost always these changes are forward-looking so don't affect historical data.
+But computers sometimes store data about the future!
+For example, a calendar app might record that a user wants to be reminded of a friend's birthday next year.
 
-This method overrides `Object.prototype.toString()` and provides the time zone's `id` property as a human-readable description.
+When date/time data for future times is stored with both the offset and the time zone, and if the time zone definition changes, then it's possible that the new time zone definition may conflict with previously-stored data.
+In this case, then the `offset` option to [`Temporal.ZonedDateTime.from`](./zoneddatetime.md#from) is used to resolve the conflict:
 
-### timeZone.**toJSON**() : string
+- `'use'`: Evaluate date/time values using the time zone offset if it's provided in the input.
+  This will keep the exact time unchanged even if local time will be different than what was originally stored.
+- `'ignore'`: Never use the time zone offset provided in the input. Instead, calculate the offset from the time zone.
+  This will keep local time unchanged but may result in a different exact time than was originally stored.
+- `'prefer'`: Evaluate date/time values using the offset if it's valid for this time zone.
+  If the offset is invalid, then calculate the offset from the time zone.
+  This option is rarely used when calling `from()`.
+  See the documentation of `with()` for more details about why this option is used.
+- `'reject'`: Throw a `RangeError` if the offset is not valid for the provided date and time in the provided time zone.
 
-**Returns:** the string given by `timeZone.id`.
+The default is `'reject'` for [`Temporal.ZonedDateTime.from`](./zoneddatetime.md#from) because there is no obvious default solution.
+Instead, the developer needs to decide how to fix the now-invalid data.
 
-This method is the same as `timeZone.toString()`.
-It is usually not called directly, but it can be called automatically by `JSON.stringify()`.
+For [`Temporal.ZonedDateTime.with`](./zoneddatetime.md#with) the default is `'prefer'`.
+This default is helpful to prevent DST disambiguation from causing unexpected one-hour changes in exact time after making small changes to clock time fields.
+For example, if a [`Temporal.ZonedDateTime`](./zoneddatetime.md) is set to the "second" 1:30AM on a day where the 1-2AM clock hour is repeated after a backwards DST transition, then calling `.with({minute: 45})` will result in an ambiguity which is resolved using the default `offset: 'prefer'` option.
+Because the existing offset is valid for the new time, it will be retained so the result will be the "second" 1:45AM.
+However, if the existing offset is not valid for the new result (e.g. `.with({hour: 0})`), then the default behavior will change the offset to match the new local time in that time zone.
 
-The reverse operation, recovering a `Temporal.TimeZone` object from a string, is `Temporal.TimeZone.from()`, but it cannot be called automatically by `JSON.parse()`.
-If you need to rebuild a `Temporal.TimeZone` object from a JSON string, then you need to know the names of the keys that should be interpreted as `Temporal.TimeZone`s.
-In that case you can build a custom "reviver" function for your use case.
+Note that offset vs. timezone conflicts only matter for [`Temporal.ZonedDateTime`](./zoneddatetime.md) because no other Temporal type accepts both an IANA time zone and a time zone offset as an input to any method.
+For example, [`Temporal.Instant.from`](./instant.md#from) will never run into conflicts because the [`Temporal.Instant`](./instant.md) type ignores the time zone in the input and only uses the offset.
 
-When subclassing `Temporal.TimeZone`, this method doesn't need to be overridden because the default implementation returns the result of calling `timeZone.toString()`.
+## Examples: `offset` option
 
-Example usage:
+The primary reason to use the `offset` option is for parsing values which were saved before a change to that time zone's time zone definition.
+For example, Brazil stopped observing Daylight Saving Time in 2019, with the final transition out of DST on February 16, 2019.
+The change to stop DST permanently was announced in April 2019.
+Now imagine that an app running in 2018 (before these changes were announced) had saved a far-future time in a string format that contained both offset and IANA time zone.
+Such a format is used by [`Temporal.ZonedDateTime.prototype.toString`](./zoneddatetime.md#toString) as well as other platforms and libraries that use the same format like [`Java.time.ZonedDateTime`](https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.md).
+Let's assume the stored future time was noon on January 15, 2020 in São Paulo:
 
-```js
-const user = {
-  id: 775,
-  username: 'robotcat',
-  password: 'hunter2', // Note: Don't really store passwords like that
-  userTimeZone: Temporal.TimeZone.from('Europe/Madrid')
-};
-const str = JSON.stringify(user, null, 2);
-console.log(str);
-// =>
-// {
-//   "id": 775,
-//   "username": "robotcat",
-//   "password": "hunter2",
-//   "userTimeZone": "Europe/Madrid"
-// }
+<!-- prettier-ignore-start -->
+```javascript
+zdt = Temporal.ZonedDateTime.from({ year: 2020, month: 1, day: 15, hour: 12, timeZone: 'America/Sao_Paulo' });
+zdt.toString();
+  // => '2020-01-15T12:00:00-02:00[America/Sao_Paulo]'
+  // Assume this string is saved in an external database.
+  // Note that the offset is `-02:00` which is Daylight Saving Time
 
-// To rebuild from the string:
-function reviver(key, value) {
-  if (key.endsWith('TimeZone')) return Temporal.TimeZone.from(value);
-  return value;
-}
-JSON.parse(str, reviver);
+// Also note that if you run the code above today, it will return an offset
+// of `-03:00` because that reflects the current time zone definition after
+// DST was abolished.  But this code running in 2018 would have returned `-02:00`
+// which corresponds to the then-current Daylight Saving Time in Brazil.
 ```
+<!-- prettier-ignore-end -->
+
+This string was valid at the time is was created and saved in 2018.
+But after the time zone rules were changed in April 2019, `2020-01-15T12:00-02:00[America/Sao_Paulo]` is no longer valid because the correct offset for this time is now `-03:00`.
+When parsing this string using current time zone rules, `Temporal` needs to know how to interpret it.
+The `offset` option helps deal with this case.
+
+<!-- prettier-ignore-start -->
+```javascript
+savedUsingOldTzDefinition = '2020-01-01T12:00-02:00[America/Sao_Paulo]'; // string that was saved earlier
+/* WRONG */ zdt = Temporal.ZonedDateTime.from(savedUsingOldTzDefinition);
+  // => RangeError: Offset is invalid for '2020-01-01T12:00' in 'America/Sao_Paulo'. Provided: -02:00, expected: -03:00.
+  // Default is to throw when the offset and time zone conflict.
+/* WRONG */ zdt = Temporal.ZonedDateTime.from(savedUsingOldTzDefinition, { offset: 'reject' });
+  // => RangeError: Offset is invalid for '2020-01-01T12:00' in 'America/Sao_Paulo'. Provided: -02:00, expected: -03:00.
+zdt = Temporal.ZonedDateTime.from(savedUsingOldTzDefinition, { offset: 'use' });
+  // => 2020-01-01T11:00:00-03:00[America/Sao_Paulo]
+  // Evaluate date/time string using old offset, which keeps UTC time constant as local time changes to 11:00
+zdt = Temporal.ZonedDateTime.from(savedUsingOldTzDefinition, { offset: 'ignore' });
+  // => 2020-01-01T12:00:00-03:00[America/Sao_Paulo]
+  // Use current time zone rules to calculate offset, ignoring any saved offset
+zdt = Temporal.ZonedDateTime.from(savedUsingOldTzDefinition, { offset: 'prefer' });
+  // => 2020-01-01T12:00:00-03:00[America/Sao_Paulo]
+  // Saved offset is invalid for current time zone rules, so use time zone to to calculate offset.
+```
+<!-- prettier-ignore-end -->

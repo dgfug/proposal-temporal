@@ -1,9 +1,9 @@
-<!doctype html>
+<!DOCTYPE html>
 <meta charset="utf8">
 
 <emu-clause id="sec-temporal-plainyearmonth-objects">
   <h1>Temporal.PlainYearMonth Objects</h1>
-  <p>A Temporal.PlainYearMonth object is an Object that contains Number values corresponding to a particular year and month.</p>
+  <p>A Temporal.PlainYearMonth object is an Object that contains integers corresponding to a particular year and month in a particular calendar.</p>
 
   <emu-clause id="sec-temporal-plainyearmonth-constructor">
     <h1>The Temporal.PlainYearMonth Constructor</h1>
@@ -24,21 +24,22 @@
     </ul>
 
     <emu-clause id="sec-temporal.plainyearmonth">
-      <h1>Temporal.PlainYearMonth ( _isoYear_, _isoMonth_ [ , _calendarLike_ [ , _referenceISODay_ ] ] )</h1>
-      <p>
-        When the `Temporal.PlainYearMonth` function is called, the following steps are taken:
-      </p>
-      <emu-note>The value of ? ToIntegerThrowOnInfinity(*undefined*) is 0.</emu-note>
+      <h1>Temporal.PlainYearMonth ( _isoYear_, _isoMonth_ [ , _calendar_ [ , _referenceISODay_ ] ] )</h1>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. If NewTarget is *undefined*, then
           1. Throw a *TypeError* exception.
         1. If _referenceISODay_ is *undefined*, then
           1. Set _referenceISODay_ to *1*<sub>𝔽</sub>.
-        1. Let _y_ be ? ToIntegerThrowOnInfinity(_isoYear_).
-        1. Let _m_ be ? ToIntegerThrowOnInfinity(_isoMonth_).
-        1. Let _calendar_ be ? ToTemporalCalendarWithISODefault(_calendarLike_).
-        1. Let _ref_ be ? ToIntegerThrowOnInfinity(_referenceISODay_).
-        1. Return ? CreateTemporalYearMonth(_y_, _m_, _calendar_, _ref_, NewTarget).
+        1. Let _y_ be ? ToIntegerWithTruncation(_isoYear_).
+        1. Let _m_ be ? ToIntegerWithTruncation(_isoMonth_).
+        1. If _calendar_ is *undefined*, set _calendar_ to *"iso8601"*.
+        1. If _calendar_ is not a String, throw a *TypeError* exception.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Let _ref_ be ? ToIntegerWithTruncation(_referenceISODay_).
+        1. If IsValidISODate(_y_, _m_, _ref_) is *false*, throw a *RangeError* exception.
+        1. Let _isoDate_ be CreateISODateRecord(_y_, _m_, _ref_).
+        1. Return ? CreateTemporalYearMonth(_isoDate_, _calendar_, NewTarget).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -48,7 +49,7 @@
     <p>The value of the [[Prototype]] internal slot of the Temporal.PlainYearMonth constructor is the intrinsic object %Function.prototype%.</p>
     <p>The Temporal.PlainYearMonth constructor has the following properties:</p>
 
-    <emu-clause id="sec-temporal-plainyearmonth-prototype">
+    <emu-clause id="sec-temporal.plainyearmonth.prototype">
       <h1>Temporal.PlainYearMonth.prototype</h1>
       <p>The initial value of `Temporal.PlainYearMonth.prototype` is %Temporal.PlainYearMonth.prototype%.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
@@ -56,29 +57,19 @@
 
     <emu-clause id="sec-temporal.plainyearmonth.from">
       <h1>Temporal.PlainYearMonth.from ( _item_ [ , _options_ ] )</h1>
-      <p>
-        The `from` method takes two arguments, _item_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. If Type(_item_) is Object and _item_ has an [[InitializedTemporalYearMonth]] internal slot, then
-          1. Perform ? ToTemporalOverflow(_options_).
-          1. Return ? CreateTemporalYearMonth(_item_.[[ISOYear]], _item_.[[ISOMonth]], _item_.[[Calendar]], _item_.[[ISODay]]).
         1. Return ? ToTemporalYearMonth(_item_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.compare">
       <h1>Temporal.PlainYearMonth.compare ( _one_, _two_ )</h1>
-      <p>
-        The `compare` method takes two arguments, _one_ and _two_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. Set _one_ to ? ToTemporalYearMonth(_one_).
         1. Set _two_ to ? ToTemporalYearMonth(_two_).
-        1. Return 𝔽(! CompareISODate(_one_.[[ISOYear]], _one_.[[ISOMonth]], _one_.[[ISODay]], _two_.[[ISOYear]], _two_.[[ISOMonth]], _two_.[[ISODay]])).
+        1. Return 𝔽(CompareISODate(_one_.[[ISODate]], _two_.[[ISODate]])).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -93,31 +84,59 @@
       <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
     </ul>
 
+    <emu-note>
+      An ECMAScript implementation that includes the ECMA-402 Internationalization API extends this prototype with additional properties in order to represent calendar data.
+    </emu-note>
+
     <emu-clause id="sec-temporal.plainyearmonth.prototype.constructor">
       <h1>Temporal.PlainYearMonth.prototype.constructor</h1>
       <p>The initial value of `Temporal.PlainYearMonth.prototype.constructor` is %Temporal.PlainYearMonth%.</p>
     </emu-clause>
 
-    <emu-clause id="sec-temporal.plainyearmonth.prototype-@@tostringtag">
-      <h1>Temporal.PlainYearMonth.prototype[ @@toStringTag ]</h1>
-      <p>
-        The initial value of the @@toStringTag property is the string value *"Temporal.PlainYearMonth"*.
-      </p>
-      <p>
-        This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-      </p>
+    <emu-clause id="sec-temporal.plainyearmonth.prototype-%symbol.tostringtag%">
+      <h1>Temporal.PlainYearMonth.prototype[ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String value *"Temporal.PlainYearMonth"*.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
     </emu-clause>
 
-    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.calendar">
-      <h1>get Temporal.PlainYearMonth.prototype.calendar</h1>
+    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.calendarid">
+      <h1>get Temporal.PlainYearMonth.prototype.calendarId</h1>
       <p>
-        `Temporal.PlainYearMonth.prototype.calendar` is an accessor property whose set accessor function is *undefined*.
+        `Temporal.PlainYearMonth.prototype.calendarId` is an accessor property whose set accessor function is *undefined*.
         Its get accessor function performs the following steps:
       </p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
         1. Return _yearMonth_.[[Calendar]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.era">
+      <h1>get Temporal.PlainYearMonth.prototype.era</h1>
+      <p>
+        `Temporal.PlainYearMonth.prototype.era` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainYearMonth_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainYearMonth_, [[InitializedTemporalYearMonth]]).
+        1. Return CalendarISOToDate(_plainYearMonth_.[[Calendar]], _plainYearMonth_.[[ISODate]]).[[Era]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.erayear">
+      <h1>get Temporal.PlainYearMonth.prototype.eraYear</h1>
+      <p>
+        `Temporal.PlainYearMonth.prototype.eraYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainYearMonth_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainYearMonth_, [[InitializedTemporalYearMonth]]).
+        1. Let _result_ be CalendarISOToDate(_plainYearMonth_.[[Calendar]], _plainYearMonth_.[[ISODate]]).[[EraYear]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
       </emu-alg>
     </emu-clause>
 
@@ -130,8 +149,7 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return 𝔽(? CalendarYear(_calendar_, _yearMonth_)).
+        1. Return 𝔽(CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[Year]]).
       </emu-alg>
     </emu-clause>
 
@@ -144,12 +162,11 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return 𝔽(? CalendarMonth(_calendar_, _yearMonth_)).
+        1. Return 𝔽(CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[Month]]).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.monthCode">
+    <emu-clause id="sec-get-temporal.plainyearmonth.prototype.monthcode">
       <h1>get Temporal.PlainYearMonth.prototype.monthCode</h1>
       <p>
         `Temporal.PlainYearMonth.prototype.monthCode` is an accessor property whose set accessor function is *undefined*.
@@ -158,8 +175,7 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return ? CalendarMonthCode(_calendar_, _yearMonth_).
+        1. Return CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[MonthCode]].
       </emu-alg>
     </emu-clause>
 
@@ -172,8 +188,7 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return ? CalendarDaysInYear(_calendar_, _yearMonth_).
+        1. Return 𝔽(CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[Day]]).
       </emu-alg>
     </emu-clause>
 
@@ -186,8 +201,7 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return ? CalendarDaysInMonth(_calendar_, _yearMonth_).
+        1. Return 𝔽(CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[DaysInMonth]]).
       </emu-alg>
     </emu-clause>
 
@@ -200,8 +214,7 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return ? CalendarMonthsInYear(_calendar_, _yearMonth_).
+        1. Return 𝔽(CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[MonthsInYear]]).
       </emu-alg>
     </emu-clause>
 
@@ -214,287 +227,146 @@
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Return ? CalendarInLeapYear(_calendar_, _yearMonth_).
+        1. Return CalendarISOToDate(_yearMonth_.[[Calendar]], _yearMonth_.[[ISODate]]).[[InLeapYear]].
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.with">
       <h1>Temporal.PlainYearMonth.prototype.with ( _temporalYearMonthLike_ [ , _options_ ] )</h1>
-      <p>
-        The `with` method takes two arguments, _temporalYearMonthLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. If Type(_temporalYearMonthLike_) is not Object, then
-          1. Throw a *TypeError* exception.
-        1. Perform ? RejectTemporalCalendarType(_temporalYearMonthLike_).
-        1. Let _calendarProperty_ be ? Get(_temporalYearMonthLike_, *"calendar"*).
-        1. If _calendarProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _timeZoneProperty_ be ? Get(_temporalYearMonthLike_, *"timeZone"*).
-        1. If _timeZoneProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
+        1. If ? IsPartialTemporalObject(_temporalYearMonthLike_) is *false*, throw a *TypeError* exception.
         1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"month"*, *"monthCode"*, *"year"* »).
-        1. Let _partialYearMonth_ be ? PreparePartialTemporalFields(_temporalYearMonthLike_, _fieldNames_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _fields_ be ? PrepareTemporalFields(_yearMonth_, _fieldNames_, «»).
-        1. Set _fields_ to ? CalendarMergeFields(_calendar_, _fields_, _partialYearMonth_).
-        1. Set _fields_ to ? PrepareTemporalFields(_fields_, _fieldNames_, «»).
-        1. Return ? YearMonthFromFields(_calendar_, _fields_, _options_).
+        1. Let _fields_ be ISODateToFields(_calendar_, _yearMonth_.[[ISODate]], ~year-month~).
+        1. Let _partialYearMonth_ be ? PrepareCalendarFields(_calendar_, _temporalYearMonthLike_, « ~year~, ~month~, ~month-code~ », « », ~partial~).
+        1. Set _fields_ to CalendarMergeFields(_calendar_, _fields_, _partialYearMonth_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _isoDate_ be ? CalendarYearMonthFromFields(_calendar_, _fields_, _overflow_).
+        1. Return ! CreateTemporalYearMonth(_isoDate_, _calendar_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.add">
       <h1>Temporal.PlainYearMonth.prototype.add ( _temporalDurationLike_ [ , _options_ ] )</h1>
-      <p>
-        The `add` method takes two arguments, _temporalDurationLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Let _balanceResult_ be ? BalanceDuration(_duration_.[[Days]], _duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]], *"day"*).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _sign_ be ! DurationSign(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _balanceResult_.[[Days]], 0, 0, 0, 0, 0, 0).
-        1. If _sign_ &lt; 0, then
-          1. Let _dayFromCalendar_ be ? CalendarDaysInMonth(_calendar_, _yearMonth_).
-          1. Let _day_ be ? ToPositiveInteger(_dayFromCalendar_).
-        1. Else,
-          1. Let _day_ be 1.
-        1. Let _date_ be ? CreateTemporalDate(_yearMonth_.[[ISOYear]], _yearMonth_.[[ISOMonth]], _day_, _calendar_).
-        1. Let _durationToAdd_ be ? CreateTemporalDuration(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _balanceResult_.[[Days]], 0, 0, 0, 0, 0, 0).
-        1. Let _optionsCopy_ be ! OrdinaryObjectCreate(%Object.prototype%).
-        1. Let _entries_ be ? EnumerableOwnPropertyNames(_options_, ~key+value~).
-        1. For each element _nextEntry_ of _entries_, do
-          1. Perform ! CreateDataPropertyOrThrow(_optionsCopy_, _nextEntry_[0], _nextEntry_[1]).
-        1. Let _addedDate_ be ? CalendarDateAdd(_calendar_, _date_, _durationToAdd_, _options_).
-        1. Let _addedDateFields_ be ? PrepareTemporalFields(_addedDate_, _fieldNames_, «»).
-        1. Return ? YearMonthFromFields(_calendar_, _addedDateFields_, _optionsCopy_).
+        1. Return ? AddDurationToYearMonth(~add~, _yearMonth_, _temporalDurationLike_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.subtract">
       <h1>Temporal.PlainYearMonth.prototype.subtract ( _temporalDurationLike_ [ , _options_ ] )</h1>
-      <p>
-        The `subtract` method takes two arguments, _temporalDurationLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Let _balanceResult_ be ? BalanceDuration(_duration_.[[Days]], _duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]], *"day"*).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _sign_ be ! DurationSign(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _balanceResult_.[[Days]], 0, 0, 0, 0, 0, 0).
-        1. If _sign_ &lt; 0, then
-          1. Let _dayFromCalendar_ be ? CalendarDaysInMonth(_calendar_, _yearMonth_).
-          1. Let _day_ be ? ToPositiveInteger(_dayFromCalendar_).
-        1. Else,
-          1. Let _day_ be 1.
-        1. Let _date_ be ? CreateTemporalDate(_yearMonth_.[[ISOYear]], _yearMonth_.[[ISOMonth]], _day_, _calendar_).
-        1. Let _durationToAdd_ be ? CreateTemporalDuration(−_duration_.[[Years]], −_duration_.[[Months]], −_duration_.[[Weeks]], −_balanceResult_.[[Days]], 0, 0, 0, 0, 0, 0).
-        1. Let _optionsCopy_ be ! OrdinaryObjectCreate(%Object.prototype%).
-        1. Let _entries_ be ? EnumerableOwnPropertyNames(_options_, ~key+value~).
-        1. For each element _nextEntry_ of _entries_, do
-          1. Perform ! CreateDataPropertyOrThrow(_optionsCopy_, _nextEntry_[0], _nextEntry_[1]).
-        1. Let _addedDate_ be ? CalendarDateAdd(_calendar_, _date_, _durationToAdd_, _options_).
-        1. Let _addedDateFields_ be ? PrepareTemporalFields(_addedDate_, _fieldNames_, «»).
-        1. Return ? YearMonthFromFields(_calendar_, _addedDateFields_, _optionsCopy_).
+        1. Return ? AddDurationToYearMonth(~subtract~, _yearMonth_, _temporalDurationLike_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.until">
       <h1>Temporal.PlainYearMonth.prototype.until ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `until` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Set _other_ to ? ToTemporalYearMonth(_other_).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. If ? CalendarEquals(_calendar_, _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _disallowedUnits_ be « *"week"*, *"day"*, *"hour"*, *"minute"*, *"second"*, *"millisecond"*, *"microsecond"*, *"nanosecond"* ».
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, _disallowedUnits_, *"month"*).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, _disallowedUnits_, *"auto"*, *"year"*).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, *undefined*, *false*).
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _otherFields_ be ? PrepareTemporalFields(_other_, _fieldNames_, «»).
-        1. Perform ! CreateDataPropertyOrThrow(_otherFields_, *"day"*, *1*<sub>𝔽</sub>).
-        1. Let _otherDate_ be ? DateFromFields(_calendar_, _otherFields_).
-        1. Let _thisFields_ be ? PrepareTemporalFields(_yearMonth_, _fieldNames_, «»).
-        1. Perform ! CreateDataPropertyOrThrow(_thisFields_, *"day"*, *1*<sub>𝔽</sub>).
-        1. Let _thisDate_ be ? DateFromFields(_calendar_, _thisFields_).
-        1. Let _untilOptions_ be ? MergeLargestUnitOption(_options_, _largestUnit_).
-        1. Let _result_ be ? CalendarDateUntil(_calendar_, _thisDate_, _otherDate_, _untilOptions_).
-        1. If _smallestUnit_ is *"month"* and _roundingIncrement_ = 1, then
-          1. Return ? CreateTemporalDuration(_result_.[[Years]], _result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0).
-        1. Let _relativeTo_ be ? CreateTemporalDateTime(_thisDate_.[[ISOYear]], _thisDate_.[[ISOMonth]], _thisDate_.[[ISODay]], 0, 0, 0, 0, 0, 0, _calendar_).
-        1. Let _result_ be ? RoundDuration(_result_.[[Years]], _result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0, _roundingIncrement_, _smallestUnit_, _roundingMode_, _relativeTo_).
-        1. Return ? CreateTemporalDuration(_result_.[[Years]], _result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0).
+        1. Return ? DifferenceTemporalPlainYearMonth(~until~, _yearMonth_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.since">
       <h1>Temporal.PlainYearMonth.prototype.since ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `since` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Set _other_ to ? ToTemporalYearMonth(_other_).
-        1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. If ? CalendarEquals(_calendar_, _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _disallowedUnits_ be « *"week"*, *"day"*, *"hour"*, *"minute"*, *"second"*, *"millisecond"*, *"microsecond"*, *"nanosecond"* ».
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, _disallowedUnits_, *"month"*).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, _disallowedUnits_, *"auto"*, *"year"*).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Set _roundingMode_ to ! NegateTemporalRoundingMode(_roundingMode_).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, *undefined*, *false*).
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _otherFields_ be ? PrepareTemporalFields(_other_, _fieldNames_, «»).
-        1. Perform ! CreateDataPropertyOrThrow(_otherFields_, *"day"*, *1*<sub>𝔽</sub>).
-        1. Let _otherDate_ be ? DateFromFields(_calendar_, _otherFields_).
-        1. Let _thisFields_ be ? PrepareTemporalFields(_yearMonth_, _fieldNames_, «»).
-        1. Perform ! CreateDataPropertyOrThrow(_thisFields_, *"day"*, *1*<sub>𝔽</sub>).
-        1. Let _thisDate_ be ? DateFromFields(_calendar_, _thisFields_).
-        1. Let _untilOptions_ be ? MergeLargestUnitOption(_options_, _largestUnit_).
-        1. Let _result_ be ? CalendarDateUntil(_calendar_, _thisDate_, _otherDate_, _untilOptions_).
-        1. If _smallestUnit_ is *"month"* and _roundingIncrement_ = 1, then
-          1. Return ? CreateTemporalDuration(−_result_.[[Years]], −_result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0).
-        1. Let _relativeTo_ be ? CreateTemporalDateTime(_thisDate_.[[ISOYear]], _thisDate_.[[ISOMonth]], _thisDate_.[[ISODay]], 0, 0, 0, 0, 0, 0, _calendar_).
-        1. Set _roundingMode_ to ! NegateTemporalRoundingMode(_roundingMode_).
-        1. Let _result_ be ? RoundDuration(_result_.[[Years]], _result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0, _roundingIncrement_, _smallestUnit_, _roundingMode_, _relativeTo_).
-        1. Return ? CreateTemporalDuration(−_result_.[[Years]], −_result_.[[Months]], 0, 0, 0, 0, 0, 0, 0, 0).
+        1. Return ? DifferenceTemporalPlainYearMonth(~since~, _yearMonth_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.equals">
       <h1>Temporal.PlainYearMonth.prototype.equals ( _other_ )</h1>
-      <p>
-        The `equals` method takes one argument _other_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
         1. Set _other_ to ? ToTemporalYearMonth(_other_).
-        1. If _yearMonth_.[[ISOYear]] ≠ _other_.[[ISOYear]], return *false*.
-        1. If _yearMonth_.[[ISOMonth]] ≠ _other_.[[ISOMonth]], return *false*.
-        1. If _yearMonth_.[[ISODay]] ≠ _other_.[[ISODay]], return *false*.
-        1. Return ? CalendarEquals(_yearMonth_.[[Calendar]], _other_.[[Calendar]]).
+        1. If CompareISODate(_yearMonth_.[[ISODate]], _other_.[[ISODate]]) ≠ 0, return *false*.
+        1. Return CalendarEquals(_yearMonth_.[[Calendar]], _other_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.tostring">
       <h1>Temporal.PlainYearMonth.prototype.toString ( [ _options_ ] )</h1>
-      <p>
-        The `toString` method takes one argument _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _showCalendar_ be ? ToShowCalendarOption(_options_).
-        1. Return ? TemporalYearMonthToString(_yearMonth_, _showCalendar_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _showCalendar_ be ? GetTemporalShowCalendarNameOption(_resolvedOptions_).
+        1. Return TemporalYearMonthToString(_yearMonth_, _showCalendar_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.tolocalestring">
       <h1>Temporal.PlainYearMonth.prototype.toLocaleString ( [ _locales_ [ , _options_ ] ] )</h1>
       <p>
-        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement the `Temporal.PlainYearMonth.prototype.toLocaleString` method as specified in the ECMA-402 specification. If an ECMAScript implementation does not include the ECMA-402 API the following specification of the `toLocaleString` method is used.
+        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement this method as specified in the ECMA-402 specification.
+        If an ECMAScript implementation does not include the ECMA-402 API the following specification of this method is used.
       </p>
-      <p>
-        The `toLocaleString` method takes two arguments, _locales_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>The meanings of the optional parameters to this method are defined in the ECMA-402 specification; implementations that do not include ECMA-402 support must not use those parameter positions for anything else.</p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Return ? TemporalYearMonthToString(_yearMonth_, *"auto"*).
+        1. Return TemporalYearMonthToString(_yearMonth_, ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.tojson">
       <h1>Temporal.PlainYearMonth.prototype.toJSON ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Return ? TemporalYearMonthToString(_yearMonth_, *"auto"*).
+        1. Return TemporalYearMonthToString(_yearMonth_, ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.valueof">
       <h1>Temporal.PlainYearMonth.prototype.valueOf ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Throw a *TypeError* exception.
       </emu-alg>
+      <emu-note>
+        <p>
+          This method always throws, because in the absence of `valueOf()`, expressions with arithmetic operators such as `plainYearMonth1 > plainYearMonth2` would fall back to being equivalent to `plainYearMonth1.toString() > plainYearMonth2.toString()`.
+          Lexicographical comparison of serialized strings might not seem obviously wrong, because the result would sometimes be correct.
+          Implementations are encouraged to phrase the error message to point users to `Temporal.PlainYearMonth.compare()`, `Temporal.PlainYearMonth.prototype.equals()`, and/or `Temporal.PlainYearMonth.prototype.toString()`.
+        </p>
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plainyearmonth.prototype.toplaindate">
       <h1>Temporal.PlainYearMonth.prototype.toPlainDate ( _item_ )</h1>
-      <p>
-        The `toPlainDate` method takes one argument _item_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _yearMonth_ be the *this* value.
         1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. If Type(_item_) is not Object, then
+        1. If _item_ is not an Object, then
           1. Throw a *TypeError* exception.
         1. Let _calendar_ be _yearMonth_.[[Calendar]].
-        1. Let _receiverFieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _fields_ be ? PrepareTemporalFields(_yearMonth_, _receiverFieldNames_, «»).
-        1. Let _inputFieldNames_ be ? CalendarFields(_calendar_, « *"day"* »).
-        1. Let _inputFields_ be ? PrepareTemporalFields(_item_, _inputFieldNames_, «»).
-        1. Let _mergedFields_ be ? CalendarMergeFields(_calendar_, _fields_, _inputFields_).
-        1. Let _mergedFieldNames_ be the List containing all the elements of _receiverFieldNames_ followed by all the elements of _inputFieldNames_, with duplicate elements removed.
-        1. Set _mergedFields_ to ? PrepareTemporalFields(_mergedFields_, _mergedFieldNames_, «»).
-        1. Let _options_ be ! OrdinaryObjectCreate(*null*).
-        1. Perform ! CreateDataPropertyOrThrow(_options_, *"overflow"*, *"reject"*).
-        1. Return ? DateFromFields(_calendar_, _mergedFields_, _options_).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plainyearmonth.prototype.getisofields">
-      <h1>Temporal.PlainYearMonth.prototype.getISOFields ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _yearMonth_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_yearMonth_, [[InitializedTemporalYearMonth]]).
-        1. Let _fields_ be ! OrdinaryObjectCreate(%Object.prototype%).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"calendar"*, _yearMonth_.[[Calendar]]).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoDay"*, 𝔽(_yearMonth_.[[ISODay]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMonth"*, 𝔽(_yearMonth_.[[ISOMonth]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoYear"*, 𝔽(_yearMonth_.[[ISOYear]])).
-        1. Return _fields_.
+        1. Let _fields_ be ISODateToFields(_calendar_, _yearMonth_.[[ISODate]], ~year-month~).
+        1. Let _inputFields_ be ? PrepareCalendarFields(_calendar_, _item_, « ~day~ », « », « »).
+        1. Let _mergedFields_ be CalendarMergeFields(_calendar_, _fields_, _inputFields_).
+        1. Let _isoDate_ be ? CalendarDateFromFields(_calendar_, _mergedFields_, ~constrain~).
+        1. Return ! CreateTemporalDate(_isoDate_, _calendar_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -507,198 +379,284 @@
     </p>
     <emu-table id="table-internal-slots-of-temporalyearmonth-instances" caption="Internal Slots of Temporal.PlainYearMonth Instances">
       <table>
-        <tbody>
-          <tr>
-            <th>
-              Internal Slot
-            </th>
-            <th>
-              Description
-            </th>
-          </tr>
-          <tr>
-            <td>
-              [[InitializedTemporalYearMonth]]
-            </td>
-            <td>
-              The only specified use of this slot is for distinguishing Temporal.PlainYearMonth instances from other objects.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOYear]]
-            </td>
-            <td>
-              An integer representing the year in the ISO 8601 calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMonth]]
-            </td>
-            <td>
-              An integer between 1 and 12, inclusive, representing the month of the year in the ISO 8601 calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISODay]]
-            </td>
-            <td>
-              An integer between 1 and ISODaysInMonth([[ISOYear]], [[ISOMonth]]), inclusive, representing a reference day of the month in the ISO 8601 calendar.
-              This slot is used by the calendar object in the [[Calendar]] slot to disambiguate if the [[ISOYear]] and [[ISOMonth]] slots are not enough to uniquely identify a year and month in that calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[Calendar]]
-            </td>
-            <td>
-              An Object representing the calendar.
-            </td>
-          </tr>
-        </tbody>
+        <tr>
+          <th>
+            Internal Slot
+          </th>
+          <th>
+            Description
+          </th>
+        </tr>
+        <tr>
+          <td>
+            [[InitializedTemporalYearMonth]]
+          </td>
+          <td>
+            The only specified use of this slot is for distinguishing Temporal.PlainYearMonth instances from other objects.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[ISODate]]
+          </td>
+          <td>
+            An ISO Date Record.
+            The [[Day]] field is used by the calendar in the [[Calendar]] slot to disambiguate if the [[Year]] and [[Month]] fields are not sufficient to uniquely identify a year and month in that calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Calendar]]
+          </td>
+          <td>
+            A calendar type.
+          </td>
+        </tr>
       </table>
     </emu-table>
   </emu-clause>
 
   <emu-clause id="sec-temporal-plainyearmonth-abstract-ops">
-    <h1>Abstract operations</h1>
+    <h1>Abstract Operations</h1>
 
-    <emu-clause id="sec-temporal-totemporalyearmonth" aoid="ToTemporalYearMonth">
-      <h1>ToTemporalYearMonth ( _item_ [ , _options_ ] )</h1>
-      <p>
-        The abstract operation ToTemporalYearMonth returns its argument _item_ if it is already a Temporal.PlainYearMonth instance, converts _item_ to a new Temporal.PlainYearMonth instance if possible, and throws otherwise.
-      </p>
+    <emu-clause id="sec-temporal-iso-year-month-records">
+      <h1>ISO Year-Month Records</h1>
+      <p>An <dfn variants="ISO Year-Month Records">ISO Year-Month Record</dfn> is a Record value used to represent a valid month in the ISO 8601 calendar, although the year may be outside of the allowed range for Temporal.</p>
+      <p>ISO Year-Month Records have the fields listed in <emu-xref href="#table-temporal-iso-year-month-record-fields"></emu-xref>.</p>
+      <emu-table id="table-temporal-iso-year-month-record-fields" caption="ISO Year-Month Record Fields">
+        <table class="real-table">
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Year]]</td>
+            <td>an integer</td>
+            <td>
+              The year in the ISO 8601 calendar.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Month]]</td>
+            <td>an integer between 1 and 12, inclusive</td>
+            <td>
+              The number of the month in the ISO 8601 calendar.
+            </td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-totemporalyearmonth" type="abstract operation">
+      <h1>
+        ToTemporalYearMonth (
+          _item_: an ECMAScript language value,
+          optional _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainYearMonth, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a new Temporal.PlainYearMonth instance if possible, and throws otherwise.</dd>
+      </dl>
       <emu-alg>
-        1. If _options_ is not present, set _options_ to ! OrdinaryObjectCreate(*null*).
-        1. Assert: Type(_options_) is Object.
-        1. If Type(_item_) is Object, then
+        1. If _options_ is not present, set _options_ to *undefined*.
+        1. If _item_ is an Object, then
           1. If _item_ has an [[InitializedTemporalYearMonth]] internal slot, then
-            1. Return _item_.
-          1. Let _calendar_ be ? GetTemporalCalendarWithISODefault(_item_).
-          1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"month"*, *"monthCode"*, *"year"* »).
-          1. Let _fields_ be ? PrepareTemporalFields(_item_, _fieldNames_, «»).
-          1. Return ? YearMonthFromFields(_calendar_, _fields_, _options_).
-        1. Perform ? ToTemporalOverflow(_options_).
-        1. Let _string_ be ? ToString(_item_).
-        1. Let _result_ be ? ParseTemporalYearMonthString(_string_).
-        1. Let _calendar_ be ? ToTemporalCalendarWithISODefault(_result_.[[Calendar]]).
-        1. Set _result_ to ? CreateTemporalYearMonth(_result_.[[Year]], _result_.[[Month]], _calendar_, _result_.[[Day]]).
-        1. Let _canonicalYearMonthOptions_ be ! OrdinaryObjectCreate(*null*).
-        1. Return ? YearMonthFromFields(_calendar_, _result_, _canonicalYearMonthOptions_).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalYearMonth(_item_.[[ISODate]], _item_.[[Calendar]]).
+          1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_item_).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _item_, « ~year~, ~month~, ~month-code~ », «», «»).
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Let _isoDate_ be ? CalendarYearMonthFromFields(_calendar_, _fields_, _overflow_).
+          1. Return ! CreateTemporalYearMonth(_isoDate_, _calendar_).
+        1. If _item_ is not a String, throw a *TypeError* exception.
+        1. Let _result_ be ? ParseISODateTime(_item_, « |TemporalYearMonthString| »).
+        1. Let _calendar_ be _result_.[[Calendar]].
+        1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Let _isoDate_ be CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+        1. Set _result_ to ISODateToFields(_calendar_, _isoDate_, ~year-month~).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. NOTE: The following operation is called with ~constrain~ regardless of the value of _overflow_, in order for the calendar to store a canonical value in the [[Day]] field of the [[ISODate]] internal slot of the result.
+        1. Set _isoDate_ to ? CalendarYearMonthFromFields(_calendar_, _result_, ~constrain~).
+        1. Return ! CreateTemporalYearMonth(_isoDate_, _calendar_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-regulateisoyearmonth" aoid="RegulateISOYearMonth">
-      <h1>RegulateISOYearMonth ( _year_, _month_, _overflow_ )</h1>
+    <emu-clause id="sec-temporal-isoyearmonthwithinlimits" type="abstract operation">
+      <h1>
+        ISOYearMonthWithinLimits (
+          _isoDate_: an ISO Date Record,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns *true* if its argument represents a month within the range that a Temporal.PlainYearMonth object can represent, and *false* otherwise.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_ and _month_ are integers.
-        1. Assert: _overflow_ is either *"constrain"* or *"reject"*.
-        1. If _overflow_ is *"constrain"*, then
-          1. Return ! ConstrainISOYearMonth(_year_, _month_).
-        1. If _overflow_ is *"reject"*, then
-          1. If ! IsValidISOMonth(_month_) is *false*, throw a *RangeError* exception.
-          1. Return the Record {
-              [[Year]]: _year_,
-              [[Month]]: _month_
-            }.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-isvalidisomonth" aoid="IsValidISOMonth">
-      <h1>IsValidISOMonth ( _month_ )</h1>
-      <p>
-        The abstract operation IsValidISOMonth returns *true* if its argument is a valid month in the ISO 8601 calendar, and *false* otherwise.
-      </p>
-      <emu-alg>
-        1. Assert: _month_ is an integer.
-        1. If _month_ &lt; 1 or _month_ &gt; 12, then
+        1. If _isoDate_.[[Year]] &lt; -271821 or _isoDate_.[[Year]] > 275760, then
+          1. Return *false*.
+        1. If _isoDate_.[[Year]] = -271821 and _isoDate_.[[Month]] &lt; 4, then
+          1. Return *false*.
+        1. If _isoDate_.[[Year]] = 275760 and _isoDate_.[[Month]] > 9, then
           1. Return *false*.
         1. Return *true*.
       </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-isoyearmonthwithinlimits" aoid="ISOYearMonthWithinLimits">
-      <h1>ISOYearMonthWithinLimits ( _year_, _month_ )</h1>
-      <p>
-        The abstract operation ISOYearMonthWithinLimits returns *true* if its arguments represent a month within the range that a Temporal.PlainYearMonth object can represent, and *false* otherwise.
-      </p>
       <emu-note>
         <p>
           Temporal.PlainYearMonth objects can represent any month that contains a day that a Temporal.PlainDate can represent.
           This ensures that a Temporal.PlainDate object can always be converted into a Temporal.PlainYearMonth object.
         </p>
       </emu-note>
-      <emu-alg>
-        1. Assert: _year_ and _month_ are integers.
-        1. If _year_ &lt; −271821 or _year_ &gt; 275760, then
-          1. Return *false*.
-        1. If _year_ is −271821 and _month_ &lt; 4, then
-          1. Return *false*.
-        1. If _year_ is 275760 and _month_ &gt; 9, then
-          1. Return *false*.
-        1. Return *true*.
-      </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-balanceisoyearmonth" aoid="BalanceISOYearMonth">
-      <h1>BalanceISOYearMonth ( _year_, _month_ )</h1>
+    <emu-clause id="sec-temporal-balanceisoyearmonth" type="abstract operation">
+      <h1>
+        BalanceISOYearMonth (
+          _year_: an integer,
+          _month_: an integer,
+        ): an ISO Year-Month Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_ and _month_ are integers.
         1. Set _year_ to _year_ + floor((_month_ - 1) / 12).
-        1. Set _month_ to (_month_ − 1) modulo 12 + 1.
-        1. Return the Record {
-            [[Year]]: _year_,
-            [[Month]]: _month_
-          }.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-constrainisoyearmonth" aoid="ConstrainISOYearMonth">
-      <h1>ConstrainISOYearMonth ( _year_, _month_ )</h1>
-      <emu-alg>
-        1. Assert: _year_ and _month_ are integers.
-        1. Set _month_ to ! ConstrainToRange(_month_, 1, 12).
-        1. Return the Record {
+        1. Set _month_ to ((_month_ - 1) modulo 12) + 1.
+        1. Return ISO Year-Month Record {
           [[Year]]: _year_,
           [[Month]]: _month_
           }.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-createtemporalyearmonth" aoid="CreateTemporalYearMonth">
-      <h1>CreateTemporalYearMonth ( _isoYear_, _isoMonth_, _calendar_, _referenceISODay_ [ , _newTarget_ ] )</h1>
+    <emu-clause id="sec-temporal-createtemporalyearmonth" type="abstract operation">
+      <h1>
+        CreateTemporalYearMonth (
+          _isoDate_: an ISO Date Record,
+          _calendar_: a calendar type,
+          optional _newTarget_: a constructor,
+        ): either a normal completion containing a Temporal.PlainYearMonth or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It creates a Temporal.PlainYearMonth instance and fills the internal slots with valid values.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _isoYear_, _isoMonth_, and _referenceISODay_ are integers.
-        1. Assert: Type(_calendar_) is Object.
-        1. If ! IsValidISODate(_isoYear_, _isoMonth_, _referenceISODay_) is *false*, throw a *RangeError* exception.
-        1. If ! ISOYearMonthWithinLimits(_isoYear_, _isoMonth_) is *false*, throw a *RangeError* exception.
-        1. If _newTarget_ is not present, set it to %Temporal.PlainYearMonth%.
-        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainYearMonth.prototype%"*, « [[InitializedTemporalYearMonth]], [[ISOYear]], [[ISOMonth]], [[ISODay]], [[Calendar]] »).
-        1. Set _object_.[[ISOYear]] to _isoYear_.
-        1. Set _object_.[[ISOMonth]] to _isoMonth_.
+        1. If ISOYearMonthWithinLimits(_isoDate_) is *false*, throw a *RangeError* exception.
+        1. If _newTarget_ is not present, set _newTarget_ to %Temporal.PlainYearMonth%.
+        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainYearMonth.prototype%"*, « [[InitializedTemporalYearMonth]], [[ISODate]], [[Calendar]] »).
+        1. Set _object_.[[ISODate]] to _isoDate_.
         1. Set _object_.[[Calendar]] to _calendar_.
-        1. Set _object_.[[ISODay]] to _referenceISODay_.
         1. Return _object_.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-temporalyearmonthtostring" aoid="TemporalYearMonthToString">
-      <h1>TemporalYearMonthToString ( _yearMonth_, _showCalendar_ )</h1>
+    <emu-clause id="sec-temporal-temporalyearmonthtostring" type="abstract operation">
+      <h1>
+        TemporalYearMonthToString (
+          _yearMonth_: a Temporal.PlainYearMonth,
+          _showCalendar_: ~auto~, ~always~, ~never~, or ~critical~,
+        ): a String
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It formats _yearMonth_ as an ISO 8601 string.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: Type(_yearMonth_) is Object.
-        1. Assert: _yearMonth_ has an [[InitializedTemporalYearMonth]] internal slot.
-        1. Let _year_ be ! PadISOYear(_yearMonth_.[[ISOYear]]).
-        1. Let _month_ be _yearMonth_.[[ISOMonth]] formatted as a two-digit decimal number, padded to the left with a zero if necessary.
+        1. Let _year_ be PadISOYear(_yearMonth_.[[ISODate]].[[Year]]).
+        1. Let _month_ be ToZeroPaddedDecimalString(_yearMonth_.[[ISODate]].[[Month]], 2).
         1. Let _result_ be the string-concatenation of _year_, the code unit 0x002D (HYPHEN-MINUS), and _month_.
-        1. Let _calendarID_ be ? ToString(_yearMonth_.[[Calendar]]).
-        1. If _calendarID_ is not *"iso8601"*, then
-          1. Let _day_ be _yearMonth_.[[ISODay]] formatted as a two-digit decimal number, padded to the left with a zero if necessary.
+        1. If _showCalendar_ is one of ~always~ or ~critical~, or if _yearMonth_.[[Calendar]] is not *"iso8601"*, then
+          1. Let _day_ be ToZeroPaddedDecimalString(_yearMonth_.[[ISODate]].[[Day]], 2).
           1. Set _result_ to the string-concatenation of _result_, the code unit 0x002D (HYPHEN-MINUS), and _day_.
-        1. Let _calendarString_ be ! FormatCalendarAnnotation(_calendarID_, _showCalendar_).
+        1. Let _calendarString_ be FormatCalendarAnnotation(_yearMonth_.[[Calendar]], _showCalendar_).
         1. Set _result_ to the string-concatenation of _result_ and _calendarString_.
         1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-differencetemporalplainyearmonth" type="abstract operation">
+      <h1>
+        DifferenceTemporalPlainYearMonth (
+          _operation_: ~since~ or ~until~,
+          _yearMonth_: a Temporal.PlainYearMonth,
+          _other_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.Duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It computes the difference between the two times represented by _yearMonth_ and _other_, optionally rounds it, and returns it as a Temporal.Duration object.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _other_ to ? ToTemporalYearMonth(_other_).
+        1. Let _calendar_ be _yearMonth_.[[Calendar]].
+        1. If CalendarEquals(_calendar_, _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _settings_ be ? GetDifferenceSettings(_operation_, _resolvedOptions_, ~date~, « ~week~, ~day~ », ~month~, ~year~).
+        1. If CompareISODate(_yearMonth_.[[ISODate]], _other_.[[ISODate]]) = 0, then
+          1. Return ! CreateTemporalDuration(0, 0, 0, 0, 0, 0, 0, 0, 0, 0).
+        1. Let _thisFields_ be ISODateToFields(_calendar_, _yearMonth_.[[ISODate]], ~year-month~).
+        1. Set _thisFields_.[[Day]] to 1.
+        1. Let _thisDate_ be ? CalendarDateFromFields(_calendar_, _thisFields_, ~constrain~).
+        1. Let _otherFields_ be ISODateToFields(_calendar_, _yearMonth_.[[ISODate]], ~year-month~).
+        1. Set _otherFields_.[[Day]] to 1.
+        1. Let _otherDate_ be ? CalendarDateFromFields(_calendar_, _otherFields_, ~constrain~).
+        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _thisDate_, _otherDate_, _settings_.[[LargestUnit]]).
+        1. Let _yearsMonthsDifference_ be ! AdjustDateDurationRecord(_dateDifference_, 0, 0).
+        1. Let _duration_ be ! CombineDateAndTimeDuration(_yearsMonthsDifference_, 0).
+        1. If _settings_.[[SmallestUnit]] is not ~month~ or _settings_.[[RoundingIncrement]] ≠ 1, then
+          1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_thisDate_, MidnightTimeRecord()).
+          1. Let _isoDateTimeOther_ be CombineISODateAndTimeRecord(_otherDate_, MidnightTimeRecord()).
+          1. Let _destEpochNs_ be GetUTCEpochNanoseconds(_isoDateTimeOther_).
+          1. Set _duration_ to ? RoundRelativeDuration(_duration_, _destEpochNs_, _isoDateTime_, ~unset~, _calendar_, _settings_.[[LargestUnit]], _settings_.[[RoundingIncrement]], _settings_.[[SmallestUnit]], _settings_.[[RoundingMode]]).[[Duration]].
+        1. Let _result_ be ? TemporalDurationFromInternal(_duration_, ~day~).
+        1. If _operation_ is ~since~, set _result_ to CreateNegatedTemporalDuration(_result_).
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-adddurationtoyearmonth" type="abstract operation">
+      <h1>
+        AddDurationToYearMonth (
+          _operation_: ~add~ or ~subtract~,
+          _yearMonth_: a Temporal.PlainYearMonth,
+          _temporalDurationLike_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainYearMonth or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It adds/subtracts _temporalDurationLike_ to/from _yearMonth_, returning a point in time that is in the future/past relative to _yearMonth_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _duration_ be ? ToTemporalDuration(_temporalDurationLike_).
+        1. If _operation_ is ~subtract~, set _duration_ to CreateNegatedTemporalDuration(_duration_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _sign_ be DurationSign(_duration_).
+        1. Let _calendar_ be _yearMonth_.[[Calendar]].
+        1. Let _fields_ be ISODateToFields(_calendar_, _yearMonth_.[[ISODate]], ~year-month~).
+        1. Set _fields_.[[Day]] to 1.
+        1. Let _intermediateDate_ be ? CalendarDateFromFields(_calendar_, _fields_, ~constrain~).
+        1. If _sign_ &lt; 0, then
+          1. Let _oneMonthDuration_ be ! CreateDateDurationRecord(0, 1, 0, 0).
+          1. Let _nextMonth_ be ? CalendarDateAdd(_calendar_, _intermediateDate_, _oneMonthDuration_, ~constrain~).
+          1. Let _date_ be BalanceISODate(_nextMonth_.[[Year]], _nextMonth_.[[Month]], _nextMonth_.[[Day]] - 1).
+          1. Assert: ISODateWithinLimits(_date_) is *true*.
+        1. Else,
+          1. Let _date_ be _intermediateDate_.
+        1. Let _durationToAdd_ be ? ToDateDurationRecordWithoutTime(_duration_).
+        1. Let _addedDate_ be ? CalendarDateAdd(_calendar_, _date_, _durationToAdd_, _overflow_).
+        1. Let _addedDateFields_ be ISODateToFields(_calendar_, _addedDate_, ~year-month~).
+        1. Let _isoDate_ be ? CalendarYearMonthFromFields(_calendar_, _addedDateFields_, _overflow_).
+        1. Return ! CreateTemporalYearMonth(_isoDate_, _calendar_).
       </emu-alg>
     </emu-clause>
   </emu-clause>

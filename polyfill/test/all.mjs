@@ -1,4 +1,4 @@
-#! /usr/bin/env -S node --experimental-modules
+#! /usr/bin/env -S node
 
 /*
  ** Copyright (C) 2018-2019 Bloomberg LP. All rights reserved.
@@ -8,28 +8,17 @@
 import Demitasse from '@pipobscure/demitasse';
 import Pretty from '@pipobscure/demitasse-pretty';
 
-// tests with long tedious output
+// exhaustive date arithmetic tests, not suitable for test262
 import './datemath.mjs';
-import './regex.mjs';
 
-// tests of internals
+// tests of internals, not suitable for test262
 import './ecmascript.mjs';
 
-// tests of public API
-import './now.mjs';
-import './timezone.mjs';
-import './instant.mjs';
-import './zoneddatetime.mjs';
-import './plaindate.mjs';
-import './plaintime.mjs';
-import './plaindatetime.mjs';
-import './duration.mjs';
-import './plainyearmonth.mjs';
-import './intl.mjs';
+// Power-of-10 math
+import './math.mjs';
 
-// tests of userland objects
-import './usertimezone.mjs';
-import './usercalendar.mjs';
+// Internal 96-bit integer implementation, not suitable for test262
+import './timeduration.mjs';
 
 Promise.resolve()
   .then(() => {

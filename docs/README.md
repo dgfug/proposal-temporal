@@ -31,18 +31,15 @@ A cookbook to help you get started and learn the ins and outs of Temporal is ava
 The Temporal API follows a convention of using types whose names start with "Plain" (like `Temporal.PlainDate`, `Temporal.PlainTime`, and `Temporal.PlainDateTime`) for objects which do not have an associated time zone.
 Converting between such types and exact time types (`Temporal.Instant` and `Temporal.ZonedDateTime`) can be ambiguous because of time zones and daylight saving time, and the Temporal API lets developers configure how this ambiguity is resolved.
 
-Several important concepts are explained elsewhere: [exact time, wall-clock time, time zones, DST, handling ambiguity, and more](./ambiguity.md).
+Several important concepts are explained elsewhere: [exact time, wall-clock time, time zones, DST, handling ambiguity, and more](./timezone.md).
 
 ### **Temporal.Now**
 
-- `Temporal.Now.instant()` - get the exact time since [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)
-- `Temporal.Now.timeZone()` - get the current system time zone
-- `Temporal.Now.zonedDateTime(calendar)` - get the current date and wall-clock time in the system time zone and specified calendar
+- `Temporal.Now.instant()` - get the current system exact time
+- `Temporal.Now.timeZoneId()` - get the current system time zone
 - `Temporal.Now.zonedDateTimeISO()` - get the current date and wall-clock time in the system time zone and ISO-8601 calendar
-- `Temporal.Now.plainDate(calendar)` - get the current date in the system time zone and specified calendar
 - `Temporal.Now.plainDateISO()` - get the current date in the system time zone and ISO-8601 calendar
 - `Temporal.Now.plainTimeISO()` - get the current wall-clock time in the system time zone and ISO-8601 calendar
-- `Temporal.Now.plainDateTime(calendar)` - get the current system date/time in the system time zone, but return an object that doesn't remember its time zone so should NOT be used to derive other values (e.g. 12 hours later) in time zones that use Daylight Saving Time (DST).
 - `Temporal.Now.plainDateTimeISO()` - same as above, but return the DateTime in the ISO-8601 calendar
 
 ```js
@@ -56,7 +53,7 @@ See [Temporal.Now Documentation](./now.md) for detailed documentation.
 ### **Temporal.Instant**
 
 A `Temporal.Instant` represents a fixed point in time (called **"exact time"**), without regard to calendar or location, e.g. July 20, 1969, at 20:17 UTC.
-For a human-readable local calendar date or clock time, use a `Temporal.TimeZone` and `Temporal.Calendar` to obtain a `Temporal.ZonedDateTime` or `Temporal.PlainDateTime`.
+For a human-readable local calendar date or clock time, use a time zone and calendar identifier to obtain a `Temporal.ZonedDateTime` or `Temporal.PlainDateTime`.
 
 ```js
 const instant = Temporal.Instant.from('1969-07-20T20:17Z');
@@ -86,7 +83,7 @@ const zonedDateTime = Temporal.ZonedDateTime.from({
 }); // => 1995-12-07T03:24:30.0000035-08:00[America/Los_Angeles]
 ```
 
-As the broadest `Temporal` type, `Temporal.ZonedDateTime` can be considered a combination of `Temporal.TimeZone`, `Temporal.Instant`, and `Temporal.PlainDateTime` (which includes `Temporal.Calendar`).
+As the broadest `Temporal` type, `Temporal.ZonedDateTime` can be considered a combination of `Temporal.Instant` and `Temporal.PlainDateTime` with a time zone identifier.
 
 See [Temporal.ZonedDateTime Documentation](./zoneddatetime.md) for detailed documentation.
 
@@ -129,7 +126,7 @@ See [Temporal.PlainTime Documentation](./plaintime.md) for detailed documentatio
 
 A `Temporal.PlainDateTime` represents a calendar date and wall-clock time that does not carry time zone information, e.g. December 7th, 1995 at 3:00 PM (in the Gregorian calendar).
 
-It can be converted to a `Temporal.ZonedDateTime` using a `Temporal.TimeZone`.
+It can be converted to a `Temporal.ZonedDateTime` using time zone identifier.
 For use cases that require a time zone, especially using arithmetic or other derived values, consider using `Temporal.ZonedDateTime` instead because that type automatically adjusts for Daylight Saving Time.
 
 ```js
@@ -195,62 +192,41 @@ Unlike the other Temporal types, the units in `Temporal.Duration` don't naturall
 
 See [Duration balancing](./balancing.md) for more on this topic.
 
-### **Temporal.TimeZone**
+### Time Zones
 
-A `Temporal.TimeZone` represents an IANA time zone, a specific UTC offset, or UTC itself.
-Time zones translate from a date/time in UTC to a local date/time.
-Because of this `Temporal.TimeZone` can be used to convert between `Temporal.Instant` and `Temporal.PlainDateTime` as well as finding out the offset at a specific `Temporal.Instant`.
+A time zone in ECMAScript is usually represented by an IANA Time Zone Database identifier such as `'America/Los_Angeles'`, `'Asia/Tokyo'`, or `'UTC'`.
+Fixed-offset time zone identifiers like `'+05:30'` may also be used, although this usage is discouraged because offsets for a particular location may change in response to political changes.
 
-It is also possible to implement your own time zones.
+Time zones translate between a date/time in UTC to a local calendar date and wall clock time.
+`Temporal.ZonedDateTime` provides built-in support for time-zone-aware applications.
+A time zone is required to convert from `Temporal.Instant` or `Temporal.PlainDateTime` to `Temporal.ZonedDateTime`.
 
-```js
-const timeZone = Temporal.TimeZone.from('Africa/Cairo');
-timeZone.getInstantFor('2000-01-01T00:00'); // => 1999-12-31T22:00:00Z
-timeZone.getPlainDateTimeFor('2000-01-01T00:00Z'); // => 2000-01-01T02:00:00
-timeZone.getPreviousTransition(Temporal.Now.instant()); // => 2014-09-25T21:00:00Z
-timeZone.getNextTransition(Temporal.Now.instant()); // => null
-```
+See [`Temporal.ZonedDateTime` Documentation](./zoneddatetime.md) for more information.
+A conceptual explanation of handling [time zones, DST, and ambiguity in Temporal](./timezone.md) is also available.
 
-See [Temporal.TimeZone Documentation](./timezone.md) for detailed documentation.
-A conceptual explanation of handling [time zones, DST, and ambiguity in Temporal](./ambiguity.md) is also available.
+### Calendars
 
-### **Temporal.Calendar**
-
-A `Temporal.Calendar` represents a calendar system.
+Temporal supports multiple calendar systems.
 Most code will use the ISO 8601 calendar, but other calendar systems are available.
 
-Dates have associated `Temporal.Calendar` objects, to perform calendar-related math.
-Under the hood, this math is done by methods on the calendars.
+Dates have associated calendar IDs, to perform calendar-related math.
 
-It is also possible to implement your own calendars.
+See [Calendars in Temporal](./calendars.md) for detailed documentation.
 
-```js
-const cal = Temporal.Calendar.from('iso8601');
-const date = cal.dateFromFields({ year: 1999, month: 12, day: 31 }, {});
-date.monthsInYear; // => 12
-date.daysInYear; // => 365
-```
-
-See [Temporal.Calendar Documentation](./calendar.md) for detailed documentation.
-
-## Object Relationship
+## Object relationship
 
 <img src="object-model.svg">
 
-## String Persistence
+## String persistence, parsing, and formatting
 
 All `Temporal` types have a string representation for persistence and interoperability.
-The correspondence between types and strings is shown below.
-For more information about extensions to the ISO 8601 / RFC 3339 standards that are used by Temporal and which are intended to be put on a standards track, see [ISO string extensions](./iso-string-ext.md).
+The correspondence between types and machine-readable strings is shown below.
+For more information about string parsing, serialization, and formatting in `Temporal` (including how Temporal is using industry standards like ISO 8601 and RFC 3339), see [String Parsing, Serialization, and Formatting](./strings.md).
 
 <img src="persistence-model.svg">
 
-## Other Documentation
+## Other documentation
 
-### **Key Concepts**
-
-- [Ambiguity](./ambiguity.md) &mdash; Explanation of missing times and double times due to daylight saving and time zone changes.
+- [Time Zones and Resolving Ambiguity](./timezone.md) &mdash; Explanation of missing times and double times due to daylight saving and time zone changes.
 - [Balancing](./balancing.md) &mdash; Explanation of when `Temporal.Duration` units wrap around to 0 and when they don't.
-- [ISO String Extensions](./iso-string-ext.md) &mdash; Discussion of extensions to the ISO 8601 and/or RFC 3339 standards which are used by `Temporal`.
-- [Why do Temporal instances have a Calendar?](./calendar-review.md) &mdash; Background about why types like `Temporal.PlainDate` or `Temporal.PlainDate` contain a calendar.
-  These extensions are being actively worked on with IETF to get them on a standards track.
+- [Why do Temporal instances have a Calendar?](./calendar-review.md) &mdash; Background about why types like `Temporal.PlainDate` or `Temporal.ZonedDateTime` contain a calendar.

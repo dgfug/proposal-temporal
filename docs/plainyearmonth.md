@@ -13,31 +13,34 @@ A `Temporal.PlainYearMonth` can be converted into a `Temporal.PlainDate` by comb
 
 ## Constructor
 
-### **new Temporal.PlainYearMonth**(_isoYear_: number, _isoMonth_: number, _calendar_?: string | object, _referenceISODay_: number = 1) : Temporal.PlainYearMonth
+### **new Temporal.PlainYearMonth**(_isoYear_: number, _isoMonth_: number, _calendar_: string = "iso8601", _referenceISODay_: number = 1) : Temporal.PlainYearMonth
 
 **Parameters:**
 
 - `isoYear` (number): A year.
 - `isoMonth` (number): A month, ranging between 1 and 12 inclusive.
-- `calendar` (optional `Temporal.Calendar`, plain object, or string): A calendar to project the month into.
+- `calendar` (optional string): A calendar to project the month into.
 - `referenceISODay` (optional for ISO 8601 calendar; required for other calendars): A reference day, used for disambiguation when implementing calendar systems.
   For the ISO 8601 calendar, this parameter will default to 1 if omitted.
-  For other calendars, the must set this parameter to the ISO-calendar day corresponding to the first day of the desired calendar year and month.
+  For other calendars, this parameter must be the ISO-calendar day corresponding to the first day of the desired calendar year and month.
 
 > The `calendar` and `referenceISODay` parameters should be avoided because `equals` or `compare` will consider `new Temporal.PlainYearMonth(2000, 3, 'iso8601', 14)` and `PlainYearMonth(2000, 3, 'iso8601', 1)` unequal even though they refer to the same year and month.
-> When creating instances for non-ISO-8601 calendars (except when implementing a custom calendar) use the `from()` method which will automatically set a valid and `equals`-compatible reference day.
+> When creating instances for non-ISO-8601 calendars use the `from()` method which will automatically set a valid and `equals`-compatible reference day.
 
 > NOTE: To avoid infinite recursion, `referenceISODay` is accepted as-is without validating that the day provided is actually the first day of the month in the desired calendar system.
 > This lack of validation means that `equals` or `compare` may return `false` for `Temporal.PlainYearMonth` instances where the year and month and day are identical, but the reference days don't match.
-> For this reason, it is STRONGLY recommended that this constructor SHOULD NOT be used except when implementing a custom calendar or when only using the ISO 8601 calendar.
+> For this reason, it is STRONGLY recommended that this constructor SHOULD NOT be used except when only using the ISO 8601 calendar.
 > For other calendars, use `Temporal.PlainYearMonth.from()` which will automatically set the correct always set the `referenceISODay` to the first of the month when constructing the new object.
 
 **Returns:** a new `Temporal.PlainYearMonth` object.
 
 All values are given as reckoned in the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates).
+Together, `isoYear`, `isoMonth`, and `referenceISODay` must represent a valid date in that calendar, even if you are passing a different calendar as the `calendar` parameter.
 
 The range of allowed values for this type is exactly enough that calling [`toPlainYearMonth()`](./plaindate.md#toPlainYearMonth) on any valid `Temporal.PlainDate` will succeed.
 If `isoYear` and `isoMonth` are outside of this range, then this function will throw a `RangeError`.
+
+`calendar` is a string containing the identifier of a built-in calendar, such as `'islamic'` or `'gregory'`.
 
 > **NOTE**: The `isoMonth` argument ranges from 1 to 12, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 
@@ -51,16 +54,16 @@ ym = new Temporal.PlainYearMonth(2019, 6);
 
 ## Static methods
 
-### Temporal.PlainYearMonth.**from**(_thing_: any, _options_?: object) : Temporal.PlainYearMonth
+### Temporal.PlainYearMonth.**from**(_item_: Temporal.PlainYearMonth | object | string, _options_?: object) : Temporal.PlainYearMonth
 
 **Parameters:**
 
-- `thing`: The value representing the desired month.
+- `item`: a value convertible to a `Temporal.PlainYearMonth`.
 - `options` (optional object): An object with properties representing options for constructing the date.
   The following options are recognized:
-  - `overflow` (string): How to deal with out-of-range values if `thing` is an object.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+  - `overflow` (string): How to deal with out-of-range values if `item` is an object.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainYearMonth` object.
 
@@ -69,23 +72,25 @@ If the value is another `Temporal.PlainYearMonth` object, a new object represent
 If the value is any other object, it must have `year` (or `era` and `eraYear`), `month` (or `monthCode`) properties, and optionally a `calendar` property.
 A `Temporal.PlainYearMonth` will be constructed from these properties.
 
-If the `calendar` property is not present, it will be assumed to be `Temporal.Calendar.from('iso8601')`, the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates).
+If the `calendar` property is not present, it's assumed to be `'iso8601'` (identifying the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates)).
 In this calendar, `era` is ignored.
 
-Any non-object value is converted to a string, which is expected to be in ISO 8601 format.
+If the value is not an object, it must be a string, which is expected to be in ISO 8601 format.
 Any parts of the string other than the year and the month are optional and will be ignored.
+
 If the string isn't valid according to ISO 8601, then a `RangeError` will be thrown regardless of the value of `overflow`.
+A `RangeError` will also be thrown for strings that contain a `Z` in place of a numeric UTC offset, because interpreting these strings as a local date is usually a bug.
 
-The `overflow` option works as follows, if `thing` is an object:
+The `overflow` option works as follows, if `item` is an object:
 
-- In `constrain` mode (the default), any out-of-range values are clamped to the nearest in-range value.
-- In `reject` mode, the presence of out-of-range values will cause the function to throw a `RangeError`.
+- In `'constrain'` mode (the default), any out-of-range values are clamped to the nearest in-range value (after assuming extension of eras over arbitrary years to substitute `era` and `eraYear` with appropriate values for the `item`).
+- In `'reject'` mode, the presence of out-of-range values (after assuming extension of eras over arbitrary years to substitute `era` and `eraYear` with appropriate values for the `item`) will cause the function to throw a `RangeError`.
 
-The `overflow` option is ignored if `thing` is a string.
+The `overflow` option is ignored if `item` is a string.
 
 Additionally, if the result is earlier or later than the range of dates that `Temporal.PlainYearMonth` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then this method will throw a `RangeError` regardless of `overflow`.
 
-> **NOTE**: The allowed values for the `thing.month` property start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
+> **NOTE**: The allowed values for the `item.month` property start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 
 Example usage:
 
@@ -94,7 +99,6 @@ Example usage:
 ym = Temporal.PlainYearMonth.from('2019-06'); // => 2019-06
 ym = Temporal.PlainYearMonth.from('2019-06-24'); // => 2019-06
 ym = Temporal.PlainYearMonth.from('2019-06-24T15:43:27'); // => 2019-06
-ym = Temporal.PlainYearMonth.from('2019-06-24T15:43:27Z'); // => 2019-06
 ym = Temporal.PlainYearMonth.from('2019-06-24T15:43:27+01:00[Europe/Brussels]');
   // => 2019-06
 ym === Temporal.PlainYearMonth.from(ym); // => false
@@ -124,14 +128,14 @@ ym = Temporal.PlainYearMonth.from({ year: 2001, month: 13 }, { overflow: 'reject
 Compares two `Temporal.PlainYearMonth` objects.
 Returns an integer indicating whether `one` comes before or after or is equal to `two`.
 
-- &minus;1 if `one` comes before `two`;
-- 0 if `one` and `two` are the same month and their `calendar` properties are also the same;
-- 1 if `one` comes after `two`.
+- &minus;1 if `one` comes before `two`
+- 0 if `one` and `two` start on the same date when projected into the ISO 8601 calendar
+- 1 if `one` comes after `two`
 
 If `one` and `two` are not `Temporal.PlainYearMonth` objects, then they will be converted to one as if they were passed to `Temporal.PlainYearMonth.from()`.
 
-Note that this function will not return 0 if the two objects have different `calendar` properties, even if the actual years and months are equal.
-If the months are equal, then `.calendar.id` will be compared lexicographically, in order to ensure a deterministic sort order.
+Comparison is based on the first day of the month in the real world, regardless of the `calendar`.
+For example, this method returns `0` for months that start on the same day in the ISO 8601 calendar, even if their calendars describe that day with a different `year` and/or `month`.
 
 This function can be used to sort arrays of `Temporal.PlainYearMonth` objects.
 For example:
@@ -154,9 +158,9 @@ sorted.join(' '); // => '1930-02 2006-08 2015-07'
 
 The above read-only properties allow accessing the year or month individually.
 
-- `year` is a signed integer representing the number of years relative to a calendar-specific anchor date.
+- `year` is a signed integer representing the number of years relative to a calendar-specific epoch.
   For calendars that use eras, the anchor is usually aligned with the latest era so that `eraYear === year` for all dates in that era.
-  However, some calendars like Japanese may use a different anchor.
+  However, some calendars use a different anchor (e.g., the Japanese calendar `year` matches the ISO 8601 and Gregorian calendars in counting from ISO year 0001 as `1`).
 - `month` is a positive integer representing the ordinal index of the month in the current year.
   For calendars like Hebrew or Chinese that use leap months, the same-named month may have a different `month` value depending on the year.
   The first month in every year has `month` equal to `1`.
@@ -164,11 +168,11 @@ The above read-only properties allow accessing the year or month individually.
   `month` values start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 - `monthCode` is a calendar-specific string that identifies the month in a year-independent way.
   For common (non-leap) months, `monthCode` should be `` `M${month}` ``, where `month` is zero padded up to two digits.
-  For uncommon (leap) months in lunisolar calendars like Hebrew or Chinese, the month code is the previous month's code with with an "L" suffix appended.
+  For uncommon (leap) months in lunisolar calendars like Hebrew or Chinese, the month code is the previous month's code with an "L" suffix appended.
   Examples: `'M02'` => February; `'M08L'` => repeated 8th month in the Chinese calendar; `'M05L'` => Adar I in the Hebrew calendar.
 
 Either `month` or `monthCode` can be used in `from` or `with` to refer to the month.
-Similarly, in calendars that user eras an `era`/`eraYear` pair can be used in place of `year` when calling `from` or `with`.
+Similarly, in calendars that use eras, an `era`/`eraYear` pair can be used in place of `year` when calling `from` or `with`.
 
 Usage examples:
 
@@ -184,9 +188,9 @@ ym.month; // => 6
 ym.monthCode; // => 'M05L'
 ```
 
-### yearMonth.**calendar** : object
+### yearMonth.**calendarId** : object
 
-The `calendar` read-only property gives the calendar that the `year` and `month` properties are interpreted in.
+The `calendarId` read-only property gives the identifier of the calendar that the `year`, `month`, and `monthCode` properties are interpreted in.
 
 ### yearMonth.**era** : string | undefined
 
@@ -264,6 +268,8 @@ ym.monthsInYear; // => 12
 The `inLeapYear` read-only property tells whether the year that the date falls in is a leap year or not.
 Its value is `true` if the year is a leap year, and `false` if not.
 
+NOTE: A "leap year" is a year that contains more days than other years (for solar or lunar calendars) or more months than other years (for lunisolar calendars like Hebrew or Chinese). In the ISO 8601 calendar, a year is a leap year (and has exactly one extra day, February 29) if it is evenly divisible by 4 but not 100 or if it is evenly divisible by 400.
+
 Usage example:
 
 ```javascript
@@ -284,8 +290,8 @@ ym.with({ year: 2100 }).inLeapYear; // => false
 - `options` (optional object): An object with properties representing options for the operation.
   The following options are recognized:
   - `overflow` (string): How to deal with out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainYearMonth` object.
 
@@ -317,8 +323,8 @@ ym.with({ month: 12 }); // => 2019-12
 - `options` (optional object): An object with properties representing options for the addition.
   The following options are recognized:
   - `overflow` (string): How to deal with additions that result in out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainYearMonth` object which is the month indicated by `yearMonth` plus `duration`.
 
@@ -327,9 +333,12 @@ This method adds `duration` to `yearMonth`, returning a month that is in the fut
 The `duration` argument is an object with properties denoting a duration, such as `{ months: 5 }`, or a string such as `P5M`, or a `Temporal.Duration` object.
 If `duration` is not a `Temporal.Duration` object, then it will be converted to one as if it were passed to `Temporal.Duration.from()`.
 
+If `duration` has any units smaller than `months`, they will be treated as if they are being added to the first moment of the month given by `yearMonth`.
+Effectively, this means that adding things like `{ days: 1 }` will be ignored.
+
 If the result is earlier or later than the range of dates that `Temporal.PlainYearMonth` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then this method will throw a `RangeError` regardless of `overflow`.
 
-The `overflow` option has no effect in the default ISO calendar, because a year is always 12 months and therefore not ambiguous.
+The `overflow` option has no effect in the default ISO 8601 calendar, because a year is always 12 months and therefore not ambiguous.
 It doesn't matter in this case that years and months can be different numbers of days, as the resolution of `Temporal.PlainYearMonth` does not distinguish days.
 However, `overflow` may have an effect in other calendars where years can be different numbers of months.
 
@@ -350,8 +359,8 @@ ym.add({ years: 20, months: 4 }); // => 2039-10
 - `options` (optional object): An object with properties representing options for the subtraction.
   The following options are recognized:
   - `overflow` (string): How to deal with additions that result in out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.PlainYearMonth` object which is the month indicated by `yearMonth` minus `duration`.
 
@@ -360,9 +369,12 @@ This method subtracts `duration` from `yearMonth`, returning a month that is in 
 The `duration` argument is an object with properties denoting a duration, such as `{ months: 5 }`, or a string such as `P5M`, or a `Temporal.Duration` object.
 If `duration` is not a `Temporal.Duration` object, then it will be converted to one as if it were passed to `Temporal.Duration.from()`.
 
+If `duration` has any units smaller than `months`, they will be treated as if they are being subtracted from the last moment of the month given by `yearMonth`.
+Effectively, this means that subtracting things like `{ days: 1 }` will be ignored.
+
 If the result is earlier or later than the range of dates that `Temporal.PlainYearMonth` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then this method will throw a `RangeError` regardless of `overflow`.
 
-The `overflow` option has no effect in the default ISO calendar, because a year is always 12 months and therefore not ambiguous.
+The `overflow` option has no effect in the default ISO 8601 calendar, because a year is always 12 months and therefore not ambiguous.
 It doesn't matter in this case that years and months can be different numbers of days, as the resolution of `Temporal.PlainYearMonth` does not distinguish days.
 However, `overflow` may have an effect in other calendars where years can be different numbers of months.
 
@@ -391,14 +403,14 @@ ym.subtract({ years: 20, months: 4 }); // => 1999-02
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time after `yearMonth` and until `other`.
 
 This method computes the difference between the two months represented by `yearMonth` and `other`, optionally rounds it, and returns it as a `Temporal.Duration` object.
 If `other` is earlier than `yearMonth` then the resulting duration will be negative.
-The returned `Temporal.Duration`, when added to `yearMonth` with the same `options`, will yield `other`.
+If using the default `options`, adding the returned `Temporal.Duration` to `yearMonth` will yield `other`.
 
 If `other` is not a `Temporal.PlainYearMonth` object, then it will be converted to one as if it were passed to `Temporal.PlainYearMonth.from()`.
 
@@ -452,7 +464,7 @@ ym.toPlainDate({ day: 1 }).until(other.toPlainDate({ day: 1 }), { largestUnit: '
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time before `yearMonth` and since `other`.
@@ -461,8 +473,7 @@ This method computes the difference between the two months represented by `yearM
 If `other` is later than `yearMonth` then the resulting duration will be negative.
 
 This method is similar to `Temporal.PlainYearMonth.prototype.until()`, but reversed.
-The returned `Temporal.Duration`, when subtracted from `yearMonth` using the same `options`, will yield `other`.
-Using default options, `ym1.since(ym2)` yields the same result as `ym1.until(ym2).negated()`, but results may differ with options like `{ largestUnit: 'month' }`.
+If using the default `options`, subtracting the returned `Temporal.Duration` from `yearMonth` will yield `other`, and `ym1.since(ym2)` will yield the same result as `ym1.until(ym2).negated()`.
 
 Usage example:
 
@@ -506,7 +517,7 @@ ym.equals(ym); // => true
 - `options` (optional object): An object with properties influencing the formatting.
   The following options are recognized:
   - `calendarName` (string): Whether to show the calendar annotation in the return value.
-    Valid values are `'auto'`, `'always'`, and `'never'`.
+    Valid values are `'auto'`, `'always'`, `'never'`, and `'critical'`.
     The default is `'auto'`.
 
 **Returns:** a string in the ISO 8601 date format representing `yearMonth`.
@@ -516,7 +527,8 @@ The string can be passed to `Temporal.PlainYearMonth.from()` to create a new `Te
 
 Normally, a calendar annotation is shown when `yearMonth`'s calendar is not the ISO 8601 calendar.
 By setting the `calendarName` option to `'always'` or `'never'` this can be overridden to always or never show the annotation, respectively.
-For more information on the calendar annotation, see [ISO string extensions](./iso-string-ext.md#calendar-systems).
+Normally not necessary, a value of `'critical'` is equivalent to `'always'` but the annotation will contain an additional `!` for certain interoperation use cases.
+For more information on the calendar annotation, see [the `Temporal` string formats documentation](./strings.md#calendar-systems).
 
 Example usage:
 
@@ -536,7 +548,7 @@ ym.toString(); // => '2019-06'
 
 This method overrides `Object.prototype.toLocaleString()` to provide a human-readable, language-sensitive representation of `yearMonth`.
 
-The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat).
+The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters).
 
 The calendar in the output locale (given by `new Intl.DateTimeFormat(locales, options).resolvedOptions().calendar`) must match `monthDay.calendar`, or this method will throw an exception.
 This is because it's not possible to convert a Temporal.PlainMonthDay from one calendar to another without more information.
@@ -626,20 +638,4 @@ Usage example:
 ```javascript
 ym = Temporal.PlainYearMonth.from('2019-06');
 ym.toPlainDate({ day: 24 }); // => 2019-06-24
-```
-
-### yearMonth.**getISOFields**(): { isoYear: number, isoMonth: number, isoDay: number, calendar: object }
-
-**Returns:** a plain object with properties expressing `yearMonth` in the ISO 8601 calendar, as well as the value of `yearMonth.calendar`.
-
-This method is mainly useful if you are implementing a custom calendar.
-Most code will not need to use it.
-
-The value of the `isoDay` property will be equal to the `referenceISODay` constructor argument passed when `yearMonth` was constructed.
-
-Usage example:
-
-```javascript
-ym = Temporal.PlainYearMonth.from('2019-06');
-ym.getISOFields().isoYear; // => 2019
 ```

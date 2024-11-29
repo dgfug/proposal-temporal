@@ -1,10 +1,12 @@
-<!doctype html>
+<!DOCTYPE html>
 <meta charset="utf8">
 
 <emu-clause id="sec-temporal-plaintime-objects">
   <h1>Temporal.PlainTime Objects</h1>
-  <p>A Temporal.PlainTime object is an Object that contains integers corresponding to a particular hour, minute,
-    second, millisecond, microsecond, and nanosecond.</p>
+  <p>
+    A Temporal.PlainTime object is an Object that contains integers corresponding to a particular hour, minute,
+    second, millisecond, microsecond, and nanosecond.
+  </p>
 
   <emu-clause id="sec-temporal-plaintime-constructor">
     <h1>The Temporal.PlainTime Constructor</h1>
@@ -26,31 +28,32 @@
 
     <emu-clause id="sec-temporal.plaintime">
       <h1>Temporal.PlainTime ( [ _hour_ [ , _minute_ [ , _second_ [ , _millisecond_ [ , _microsecond_ [ , _nanosecond_ ] ] ] ] ] ] )</h1>
-      <p>
-        When the `Temporal.PlainTime` function is called, the following steps are taken:
-      </p>
-      <emu-note>The value of ? ToIntegerThrowOnInfinity(*undefined*) is 0.</emu-note>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. If NewTarget is *undefined*, then
           1. Throw a *TypeError* exception.
-        1. Let _hour_ be ? ToIntegerThrowOnInfinity(_hour_).
-        1. Let _minute_ be ? ToIntegerThrowOnInfinity(_minute_).
-        1. Let _second_ be ? ToIntegerThrowOnInfinity(_second_).
-        1. Let _millisecond_ be ? ToIntegerThrowOnInfinity(_millisecond_).
-        1. Let _microsecond_ be ? ToIntegerThrowOnInfinity(_microsecond_).
-        1. Let _nanosecond_ be ? ToIntegerThrowOnInfinity(_nanosecond_).
-        1. Return ? CreateTemporalTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, NewTarget).
+        1. If _hour_ is *undefined*, set _hour_ to 0; else set _hour_ to ? ToIntegerWithTruncation(_hour_).
+        1. If _minute_ is *undefined*, set _minute_ to 0; else set _minute_ to ? ToIntegerWithTruncation(_minute_).
+        1. If _second_ is *undefined*, set _second_ to 0; else set _second_ to ? ToIntegerWithTruncation(_second_).
+        1. If _millisecond_ is *undefined*, set _millisecond_ to 0; else set _millisecond_ to ? ToIntegerWithTruncation(_millisecond_).
+        1. If _microsecond_ is *undefined*, set _microsecond_ to 0; else set _microsecond_ to ? ToIntegerWithTruncation(_microsecond_).
+        1. If _nanosecond_ is *undefined*, set _nanosecond_ to 0; else set _nanosecond_ to ? ToIntegerWithTruncation(_nanosecond_).
+        1. If IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
+        1. Let _time_ be CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Return ? CreateTemporalTime(_time_, NewTarget).
       </emu-alg>
     </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-properties-of-the-temporal-plaintime-constructor">
     <h1>Properties of the Temporal.PlainTime Constructor</h1>
-    <p>The value of the [[Prototype]] internal slot of the Temporal.PlainTime constructor is the intrinsic object
-      %Function.prototype%.</p>
+    <p>
+      The value of the [[Prototype]] internal slot of the Temporal.PlainTime constructor is the intrinsic object
+      %Function.prototype%.
+    </p>
     <p>The Temporal.PlainTime constructor has the following properties:</p>
 
-    <emu-clause id="sec-temporal-plaintime-prototype">
+    <emu-clause id="sec-temporal.plaintime.prototype">
       <h1>Temporal.PlainTime.prototype</h1>
       <p>The initial value of `Temporal.PlainTime.prototype` is %Temporal.PlainTime.prototype%.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
@@ -58,29 +61,19 @@
 
     <emu-clause id="sec-temporal.plaintime.from">
       <h1>Temporal.PlainTime.from ( _item_ [ , _options_ ] )</h1>
-      <p>
-        The `from` method takes two arguments, _item_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _overflow_ be ? ToTemporalOverflow(_options_).
-        1. If Type(_item_) is Object and _item_ has an [[InitializedTemporalTime]] internal slot, then
-          1. Return ? CreateTemporalTime(_item_.[[ISOHour]], _item_.[[ISOMinute]], _item_.[[ISOSecond]], _item_.[[ISOMillisecond]], _item_.[[ISOMicrosecond]], _item_.[[ISONanosecond]]).
-        1. Return ? ToTemporalTime(_item_, _overflow_).
+        1. Return ? ToTemporalTime(_item_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.compare">
       <h1>Temporal.PlainTime.compare ( _one_, _two_ )</h1>
-      <p>
-        The `compare` method takes two arguments, _one_ and _two_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. Set _one_ to ? ToTemporalTime(_one_).
         1. Set _two_ to ? ToTemporalTime(_two_).
-        1. Return 𝔽(! CompareTemporalTime(_one_.[[ISOHour]], _one_.[[ISOMinute]], _one_.[[ISOSecond]], _one_.[[ISOMillisecond]], _one_.[[ISOMicrosecond]], _one_.[[ISONanosecond]], _two_.[[ISOHour]], _two_.[[ISOMinute]], _two_.[[ISOSecond]], _two_.[[ISOMillisecond]], _two_.[[ISOMicrosecond]], _two_.[[ISONanosecond]])).
+        1. Return 𝔽(CompareTimeRecord(_one_.[[Time]], _two_.[[Time]])).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -100,27 +93,10 @@
       <p>The initial value of `Temporal.PlainTime.prototype.constructor` is %Temporal.PlainTime%.</p>
     </emu-clause>
 
-    <emu-clause id="sec-temporal.plaintime.prototype-@@tostringtag">
-      <h1>Temporal.PlainTime.prototype[ @@toStringTag ]</h1>
-      <p>
-        The initial value of the @@toStringTag property is the string value *"Temporal.PlainTime"*.
-      </p>
-      <p>
-        This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-      </p>
-    </emu-clause>
-
-    <emu-clause id="sec-get-temporal.plaintime.prototype.calendar">
-      <h1>get Temporal.PlainTime.prototype.calendar</h1>
-      <p>
-        `Temporal.PlainTime.prototype.calendar` is an accessor property whose set accessor function is *undefined*.
-        Its get accessor function performs the following steps:
-      </p>
-      <emu-alg>
-        1. Let _temporalTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return _temporalTime_.[[Calendar]].
-      </emu-alg>
+    <emu-clause id="sec-temporal.plaintime.prototype-%symbol.tostringtag%">
+      <h1>Temporal.PlainTime.prototype[ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String value *"Temporal.PlainTime"*.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
     </emu-clause>
 
     <emu-clause id="sec-get-temporal.plaintime.prototype.hour">
@@ -132,7 +108,7 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISOHour]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Hour]]).
       </emu-alg>
     </emu-clause>
 
@@ -145,7 +121,7 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISOMinute]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Minute]]).
       </emu-alg>
     </emu-clause>
 
@@ -158,7 +134,7 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISOSecond]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Second]]).
       </emu-alg>
     </emu-clause>
 
@@ -171,7 +147,7 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISOMillisecond]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Millisecond]]).
       </emu-alg>
     </emu-clause>
 
@@ -184,7 +160,7 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISOMicrosecond]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Microsecond]]).
       </emu-alg>
     </emu-clause>
 
@@ -197,303 +173,183 @@
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return 𝔽(_temporalTime_.[[ISONanosecond]]).
+        1. Return 𝔽(_temporalTime_.[[Time]].[[Nanosecond]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.add">
       <h1>Temporal.PlainTime.prototype.add ( _temporalDurationLike_ )</h1>
-      <p>
-        The `add` method takes one argument _temporalDurationLike_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Let _result_ be ! AddTime(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], _duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
-        1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-        1. Return ? CreateTemporalTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]).
+        1. Return ? AddDurationToTime(~add~, _temporalTime_, _temporalDurationLike_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.subtract">
       <h1>Temporal.PlainTime.prototype.subtract ( _temporalDurationLike_ )</h1>
-      <p>
-        The `subtract` method takes one argument _temporalDurationLike_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Let _result_ be ! AddTime(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], −_duration_.[[Hours]], −_duration_.[[Minutes]], −_duration_.[[Seconds]], −_duration_.[[Milliseconds]], −_duration_.[[Microseconds]], −_duration_.[[Nanoseconds]]).
-        1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-        1. Return ? CreateTemporalTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]).
+        1. Return ? AddDurationToTime(~subtract~, _temporalTime_, _temporalDurationLike_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.with">
       <h1>Temporal.PlainTime.prototype.with ( _temporalTimeLike_ [ , _options_ ] )</h1>
-      <p>
-        The `with` method takes two arguments, _temporalTimeLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. If Type(_temporalTimeLike_) is not Object, then
-          1. Throw a *TypeError* exception.
-        1. Perform ? RejectTemporalCalendarType(_temporalTimeLike_).
-        1. Let _calendarProperty_ be ? Get(_temporalTimeLike_, *"calendar"*).
-        1. If _calendarProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _timeZoneProperty_ be ? Get(_temporalTimeLike_, *"timeZone"*).
-        1. If _timeZoneProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _partialTime_ be ? ToPartialTime(_temporalTimeLike_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _overflow_ be ? ToTemporalOverflow(_options_).
+        1. If ? IsPartialTemporalObject(_temporalTimeLike_) is *false*, throw a *TypeError* exception.
+        1. Let _partialTime_ be ? ToTemporalTimeRecord(_temporalTimeLike_, ~partial~).
         1. If _partialTime_.[[Hour]] is not *undefined*, then
           1. Let _hour_ be _partialTime_.[[Hour]].
         1. Else,
-          1. Let _hour_ be _temporalTime_.[[ISOHour]].
+          1. Let _hour_ be _temporalTime_.[[Time]].[[Hour]].
         1. If _partialTime_.[[Minute]] is not *undefined*, then
           1. Let _minute_ be _partialTime_.[[Minute]].
         1. Else,
-          1. Let _minute_ be _temporalTime_.[[ISOMinute]].
+          1. Let _minute_ be _temporalTime_.[[Time]].[[Minute]].
         1. If _partialTime_.[[Second]] is not *undefined*, then
           1. Let _second_ be _partialTime_.[[Second]].
         1. Else,
-          1. Let _second_ be _temporalTime_.[[ISOSecond]].
+          1. Let _second_ be _temporalTime_.[[Time]].[[Second]].
         1. If _partialTime_.[[Millisecond]] is not *undefined*, then
           1. Let _millisecond_ be _partialTime_.[[Millisecond]].
         1. Else,
-          1. Let _millisecond_ be _temporalTime_.[[ISOMillisecond]].
+          1. Let _millisecond_ be _temporalTime_.[[Time]].[[Millisecond]].
         1. If _partialTime_.[[Microsecond]] is not *undefined*, then
           1. Let _microsecond_ be _partialTime_.[[Microsecond]].
         1. Else,
-          1. Let _microsecond_ be _temporalTime_.[[ISOMicrosecond]].
+          1. Let _microsecond_ be _temporalTime_.[[Time]].[[Microsecond]].
         1. If _partialTime_.[[Nanosecond]] is not *undefined*, then
           1. Let _nanosecond_ be _partialTime_.[[Nanosecond]].
         1. Else,
-          1. Let _nanosecond_ be _temporalTime_.[[ISONanosecond]].
+          1. Let _nanosecond_ be _temporalTime_.[[Time]].[[Nanosecond]].
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
         1. Let _result_ be ? RegulateTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _overflow_).
-        1. Return ? CreateTemporalTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]).
+        1. Return ! CreateTemporalTime(_result_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.until">
       <h1>Temporal.PlainTime.prototype.until ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `until` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Set _other_ to ? ToTemporalTime(_other_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"*, *"day"* », *"nanosecond"*).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"*, *"day"* », *"auto"*, *"hour"*).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Let _maximum_ be ! MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, _maximum_, *false*).
-        1. Let _result_ be ! DifferenceTime(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], _other_.[[ISOHour]], _other_.[[ISOMinute]], _other_.[[ISOSecond]], _other_.[[ISOMillisecond]], _other_.[[ISOMicrosecond]], _other_.[[ISONanosecond]]).
-        1. Set _result_ to ? RoundDuration(0, 0, 0, 0, _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
-        1. Set _result_ to ! BalanceDuration(0, _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]], _largestUnit_).
-        1. Return ? CreateTemporalDuration(0, 0, 0, 0, _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]]).
+        1. Return ? DifferenceTemporalPlainTime(~until~, _temporalTime_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.since">
       <h1>Temporal.PlainTime.prototype.since ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `since` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Set _other_ to ? ToTemporalTime(_other_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"*, *"day"* », *"nanosecond"*).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"*, *"day"* », *"auto"*, *"hour"*).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Set _roundingMode_ to ! NegateTemporalRoundingMode(_roundingMode_).
-        1. Let _maximum_ be ! MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, _maximum_, *false*).
-        1. Let _result_ be ! DifferenceTime(_other_.[[ISOHour]], _other_.[[ISOMinute]], _other_.[[ISOSecond]], _other_.[[ISOMillisecond]], _other_.[[ISOMicrosecond]], _other_.[[ISONanosecond]], _temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]]).
-        1. Set _result_ to ? RoundDuration(0, 0, 0, 0, −_result_.[[Hours]], −_result_.[[Minutes]], −_result_.[[Seconds]], −_result_.[[Milliseconds]], −_result_.[[Microseconds]], −_result_.[[Nanoseconds]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
-        1. Set _result_ to ! BalanceDuration(0, −_result_.[[Hours]], −_result_.[[Minutes]], −_result_.[[Seconds]], −_result_.[[Milliseconds]], −_result_.[[Microseconds]], −_result_.[[Nanoseconds]], _largestUnit_).
-        1. Return ? CreateTemporalDuration(0, 0, 0, 0, _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]]).
+        1. Return ? DifferenceTemporalPlainTime(~since~, _temporalTime_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.round">
-      <h1>Temporal.PlainTime.prototype.round ( _options_ )</h1>
-      <p>
-        The `round` method takes one argument _options_.
-        The following steps are taken:
-      </p>
+      <h1>Temporal.PlainTime.prototype.round ( _roundTo_ )</h1>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. If _options_ is *undefined*, then
+        1. If _roundTo_ is *undefined*, then
           1. Throw a *TypeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"*, *"day"* », *undefined*).
-        1. If _smallestUnit_ is *undefined*, throw a *RangeError* exception.
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"halfExpand"*).
-        1. If _smallestUnit_ is *"hour"*, then
-          1. Let _maximum_ be 24.
-        1. Else if _smallestUnit_ is *"minute"* or *"second"*, then
-          1. Let _maximum_ be 60.
+        1. If _roundTo_ is a String, then
+          1. Let _paramString_ be _roundTo_.
+          1. Set _roundTo_ to OrdinaryObjectCreate(*null*).
+          1. Perform ! CreateDataPropertyOrThrow(_roundTo_, *"smallestUnit"*, _paramString_).
         1. Else,
-          1. Let _maximum_ be 1000.
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, _maximum_, *false*).
-        1. Let _result_ be ! RoundTime(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
-        1. Return ? CreateTemporalTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]).
+          1. Set _roundTo_ to ? GetOptionsObject(_roundTo_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetRoundingIncrementOption reads *"roundingIncrement"* and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _roundingIncrement_ be ? GetRoundingIncrementOption(_roundTo_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_roundTo_, ~half-expand~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_roundTo_, *"smallestUnit"*, ~time~, ~required~).
+        1. Let _maximum_ be MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
+        1. Assert: _maximum_ is not ~unset~.
+        1. Perform ? ValidateTemporalRoundingIncrement(_roundingIncrement_, _maximum_, *false*).
+        1. Let _result_ be RoundTime(_temporalTime_.[[Time]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Return ! CreateTemporalTime(_result_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.equals">
       <h1>Temporal.PlainTime.prototype.equals ( _other_ )</h1>
-      <p>
-        The `equals` method takes one argument _other_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
         1. Set _other_ to ? ToTemporalTime(_other_).
-        1. If _temporalTime_.[[ISOHour]] ≠ _other_.[[ISOHour]], return *false*.
-        1. If _temporalTime_.[[ISOMinute]] ≠ _other_.[[ISOMinute]], return *false*.
-        1. If _temporalTime_.[[ISOSecond]] ≠ _other_.[[ISOSecond]], return *false*.
-        1. If _temporalTime_.[[ISOMillisecond]] ≠ _other_.[[ISOMillisecond]], return *false*.
-        1. If _temporalTime_.[[ISOMicrosecond]] ≠ _other_.[[ISOMicrosecond]], return *false*.
-        1. If _temporalTime_.[[ISONanosecond]] ≠ _other_.[[ISONanosecond]], return *false*.
-        1. Return *true*.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaintime.prototype.toplaindatetime">
-      <h1>Temporal.PlainTime.prototype.toPlainDateTime ( _temporalDate_ )</h1>
-      <p>
-        The `toPlainDateTime` method takes one argument _temporalDate_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _temporalTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Set _temporalDate_ to ? ToTemporalDate(_temporalDate_).
-        1. Return ? CreateTemporalDateTime(_temporalDate_.[[ISOYear]], _temporalDate_.[[ISOMonth]], _temporalDate_.[[ISODay]],
-          _temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]],
-          _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]],
-          _temporalDate_.[[Calendar]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaintime.prototype.tozoneddatetime">
-      <h1>Temporal.PlainTime.prototype.toZonedDateTime ( _item_ )</h1>
-      <p>
-        The `toZonedDateTime` method takes one argument _item_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _temporalTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. If Type(_item_) is not Object, then
-          1. Throw a *TypeError* exception.
-        1. Let _temporalDateLike_ be ? Get(_item_, *"plainDate"*).
-        1. If _temporalDateLike_ is *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _temporalDate_ be ? ToTemporalDate(_temporalDateLike_).
-        1. Let _temporalTimeZoneLike_ be ? Get(_item_, *"timeZone"*).
-        1. If _temporalTimeZoneLike_ is *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _timeZone_ be ? ToTemporalTimeZone(_temporalTimeZoneLike_).
-        1. Let _temporalDateTime_ be ? CreateTemporalDateTime(_temporalDate_.[[ISOYear]], _temporalDate_.[[ISOMonth]], _temporalDate_.[[ISODay]], _temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], _temporalDate_.[[Calendar]]).
-        1. Let _instant_ be ? BuiltinTimeZoneGetInstantFor(_timeZone_, _temporalDateTime_, *"compatible"*).
-        1. Return ! CreateTemporalZonedDateTime(_instant_.[[Nanoseconds]], _timeZone_, _temporalDate_.[[Calendar]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaintime.prototype.getisofields">
-      <h1>Temporal.PlainTime.prototype.getISOFields ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _temporalTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Let _fields_ be ! OrdinaryObjectCreate(%Object.prototype%).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"calendar"*, _temporalTime_.[[Calendar]]).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoHour"*, 𝔽(_temporalTime_.[[ISOHour]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMicrosecond"*, 𝔽(_temporalTime_.[[ISOMicrosecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMillisecond"*, 𝔽(_temporalTime_.[[ISOMillisecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMinute"*, 𝔽(_temporalTime_.[[ISOMinute]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoNanosecond"*, 𝔽(_temporalTime_.[[ISONanosecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoSecond"*, 𝔽(_temporalTime_.[[ISOSecond]])).
-        1. Return _fields_.
+        1. If CompareTimeRecord(_temporalTime_.[[Time]], _other_.[[Time]]) = 0, return *true*.
+        1. Return *false*.
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.tostring">
       <h1>Temporal.PlainTime.prototype.toString ( [ _options_ ] )</h1>
-      <p>
-        The `toString` method takes one argument _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _precision_ be ? ToSecondsStringPrecision(_options_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Let _roundResult_ be ! RoundTime(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], _precision_.[[Increment]], _precision_.[[Unit]], _roundingMode_).
-        1. Return ! TemporalTimeToString(_roundResult_.[[Hour]], _roundResult_.[[Minute]], _roundResult_.[[Second]], _roundResult_.[[Millisecond]], _roundResult_.[[Microsecond]], _roundResult_.[[Nanosecond]], _precision_.[[Precision]]).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetTemporalFractionalSecondDigitsOption reads *"fractionalSecondDigits"* and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _digits_ be ? GetTemporalFractionalSecondDigitsOption(_resolvedOptions_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_resolvedOptions_, ~trunc~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_resolvedOptions_, *"smallestUnit"*, ~time~, ~unset~).
+        1. If _smallestUnit_ is ~hour~, throw a *RangeError* exception.
+        1. Let _precision_ be ToSecondsStringPrecisionRecord(_smallestUnit_, _digits_).
+        1. Let _roundResult_ be RoundTime(_temporalTime_.[[Time]], _precision_.[[Increment]], _precision_.[[Unit]], _roundingMode_).
+        1. Return TimeRecordToString(_roundResult_, _precision_.[[Precision]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.tolocalestring">
       <h1>Temporal.PlainTime.prototype.toLocaleString ( [ _locales_ [ , _options_ ] ] )</h1>
       <p>
-        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement the `Temporal.PlainTime.prototype.toLocaleString` method as specified in the ECMA-402 specification. If an ECMAScript implementation does not include the ECMA-402 API the following specification of the `toLocaleString` method is used.
+        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement this method as specified in the ECMA-402 specification.
+        If an ECMAScript implementation does not include the ECMA-402 API the following specification of this method is used.
       </p>
-      <p>
-        The `toLocaleString` method takes two arguments, _locales_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>The meanings of the optional parameters to this method are defined in the ECMA-402 specification; implementations that do not include ECMA-402 support must not use those parameter positions for anything else.</p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return ! TemporalTimeToString(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], *"auto"*).
+        1. Return TimeRecordToString(_temporalTime_.[[Time]], ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.tojson">
       <h1>Temporal.PlainTime.prototype.toJSON ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _temporalTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_temporalTime_, [[InitializedTemporalTime]]).
-        1. Return ! TemporalTimeToString(_temporalTime_.[[ISOHour]], _temporalTime_.[[ISOMinute]], _temporalTime_.[[ISOSecond]], _temporalTime_.[[ISOMillisecond]], _temporalTime_.[[ISOMicrosecond]], _temporalTime_.[[ISONanosecond]], *"auto"*).
+        1. Return TimeRecordToString(_temporalTime_.[[Time]], ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaintime.prototype.valueof">
       <h1>Temporal.PlainTime.prototype.valueOf ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Throw a *TypeError* exception.
       </emu-alg>
+      <emu-note>
+        <p>
+          This method always throws, because in the absence of `valueOf()`, expressions with arithmetic operators such as `plainTime1 > plainTime2` would fall back to being equivalent to `plainTime1.toString() > plainTime2.toString()`.
+          Lexicographical comparison of serialized strings might not seem obviously wrong, because the result would sometimes be correct.
+          Implementations are encouraged to phrase the error message to point users to `Temporal.PlainTime.compare()`, `Temporal.PlainTime.prototype.equals()`, and/or `Temporal.PlainTime.prototype.toString()`.
+        </p>
+      </emu-note>
     </emu-clause>
   </emu-clause>
 
@@ -505,260 +361,329 @@
     </p>
     <emu-table id="table-internal-slots-of-temporaltime-instances" caption="Internal Slots of Temporal.PlainTime Instances">
       <table>
-        <tbody>
-          <tr>
-            <th>
-              Internal Slot
-            </th>
-            <th>
-              Description
-            </th>
-          </tr>
-          <tr>
-            <td>
-              [[InitializedTemporalTime]]
-            </td>
-            <td>
-              The only specified use of this slot is for distinguishing Temporal.PlainTime instances from other objects.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOHour]]
-            </td>
-            <td>
-              An integer between 0 and 23, inclusive, representing the hour of the day.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMinute]]
-            </td>
-            <td>
-              An integer between 0 and 59, inclusive, representing the minute of the hour.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOSecond]]
-            </td>
-            <td>
-              An integer between 0 and 59, inclusive, representing the second within the minute.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMillisecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the millisecond within the second.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMicrosecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the microsecond within the millisecond.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISONanosecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the nanosecond within the microsecond.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[Calendar]]
-            </td>
-            <td>
-              An instance of the built-in ISO 8601 calendar.
-            </td>
-          </tr>
-        </tbody>
+        <tr>
+          <th>
+            Internal Slot
+          </th>
+          <th>
+            Description
+          </th>
+        </tr>
+        <tr>
+          <td>
+            [[InitializedTemporalTime]]
+          </td>
+          <td>
+            The only specified use of this slot is for distinguishing Temporal.PlainTime instances from other objects.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Time]]
+          </td>
+          <td>
+            A Time Record.
+          </td>
+        </tr>
       </table>
     </emu-table>
   </emu-clause>
 
   <emu-clause id="sec-temporal-plaintime-abstract-ops">
-    <h1>Abstract operations</h1>
+    <h1>Abstract Operations</h1>
 
-    <emu-clause id="sec-temporal-differencetime" aoid="DifferenceTime">
-      <h1>DifferenceTime ( _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_ )</h1>
-      <emu-alg>
-        1. Assert: _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, and _ns2_ are integers.
-        1. Let _hours_ be _h2_ − _h1_.
-        1. Let _minutes_ be _min2_ − _min1_.
-        1. Let _seconds_ be _s2_ − _s1_.
-        1. Let _milliseconds_ be _ms2_ − _ms1_.
-        1. Let _microseconds_ be _mus2_ − _mus1_.
-        1. Let _nanoseconds_ be _ns2_ − _ns1_.
-        1. Let _sign_ be ! DurationSign(0, 0, 0, 0, _hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
-        1. Let _bt_ be ! BalanceTime(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
-        1. Return the Record {
-          [[Days]]: _bt_.[[Days]] × _sign_,
-          [[Hours]]: _bt_.[[Hour]] × _sign_,
-          [[Minutes]]: _bt_.[[Minute]] × _sign_,
-          [[Seconds]]: _bt_.[[Second]] × _sign_,
-          [[Milliseconds]]: _bt_.[[Millisecond]] × _sign_,
-          [[Microseconds]]: _bt_.[[Microsecond]] × _sign_,
-          [[Nanoseconds]]: _bt_.[[Nanosecond]] × _sign_
-          }.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-totemporaltime" aoid="ToTemporalTime">
-      <h1>ToTemporalTime ( _item_ [ , _overflow_ ] )</h1>
+    <emu-clause id="sec-temporal-time-records">
+      <h1>Time Records</h1>
       <p>
-        The abstract operation ToTemporalTime returns its argument _item_ if it is already a Temporal.PlainTime instance, converts _item_ to a new Temporal.PlainTime instance if possible, and throws otherwise.
+        A <dfn variants="Time Records">Time Record</dfn> is a Record value used to represent a valid clock time, together with a number of overflow days such as might occur in BalanceTime.
+        For any Time Record _t_, IsValidTime(_t_.[[Hour]], _t_.[[Minute]], _t_.[[Second]], _t_.[[Millisecond]], _t_.[[Microsecond]], _t_.[[Nanosecond]]) must return *true*.
       </p>
-      <emu-alg>
-        1. If _overflow_ is not present, set it to *"constrain"*.
-        1. Assert: _overflow_ is either *"constrain"* or *"reject"*.
-        1. If Type(_item_) is Object, then
-          1. If _item_ has an [[InitializedTemporalTime]] internal slot, then
-            1. Return _item_.
-          1. If _item_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
-            1. Let _instant_ be ! CreateTemporalInstant(_item_.[[Nanoseconds]]).
-            1. Set _plainDateTime_ to ? BuiltinTimeZoneGetPlainDateTimeFor(_item_.[[TimeZone]], _instant_, _item_.[[Calendar]]).
-            1. Return ! CreateTemporalTime(_plainDateTime_.[[ISOHour]], _plainDateTime_.[[ISOMinute]], _plainDateTime_.[[ISOSecond]], _plainDateTime_.[[ISOMillisecond]], _plainDateTime_.[[ISOMicrosecond]], _plainDateTime_.[[ISONanosecond]]).
-          1. If _item_ has an [[InitializedTemporalDateTime]] internal slot, then
-            1. Return ! CreateTemporalTime(_item_.[[ISOHour]], _item_.[[ISOMinute]], _item_.[[ISOSecond]], _item_.[[ISOMillisecond]], _item_.[[ISOMicrosecond]], _item_.[[ISONanosecond]]).
-          1. Let _calendar_ be ? GetTemporalCalendarWithISODefault(_item_).
-          1. If ? ToString(_calendar_) is not *"iso8601"*, then
-            1. Throw a *RangeError* exception.
-          1. Let _result_ be ? ToTemporalTimeRecord(_item_).
-          1. Set _result_ to ? RegulateTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _overflow_).
-        1. Else,
-          1. Let _string_ be ? ToString(_item_).
-          1. Let _result_ be ? ParseTemporalTimeString(_string_).
-          1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-          1. If _result_.[[Calendar]] is not one of *undefined* or *"iso8601"*, then
-            1. Throw a *RangeError* exception.
-        1. Return ? CreateTemporalTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-topartialtime" aoid="ToPartialTime">
-      <h1>ToPartialTime ( _temporalTimeLike_ )</h1>
-      <emu-alg>
-        1. Assert: Type(_temporalTimeLike_) is Object.
-        1. Let _result_ be the Record {
-          [[Hour]]: *undefined*,
-          [[Minute]]: *undefined*,
-          [[Second]]: *undefined*,
-          [[Millisecond]]: *undefined*,
-          [[Microsecond]]: *undefined*,
-          [[Nanosecond]]: *undefined*
-          }.
-        1. Let _any_ be *false*.
-        1. For each row of <emu-xref href="#table-temporal-temporaltimelike-properties"></emu-xref>, except the header row, in table order, do
-          1. Let _property_ be the Property value of the current row.
-          1. Let _value_ be ? Get(_temporalTimeLike_, _property_).
-          1. If _value_ is not *undefined*, then
-            1. Set _any_ to *true*.
-            1. Set _value_ to ? ToIntegerThrowOnInfinity(_value_).
-            1. Set _result_'s internal slot whose name is the Internal Slot value of the current row to _value_.
-        1. If _any_ is *false*, then
-          1. Throw a *TypeError* exception.
-        1. Return _result_.
-      </emu-alg>
-
-      <emu-table id="table-temporal-temporaltimelike-properties">
-        <emu-caption>Properties of a TemporalTimeLike</emu-caption>
+      <p>Time Records have the fields listed in <emu-xref href="#table-temporal-time-record-fields"></emu-xref>.</p>
+      <emu-table id="table-temporal-time-record-fields" caption="Time Record Fields">
         <table class="real-table">
-          <thead>
-            <tr>
-              <th>Internal Slot</th>
-              <th>Property</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>[[Hour]]</td>
-              <td>*"hour"*</td>
-            </tr>
-
-            <tr>
-              <td>[[Microsecond]]</td>
-              <td>*"microsecond"*</td>
-            </tr>
-
-            <tr>
-              <td>[[Millisecond]]</td>
-              <td>*"millisecond"*</td>
-            </tr>
-
-            <tr>
-              <td>[[Minute]]</td>
-              <td>*"minute"*</td>
-            </tr>
-
-            <tr>
-              <td>[[Nanosecond]]</td>
-              <td>*"nanosecond"*</td>
-            </tr>
-
-            <tr>
-              <td>[[Second]]</td>
-              <td>*"second"*</td>
-            </tr>
-          </tbody>
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Days]]</td>
+            <td>an integer ≥ 0</td>
+            <td>A number of overflow days.</td>
+          </tr>
+          <tr>
+            <td>[[Hour]]</td>
+            <td>an integer in the inclusive interval from 0 to 23</td>
+            <td>The number of the hour.</td>
+          </tr>
+          <tr>
+            <td>[[Minute]]</td>
+            <td>an integer in the inclusive interval from 0 to 59</td>
+            <td>The number of the minute.</td>
+          </tr>
+          <tr>
+            <td>[[Second]]</td>
+            <td>an integer in the inclusive interval from 0 to 59</td>
+            <td>The number of the second.</td>
+          </tr>
+          <tr>
+            <td>[[Millisecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999</td>
+            <td>The number of the millisecond.</td>
+          </tr>
+          <tr>
+            <td>[[Microsecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999</td>
+            <td>The number of the microsecond.</td>
+          </tr>
+          <tr>
+            <td>[[Nanosecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999</td>
+            <td>The number of the nanosecond.</td>
+          </tr>
         </table>
       </emu-table>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-regulatetime" aoid="RegulateTime">
-      <h1>RegulateTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _overflow_ )</h1>
+    <emu-clause id="sec-temporal-createtimerecord" type="abstract operation">
+      <h1>
+        CreateTimeRecord (
+          _hour_: an integer in the inclusive interval from 0 to 23,
+          _minute_: an integer in the inclusive interval from 0 to 59,
+          _second_: an integer in the inclusive interval from 0 to 59,
+          _millisecond_: an integer in the inclusive interval from 0 to 999,
+          _microsecond_: an integer in the inclusive interval from 0 to 999,
+          _nanosecond_: an integer in the inclusive interval from 0 to 999,
+          optional _deltaDays_: a non-negative integer,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Most uses of Time Records do not require the _deltaDays_ parameter.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_ and _nanosecond_ are integers.
-        1. Assert: _overflow_ is either *"constrain"* or *"reject"*.
-        1. If _overflow_ is *"constrain"*, then
-          1. Return ! ConstrainTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
-        1. If _overflow_ is *"reject"*, then
-          1. If ! IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
-          1. Return the Record {
+        1. If _deltaDays_ is not present, set _deltaDays_ to 0.
+        1. Assert: IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Return Time Record {
+            [[Days]]: _deltaDays_,
             [[Hour]]: _hour_,
             [[Minute]]: _minute_,
             [[Second]]: _second_,
             [[Millisecond]]: _millisecond_,
             [[Microsecond]]: _microsecond_,
             [[Nanosecond]]: _nanosecond_
-            }.
+          }.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-isvalidtime" aoid="IsValidTime">
-      <h1>IsValidTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
-      <p>
-        The abstract operation IsValidTime returns *true* if its arguments form a valid time of day, and *false* otherwise.
-        Leap seconds are not taken into account.
-      </p>
+    <emu-clause id="sec-temporal-midnighttimerecord" type="abstract operation">
+      <h1>MidnightTimeRecord ( ): a Time Record</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned Record denotes the wall-clock time of midnight.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. If _hour_ &lt; 0 or _hour_ &gt; 23, then
+        1. Return Time Record {
+            [[Days]]: 0,
+            [[Hour]]: 0,
+            [[Minute]]: 0,
+            [[Second]]: 0,
+            [[Millisecond]]: 0,
+            [[Microsecond]]: 0,
+            [[Nanosecond]]: 0
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-noontimerecord" type="abstract operation">
+      <h1>NoonTimeRecord ( ): a Time Record</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned Record denotes the wall-clock time of noon.</dd>
+      </dl>
+      <emu-alg>
+        1. Return Time Record {
+            [[Days]]: 0,
+            [[Hour]]: 12,
+            [[Minute]]: 0,
+            [[Second]]: 0,
+            [[Millisecond]]: 0,
+            [[Microsecond]]: 0,
+            [[Nanosecond]]: 0
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-differencetime" type="abstract operation">
+      <h1>
+        DifferenceTime (
+          _time1_: a Time Record,
+          _time2_: a Time Record,
+        ): a time duration
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the elapsed duration from a first wall-clock time, until a second wall-clock time.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _hours_ be _time2_.[[Hour]] - _time1_.[[Hour]].
+        1. Let _minutes_ be _time2_.[[Minute]] - _time1_.[[Minute]].
+        1. Let _seconds_ be _time2_.[[Second]] - _time1_.[[Second]].
+        1. Let _milliseconds_ be _time2_.[[Millisecond]] - _time1_.[[Millisecond]].
+        1. Let _microseconds_ be _time2_.[[Microsecond]] - _time1_.[[Microsecond]].
+        1. Let _nanoseconds_ be _time2_.[[Nanosecond]] - _time1_.[[Nanosecond]].
+        1. Let _timeDuration_ be TimeDurationFromComponents(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
+        1. Assert: abs(_timeDuration_) &lt; nsPerDay.
+        1. Return _timeDuration_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-totemporaltime" type="abstract operation">
+      <h1>
+        ToTemporalTime (
+          _item_: an ECMAScript language value,
+          optional _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainTime or a throw Completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a new Temporal.PlainTime instance if possible, and throws otherwise.</dd>
+      </dl>
+      <emu-alg>
+        1. If _options_ is not present, set _options_ to *undefined*.
+        1. If _item_ is an Object, then
+          1. If _item_ has an [[InitializedTemporalTime]] internal slot, then
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalTime(_item_.[[Time]]).
+          1. If _item_ has an [[InitializedTemporalDateTime]] internal slot, then
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalTime(_item_.[[ISODateTime]].[[Time]]).
+          1. If _item_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
+            1. Let _isoDateTime_ be GetISODateTimeFor(_item_.[[TimeZone]], _item_.[[EpochNanoseconds]]).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalTime(_isoDateTime_.[[Time]]).
+          1. Let _result_ be ? ToTemporalTimeRecord(_item_).
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Set _result_ to ? RegulateTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _overflow_).
+        1. Else,
+          1. If _item_ is not a String, throw a *TypeError* exception.
+          1. Let _parseResult_ be ? ParseISODateTime(_item_, « |TemporalTimeString| »).
+          1. Assert: _parseResult_.[[Time]] is not ~start-of-day~.
+          1. Set _result_ to _parseResult_.[[Time]].
+          1. NOTE: A successful parse using |TemporalTimeString| guarantees absence of ambiguity with respect to any ISO 8601 date-only, year-month, or month-day representation.
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Return ! CreateTemporalTime(_result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-totimerecordormidnight" type="abstract operation">
+      <h1>
+        ToTimeRecordOrMidnight (
+          _item_: an ECMAScript language value,
+        ): either a normal completion containing a Time Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a Time Record if possible, considering *undefined* to be the same as midnight, and throws otherwise.</dd>
+      </dl>
+      <emu-alg>
+        1. If _item_ is *undefined*, return MidnightTimeRecord().
+        1. Let _plainTime_ be ? ToTemporalTime(_item_).
+        1. Return _plainTime_.[[Time]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-regulatetime" type="abstract operation">
+      <h1>
+        RegulateTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+          _overflow_: ~constrain~ or ~reject~,
+        ): either a normal completion containing a Time Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It applies the correction given by _overflow_ to the given time.
+          If _overflow_ is ~constrain~, out-of-range values are clamped.
+          If _overflow_ is ~reject~, a *RangeError* is thrown if any values are out of range.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _overflow_ is ~constrain~, then
+          1. Set _hour_ to the result of clamping _hour_ between 0 and 23.
+          1. Set _minute_ to the result of clamping _minute_ between 0 and 59.
+          1. Set _second_ to the result of clamping _second_ between 0 and 59.
+          1. Set _millisecond_ to the result of clamping _millisecond_ between 0 and 999.
+          1. Set _microsecond_ to the result of clamping _microsecond_ between 0 and 999.
+          1. Set _nanosecond_ to the result of clamping _nanosecond_ between 0 and 999.
+        1. Else,
+          1. Assert: _overflow_ is ~reject~.
+          1. If IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
+        1. Return CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_,_nanosecond_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-isvalidtime" type="abstract operation">
+      <h1>
+        IsValidTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The return value is *true* if its arguments form a valid time of day, and *false* otherwise.
+          Leap seconds are not taken into account.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _hour_ &lt; 0 or _hour_ > 23, then
           1. Return *false*.
-        1. If _minute_ &lt; 0 or _minute_ &gt; 59, then
+        1. If _minute_ &lt; 0 or _minute_ > 59, then
           1. Return *false*.
-        1. If _second_ &lt; 0 or _second_ &gt; 59, then
+        1. If _second_ &lt; 0 or _second_ > 59, then
           1. Return *false*.
-        1. If _millisecond_ &lt; 0 or _millisecond_ &gt; 999, then
+        1. If _millisecond_ &lt; 0 or _millisecond_ > 999, then
           1. Return *false*.
-        1. If _microsecond_ &lt; 0 or _microsecond_ &gt; 999, then
+        1. If _microsecond_ &lt; 0 or _microsecond_ > 999, then
           1. Return *false*.
-        1. If _nanosecond_ &lt; 0 or _nanosecond_ &gt; 999, then
+        1. If _nanosecond_ &lt; 0 or _nanosecond_ > 999, then
           1. Return *false*.
         1. Return *true*.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-balancetime" aoid="BalanceTime">
-      <h1>BalanceTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
+    <emu-clause id="sec-temporal-balancetime" type="abstract operation">
+      <h1>
+        BalanceTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
         1. Set _microsecond_ to _microsecond_ + floor(_nanosecond_ / 1000).
         1. Set _nanosecond_ to _nanosecond_ modulo 1000.
         1. Set _millisecond_ to _millisecond_ + floor(_microsecond_ / 1000).
@@ -769,174 +694,269 @@
         1. Set _second_ to _second_ modulo 60.
         1. Set _hour_ to _hour_ + floor(_minute_ / 60).
         1. Set _minute_ to _minute_ modulo 60.
-        1. Let _days_ be floor(_hour_ / 24).
+        1. Let _deltaDays_ be floor(_hour_ / 24).
         1. Set _hour_ to _hour_ modulo 24.
-        1. Return the Record {
-          [[Days]]: _days_,
-          [[Hour]]: _hour_,
-          [[Minute]]: _minute_,
-          [[Second]]: _second_,
-          [[Millisecond]]: _millisecond_,
-          [[Microsecond]]: _microsecond_,
-          [[Nanosecond]]: _nanosecond_
-          }.
+        1. Return CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _deltaDays_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-constraintime" aoid="ConstrainTime">
-      <h1>ConstrainTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
+    <emu-clause id="sec-temporal-createtemporaltime" type="abstract operation">
+      <h1>
+        CreateTemporalTime (
+          _time_: a Time Record,
+          optional _newTarget_: a constructor,
+        ): either a normal completion containing a Temporal.PlainTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It creates a new Temporal.PlainTime instance and fills the internal slots with valid values.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Set _hour_ to ! ConstrainToRange(_hour_, 0, 23).
-        1. Set _minute_ to ! ConstrainToRange(_minute_, 0, 59).
-        1. Set _second_ to ! ConstrainToRange(_second_, 0, 59).
-        1. Set _millisecond_ to ! ConstrainToRange(_millisecond_, 0, 999).
-        1. Set _microsecond_ to ! ConstrainToRange(_microsecond_, 0, 999).
-        1. Set _nanosecond_ to ! ConstrainToRange(_nanosecond_, 0, 999).
-        1. Return the Record {
-          [[Hour]]: _hour_,
-          [[Minute]]: _minute_,
-          [[Second]]: _second_,
-          [[Millisecond]]: _millisecond_,
-          [[Microsecond]]: _microsecond_,
-          [[Nanosecond]]: _nanosecond_
-          }.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-createtemporaltime" aoid="CreateTemporalTime">
-      <h1>CreateTemporalTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ [ , _newTarget_ ] )</h1>
-      <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_ and _nanosecond_ are integers.
-        1. If ! IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
-        1. If _newTarget_ is not present, set it to %Temporal.PlainTime%.
-        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainTime.prototype%"*, « [[InitializedTemporalTime]], [[ISOHour]], [[ISOMinute]], [[ISOSecond]], [[ISOMillisecond]], [[ISOMicrosecond]], [[ISONanosecond]], [[Calendar]] »).
-        1. Set _object_.[[ISOHour]] to _hour_.
-        1. Set _object_.[[ISOMinute]] to _minute_.
-        1. Set _object_.[[ISOSecond]] to _second_.
-        1. Set _object_.[[ISOMillisecond]] to _millisecond_.
-        1. Set _object_.[[ISOMicrosecond]] to _microsecond_.
-        1. Set _object_.[[ISONanosecond]] to _nanosecond_.
-        1. Set _object_.[[Calendar]] to ! GetISO8601Calendar().
+        1. If _newTarget_ is not present, set _newTarget_ to %Temporal.PlainTime%.
+        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainTime.prototype%"*, « [[InitializedTemporalTime]], [[Time]] »).
+        1. Set _object_.[[Time]] to _time_.
         1. Return _object_.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-totemporaltimerecord" aoid="ToTemporalTimeRecord">
-      <h1>ToTemporalTimeRecord ( _temporalTimeLike_ )</h1>
+    <emu-clause id="sec-temporal-totemporaltimerecord" type="abstract operation">
+      <h1>
+        ToTemporalTimeRecord (
+          _temporalTimeLike_: an Object,
+          optional _completeness_: ~partial~ or ~complete~,
+        ): either a normal completion containing a TemporalTimeLike Record or a throw completion
+      </h1>
+      <dl class="header">
+      </dl>
       <emu-alg>
-        1. Assert: Type(_temporalTimeLike_) is Object.
-        1. Let _result_ be the Record {
-          [[Hour]]: *undefined*,
-          [[Minute]]: *undefined*,
-          [[Second]]: *undefined*,
-          [[Millisecond]]: *undefined*,
-          [[Microsecond]]: *undefined*,
-          [[Nanosecond]]: *undefined*
-          }.
-        1. For each row of <emu-xref href="#table-temporal-temporaltimelike-properties"></emu-xref>, except the header row, in table order, do
-          1. Let _property_ be the Property value of the current row.
-          1. Let _value_ be ? Get(_temporalTimeLike_, _property_).
-          1. If _value_ is *undefined*, then
-            1. Throw a *TypeError* exception.
-          1. Set _value_ to ? ToIntegerThrowOnInfinity(_value_).
-          1. Set _result_'s internal slot whose name is the Internal Slot value of the current row to _value_.
+        1. If _completeness_ is not present, set _completeness_ to ~complete~.
+        1. If _completeness_ is ~complete~, then
+          1. Let _result_ be a new TemporalTimeLike Record with each field set to 0.
+        1. Else,
+          1. Let _result_ be a new TemporalTimeLike Record with each field set to ~unset~.
+        1. Let _any_ be *false*.
+        1. Let _hour_ be ? Get(_temporalTimeLike_, *"hour"*).
+        1. If _hour_ is not *undefined*, then
+          1. Set _result_.[[Hour]] to ? ToIntegerWithTruncation(_hour_).
+          1. Set _any_ to *true*.
+        1. Let _microsecond_ be ? Get(_temporalTimeLike_, *"microsecond"*).
+        1. If _microsecond_ is not *undefined*, then
+          1. Set _result_.[[Microsecond]] to ? ToIntegerWithTruncation(_microsecond_).
+          1. Set _any_ to *true*.
+        1. Let _millisecond_ be ? Get(_temporalTimeLike_, *"millisecond"*).
+        1. If _millisecond_ is not *undefined*, then
+          1. Set _result_.[[Millisecond]] to ? ToIntegerWithTruncation(_millisecond_).
+          1. Set _any_ to *true*.
+        1. Let _minute_ be ? Get(_temporalTimeLike_, *"minute"*).
+        1. If _minute_ is not *undefined*, then
+          1. Set _result_.[[Minute]] to ? ToIntegerWithTruncation(_minute_).
+          1. Set _any_ to *true*.
+        1. Let _nanosecond_ be ? Get(_temporalTimeLike_, *"nanosecond"*).
+        1. If _nanosecond_ is not *undefined*, then
+          1. Set _result_.[[Nanosecond]] to ? ToIntegerWithTruncation(_nanosecond_).
+          1. Set _any_ to *true*.
+        1. Let _second_ be ? Get(_temporalTimeLike_, *"second"*).
+        1. If _second_ is not *undefined*, then
+          1. Set _result_.[[Second]] to ? ToIntegerWithTruncation(_second_).
+          1. Set _any_ to *true*.
+        1. If _any_ is *false*, throw a *TypeError* exception.
         1. Return _result_.
       </emu-alg>
+
+      <emu-table id="table-temporal-temporaltimelike-record-fields">
+        <emu-caption>TemporalTimeLike Record Fields</emu-caption>
+        <table class="real-table">
+          <thead>
+            <tr>
+              <th>Field Name</th>
+              <th>Property Name</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>[[Hour]]</td>
+            <td>*"hour"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Minute]]</td>
+            <td>*"minute"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Second]]</td>
+            <td>*"second"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Millisecond]]</td>
+            <td>*"millisecond"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Microsecond]]</td>
+            <td>*"microsecond"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Nanosecond]]</td>
+            <td>*"nanosecond"*</td>
+          </tr>
+        </table>
+      </emu-table>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-temporaltimetostring" aoid="TemporalTimeToString">
-      <h1>TemporalTimeToString ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _precision_ )</h1>
+    <emu-clause id="sec-temporal-timerecordtostring" type="abstract operation">
+      <h1>
+        TimeRecordToString (
+          _time_: a Time Record,
+          _precision_: an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+        ): a String
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It formats the given time as an ISO 8601 string, to the precision specified by _precision_.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_ and _nanosecond_ are integers.
-        1. Let _hour_ be _hour_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _minute_ be _minute_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _seconds_ be ! FormatSecondsStringPart(_second_, _millisecond_, _microsecond_, _nanosecond_, _precision_).
-        1. Return the string-concatenation of _hour_, the code unit 0x003A (COLON), _minute_, and _seconds_.
+        1. Let _subSecondNanoseconds_ be _time_.[[Millisecond]] × 10<sup>6</sup> + _time_.[[Microsecond]] × 10<sup>3</sup> + _time_.[[Nanosecond]].
+        1. Return FormatTimeString(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _subSecondNanoseconds_, _precision_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-comparetemporaltime" aoid="CompareTemporalTime">
-      <h1>CompareTemporalTime ( _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_ )</h1>
+    <emu-clause id="sec-temporal-comparetimerecord" type="abstract operation">
+      <h1>
+        CompareTimeRecord (
+          _time1_: a Time Record,
+          _time2_: a Time Record,
+        ): -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It compares the two given times and returns -1 if the second comes earlier in the day than the first, 1 if the first comes earlier in the day than the second, and 0 if they are the same.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, and _ns2_ are integers.
-        1. If _h1_ &gt; _h2_, return 1.
-        1. If _h1_ &lt; _h2_, return -1.
-        1. If _min1_ &gt; _min2_, return 1.
-        1. If _min1_ &lt; _min2_, return -1.
-        1. If _s1_ &gt; _s2_, return 1.
-        1. If _s1_ &lt; _s2_, return -1.
-        1. If _ms1_ &gt; _ms2_, return 1.
-        1. If _ms1_ &lt; _ms2_, return -1.
-        1. If _mus1_ &gt; _mus2_, return 1.
-        1. If _mus1_ &lt; _mus2_, return -1.
-        1. If _ns1_ &gt; _ns2_, return 1.
-        1. If _ns1_ &lt; _ns2_, return -1.
+        1. If _time1_.[[Hour]] > _time2_.[[Hour]], return 1.
+        1. If _time1_.[[Hour]] &lt; _time2_.[[Hour]], return -1.
+        1. If _time1_.[[Minute]] > _time2_.[[Minute]], return 1.
+        1. If _time1_.[[Minute]] &lt; _time2_.[[Minute]], return -1.
+        1. If _time1_.[[Second]] > _time2_.[[Second]], return 1.
+        1. If _time1_.[[Second]] &lt; _time2_.[[Second]], return -1.
+        1. If _time1_.[[Millisecond]] > _time2_.[[Millisecond]], return 1.
+        1. If _time1_.[[Millisecond]] &lt; _time2_.[[Millisecond]], return -1.
+        1. If _time1_.[[Microsecond]] > _time2_.[[Microsecond]], return 1.
+        1. If _time1_.[[Microsecond]] &lt; _time2_.[[Microsecond]], return -1.
+        1. If _time1_.[[Nanosecond]] > _time2_.[[Nanosecond]], return 1.
+        1. If _time1_.[[Nanosecond]] &lt; _time2_.[[Nanosecond]], return -1.
         1. Return 0.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-addtime" aoid="AddTime">
-      <h1>AddTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_ )</h1>
+    <emu-clause id="sec-temporal-addtime" type="abstract operation">
+      <h1>
+        AddTime (
+          _time_: a Time Record,
+          _timeDuration_: a time duration,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, and _nanoseconds_ are integers.
-        1. Let _hour_ be _hour_ + _hours_.
-        1. Let _minute_ be _minute_ + _minutes_.
-        1. Let _second_ be _second_ + _seconds_.
-        1. Let _millisecond_ be _millisecond_ + _milliseconds_.
-        1. Let _microsecond_ be _microsecond_ + _microseconds_.
-        1. Let _nanosecond_ be _nanosecond_ + _nanoseconds_.
-        1. Return ! BalanceTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _time_.[[Microsecond]], _time_.[[Nanosecond]] + _timeDuration_).
+        1. NOTE: If using floating points to implement this operation, add the time components separately before balancing to avoid errors with unsafe integers.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-roundtime" aoid="RoundTime">
-      <h1>RoundTime ( _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _increment_, _unit_, _roundingMode_ [ , _dayLengthNs_ ] )</h1>
-      <p>
-        The abstract operation RoundTime rounds a time to the given increment, optionally adjusting for a non-24-hour day.
-      </p>
+    <emu-clause id="sec-temporal-roundtime" type="abstract operation">
+      <h1>
+        RoundTime (
+          _time_: a Time Record,
+          _increment_: a positive integer,
+          _unit_: a time unit or ~day~,
+          _roundingMode_: a rounding mode,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds a time to the given increment.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, and _increment_ are integers.
-        1. Let _fractionalSecond_ be _nanosecond_ × 10<sup>−9</sup> + _microsecond_ × 10<sup>−6</sup> + _millisecond_ × 10<sup>−3</sup> + _second_.
-        1. If _unit_ is *"day"*, then
-          1. If _dayLengthNs_ is not present, set it to 8.64 × 10<sup>13</sup>.
-          1. Let _quantity_ be (((((_hour_ × 60 + _minute_) × 60 + _second_) × 1000 + _millisecond_) × 1000 + _microsecond_) × 1000 + _nanosecond_) / _dayLengthNs_.
-        1. Else if _unit_ is *"hour"*, then
-          1. Let _quantity_ be (_fractionalSecond_ / 60 + _minute_) / 60 + _hour_.
-        1. Else if _unit_ is *"minute"*, then
-          1. Let _quantity_ be _fractionalSecond_ / 60 + _minute_.
-        1. Else if _unit_ is *"second"*, then
-          1. Let _quantity_ be _fractionalSecond_.
-        1. Else if _unit_ is *"millisecond"*, then
-          1. Let _quantity_ be _nanosecond_ × 10<sup>−6</sup> + _microsecond_ × 10<sup>−3</sup> + _millisecond_.
-        1. Else if _unit_ is *"microsecond"*, then
-          1. Let _quantity_ be _nanosecond_ × 10<sup>−3</sup> + _microsecond_.
+        1. If _unit_ is ~day~ or ~hour~, then
+          1. Let _quantity_ be ((((_time_.[[Hour]] × 60 + _time_.[[Minute]]) × 60 + _time_.[[Second]]) × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~minute~, then
+          1. Let _quantity_ be (((_time_.[[Minute]] × 60 + _time_.[[Second]]) × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~second~, then
+          1. Let _quantity_ be ((_time_.[[Second]] × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~millisecond~, then
+          1. Let _quantity_ be (_time_.[[Millisecond]] × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~microsecond~, then
+          1. Let _quantity_ be _time_.[[Microsecond]] × 1000 + _time_.[[Nanosecond]].
         1. Else,
-          1. Assert: _unit_ is *"nanosecond"*.
-          1. Let _quantity_ be _nanosecond_.
-        1. Let _result_ be ! RoundNumberToIncrement(_quantity_, _increment_, _roundingMode_).
-        1. If _unit_ is *"day"*, then
-          1. Return the Record {
-            [[Days]]: _result_,
-            [[Hour]]: 0,
-            [[Minute]]: 0,
-            [[Second]]: 0,
-            [[Millisecond]]: 0,
-            [[Microsecond]]: 0,
-            [[Nanosecond]]: 0
-          }.
-        1. If _unit_ is *"hour"*, then
-          1. Return ! BalanceTime(_result_, 0, 0, 0, 0, 0).
-        1. If _unit_ is *"minute"*, then
-          1. Return ! BalanceTime(_hour_, _result_, 0, 0, 0, 0).
-        1. If _unit_ is *"second"*, then
-          1. Return ! BalanceTime(_hour_, _minute_, _result_, 0, 0, 0).
-        1. If _unit_ is *"millisecond"*, then
-          1. Return ! BalanceTime(_hour_, _minute_, _second_, _result_, 0, 0).
-        1. If _unit_ is *"microsecond"*, then
-          1. Return ! BalanceTime(_hour_, _minute_, _second_, _millisecond_, _result_, 0).
-        1. Assert: _unit_ is *"nanosecond"*.
-        1. Return ! BalanceTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _result_).
+          1. Assert: _unit_ is ~nanosecond~.
+          1. Let _quantity_ be _time_.[[Nanosecond]].
+        1. Let _unitLength_ be the value in the "Length in Nanoseconds" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose "Value" column contains _unit_.
+        1. Let _result_ be RoundNumberToIncrement(_quantity_, _increment_ × _unitLength_, _roundingMode_) / _unitLength_.
+        1. If _unit_ is ~day~, then
+          1. Return CreateTimeRecord(0, 0, 0, 0, 0, 0, _result_).
+        1. If _unit_ is ~hour~, then
+          1. Return BalanceTime(_result_, 0, 0, 0, 0, 0).
+        1. If _unit_ is ~minute~, then
+          1. Return BalanceTime(_time_.[[Hour]], _result_, 0, 0, 0, 0).
+        1. If _unit_ is ~second~, then
+          1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _result_, 0, 0, 0).
+        1. If _unit_ is ~millisecond~, then
+          1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _result_, 0, 0).
+        1. If _unit_ is ~microsecond~, then
+          1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _result_, 0).
+        1. Assert: _unit_ is ~nanosecond~.
+        1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _time_.[[Microsecond]], _result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-differencetemporalplaintime" type="abstract operation">
+      <h1>
+        DifferenceTemporalPlainTime (
+          _operation_: ~since~ or ~until~,
+          _temporalTime_: a Temporal.PlainTime,
+          _other_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.Duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It computes the difference between the two times represented by _temporalTime_ and _other_, optionally rounds it, and returns it as a Temporal.Duration object.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _other_ to ? ToTemporalTime(_other_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _settings_ be ? GetDifferenceSettings(_operation_, _resolvedOptions_, ~time~, « », ~nanosecond~, ~hour~).
+        1. Let _timeDuration_ be DifferenceTime(_temporalTime_.[[Time]], _other_.[[Time]]).
+        1. Set _timeDuration_ to ! RoundTimeDuration(_timeDuration_, _settings_.[[RoundingIncrement]], _settings_.[[SmallestUnit]], _settings_.[[RoundingMode]]).
+        1. Let _duration_ be ! CombineDateAndTimeDuration(ZeroDateDuration(), _timeDuration_).
+        1. Let _result_ be ! TemporalDurationFromInternal(_duration_, _settings_.[[LargestUnit]]).
+        1. If _operation_ is ~since~, set _result_ to CreateNegatedTemporalDuration(_result_).
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-adddurationtotime" type="abstract operation">
+      <h1>
+        AddDurationToTime (
+          _operation_: ~add~ or ~subtract~,
+          _temporalTime_: a Temporal.PlainTime,
+          _temporalDurationLike_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It adds/subtracts _temporalDurationLike_ to/from _temporalTime_, returning a point in time that is in the future/past relative to _temporalTime_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _duration_ be ? ToTemporalDuration(_temporalDurationLike_).
+        1. If _operation_ is ~subtract~, set _duration_ to CreateNegatedTemporalDuration(_duration_).
+        1. Let _internalDuration_ be ToInternalDurationRecord(_duration_).
+        1. Let _result_ be AddTime(_temporalTime_.[[Time]], _internalDuration_.[[Time]]).
+        1. Return ! CreateTemporalTime(_result_).
       </emu-alg>
     </emu-clause>
   </emu-clause>

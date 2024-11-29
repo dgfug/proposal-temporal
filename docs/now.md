@@ -7,13 +7,17 @@
 
 The `Temporal.Now` object has several methods which give information about the current time and date.
 
+> **NOTE:** Because these methods return the current time, the return value will likely be different every time they are called. If you need to use the same value in more than one place, save the return value in a variable.
+
+> **NOTE**: These methods allow for up to nanosecond accuracy, but browsers and other environments may limit the accuracy for security reasons.
+
 ## Methods
 
-### Temporal.Now.**zonedDateTimeISO**(_timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.ZonedDateTime
+### Temporal.Now.**zonedDateTimeISO**(_timeZone_: object | string = Temporal.Now.timeZoneId()) : Temporal.ZonedDateTime
 
 **Parameters:**
 
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
+- `timeZone` (optional string or `Temporal.ZonedDateTime`): The time zone to get the current date and time in, as a time zone identifier, or a `Temporal.ZonedDateTime` object whose time zone will be used.
   If not given, the current system time zone will be used.
 
 **Returns:** a `Temporal.ZonedDateTime` object representing the current system date, time, time zone, and time zone offset.
@@ -21,7 +25,8 @@ The `Temporal.Now` object has several methods which give information about the c
 This method gets the current date, time, time zone, and time zone offset according to the system settings, in the reckoning of the ISO 8601 calendar system.
 Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
 
-This method is the same as `zonedDateTime()`, but always uses the ISO 8601 calendar.
+This method always returns a `Temporal.ZonedDateTime` with the ISO 8601 calendar.
+Remember to use `withCalendar()` on the result if you need to do computations in other calendars.
 
 Example usage:
 
@@ -41,21 +46,6 @@ Object.entries(financialCentres).forEach(([name, timeZone]) => {
 // London: 2020-09-18T09:17:48.438068435+01:00[Europe/London]
 // Tokyo: 2020-09-18T17:17:48.441068438+09:00[Asia/Tokyo]
 ```
-
-### Temporal.Now.**zonedDateTime**(_calendar_: object | string, _timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.ZonedDateTime
-
-**Parameters:**
-
-- `calendar` (`Temporal.Calendar`, plain object, or string): The calendar system to get the current date and time in.
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
-  If not given, the current system time zone will be used.
-
-**Returns:** a `Temporal.ZonedDateTime` object representing the current system date, time, time zone, and time zone offset.
-
-This method gets the current date, time, time zone, and time zone offset according to the system settings, in the reckoning of the given calendar system.
-Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
-
-If you only want to use the ISO 8601 calendar, use `Temporal.Now.zonedDateTimeISO()`.
 
 ### Temporal.Now.**instant**() : Temporal.Instant
 
@@ -82,32 +72,32 @@ timeit(() => JSON.parse(someData));
 // The function took PT0.001031756S
 ```
 
-### Temporal.Now.**timeZone**() : Temporal.TimeZone
+### Temporal.Now.**timeZoneId**() : string
 
-**Returns:** a `Temporal.TimeZone` object representing the time zone according to the current system settings.
+**Returns:** The identifier of time zone according to the current system settings.
 
-This method gets the current system time zone.
+This method gets the identifier of the current system time zone.
 This will usually be a named [IANA time zone](https://www.iana.org/time-zones), as that is how most people configure their computers.
 
 Example usage:
 
 ```js
-// When is the next daylight saving change from now, in the current location?
-tz = Temporal.Now.timeZone();
-now = Temporal.Now.instant();
-nextTransition = tz.getNextTransition(now);
-before = tz.getOffsetStringFor(nextTransition.subtract({ nanoseconds: 1 }));
-after = tz.getOffsetStringFor(nextTransition.add({ nanoseconds: 1 }));
-console.log(`At ${nextTransition.toZonedDateTimeISO(tz)} the offset will change from UTC ${before} to ${after}`);
+// When is the first daylight saving change in 2025, in the current location?
+id = Temporal.Now.timeZoneId();
+start2025 = Temporal.ZonedDateTime.from({ year: 2025, month: 1, day: 1, timeZone: id });
+nextTransition = start2025.getTimeZoneTransition('next');
+before = nextTransition.subtract({ nanoseconds: 1 }).offset;
+after = nextTransition.add({ nanoseconds: 1 }).offset;
+console.log(`At ${nextTransition} the offset will change from UTC ${before} to ${after}`);
 // example output:
-// At 2021-03-14T03:00:00-07:00[America/Los_Angeles] the offset will change from UTC -08:00 to -07:00
+// At 2025-03-09T03:00:00-07:00[America/Los_Angeles] the offset will change from UTC -08:00 to -07:00
 ```
 
-### Temporal.Now.**plainDateTimeISO**(_timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.PlainDateTime
+### Temporal.Now.**plainDateTimeISO**(_timeZone_: object | string = Temporal.Now.timeZoneId()) : Temporal.PlainDateTime
 
 **Parameters:**
 
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
+- `timeZone` (optional string or `Temporal.ZonedDateTime`): The time zone to get the current date and time in, as a time zone identifier, or a `Temporal.ZonedDateTime` object whose time zone will be used.
   If not given, the current system time zone will be used.
 
 **Returns:** a `Temporal.PlainDateTime` object representing the current system date and time in the reckoning of the ISO 8601 calendar.
@@ -115,7 +105,8 @@ console.log(`At ${nextTransition.toZonedDateTimeISO(tz)} the offset will change 
 This method gets the current calendar date and wall-clock time according to the system settings.
 Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
 
-This method is the same as `dateTime()`, but always uses the ISO 8601 calendar.
+This method always returns a `Temporal.PlainDateTime` with the ISO 8601 calendar.
+Remember to use `withCalendar()` on the result if you need to do computations in other calendars.
 
 Example usage:
 
@@ -138,26 +129,11 @@ Object.entries(financialCentres).forEach(([name, timeZone]) => {
 ```
 <!-- prettier-ignore-end -->
 
-### Temporal.Now.**plainDateTime**(_calendar_: object | string, _timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.PlainDateTime
+### Temporal.Now.**plainDateISO**(_timeZone_: object | string = Temporal.Now.timeZoneId()) : Temporal.PlainDate
 
 **Parameters:**
 
-- `calendar` (`Temporal.Calendar`, plain object, or string): The calendar system to get the current date and time in.
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
-  If not given, the current system time zone will be used.
-
-**Returns:** a `Temporal.PlainDateTime` object representing the current system date and time in the reckoning of the given calendar system.
-
-This method gets the current calendar date and wall-clock time according to the system settings.
-Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
-
-If you only want to use the ISO 8601 calendar, use `Temporal.Now.plainDateTimeISO()`.
-
-### Temporal.Now.**plainDateISO**(_timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.PlainDate
-
-**Parameters:**
-
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
+- `timeZone` (optional string or `Temporal.ZonedDateTime`): The time zone to get the current date and time in, as a time zone identifier, or a `Temporal.ZonedDateTime` object whose time zone will be used.
   If not given, the current system time zone will be used.
 
 **Returns:** a `Temporal.PlainDate` object representing the current system date in the reckoning of the ISO 8601 calendar.
@@ -165,7 +141,8 @@ If you only want to use the ISO 8601 calendar, use `Temporal.Now.plainDateTimeIS
 This method gets the current calendar date according to the system settings.
 Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
 
-This method is the same as `date()`, but always uses the ISO 8601 calendar.
+This method always returns a `Temporal.PlainDate` with the ISO 8601 calendar.
+Remember to use `withCalendar()` on the result if you need to do computations in other calendars.
 
 Example usage:
 
@@ -173,34 +150,17 @@ Example usage:
 // Is it New Year in the ISO 8601 calendar?
 date = Temporal.Now.plainDateISO();
 if (date.month === 1 && date.day === 1) console.log('New year!');
-```
 
-### Temporal.Now.**plainDate**(_calendar_: object | string, _timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.PlainDate
-
-**Parameters:**
-
-- `calendar` (`Temporal.Calendar`, plain object, or string): The calendar system to get the current date and time in.
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
-  If not given, the current system time zone will be used.
-
-**Returns:** a `Temporal.PlainDate` object representing the current system date in the reckoning of the given calendar.
-
-This method gets the current calendar date according to the system settings.
-Optionally a time zone can be given in which the time is computed, instead of the current system time zone.
-
-If you only want to use the ISO 8601 calendar, use `Temporal.Now.plainDateISO()`.
-
-```js
 // Is it Nowruz (New Year in the Persian calendar)?
-date = Temporal.Now.plainDate('persian');
+date = Temporal.Now.plainDateISO().withCalendar('persian');
 if (date.month === 1 && date.day === 1) console.log('New year!');
 ```
 
-### Temporal.Now.**plainTimeISO**(_timeZone_: object | string = Temporal.Now.timeZone()) : Temporal.PlainTime
+### Temporal.Now.**plainTimeISO**(_timeZone_: object | string = Temporal.Now.timeZoneId()) : Temporal.PlainTime
 
 **Parameters:**
 
-- `timeZone` (optional object or string): The time zone to get the current date and time in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
+- `timeZone` (optional string or `Temporal.ZonedDateTime`): The time zone to get the current date and time in, as a time zone identifier, or a `Temporal.ZonedDateTime` object whose time zone will be used.
   If not given, the current system time zone will be used.
 
 **Returns:** a `Temporal.PlainTime` object representing the current system time in the reckoning of the ISO 8601 calendar.

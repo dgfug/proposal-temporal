@@ -1,146 +1,95 @@
-import { ES } from './ecmascript.mjs';
+import { TypeError as TypeErrorCtor } from './primordials.mjs';
+
+import * as ES from './ecmascript.mjs';
 import { DateTimeFormat } from './intl.mjs';
 import { MakeIntrinsicClass } from './intrinsicclass.mjs';
-import { ISO_MONTH, ISO_DAY, ISO_YEAR, CALENDAR, TIME_ZONE, GetSlot, HasSlot } from './slots.mjs';
-
-const ObjectCreate = Object.create;
+import { CALENDAR, GetSlot, ISO_DATE } from './slots.mjs';
 
 export class PlainMonthDay {
-  constructor(isoMonth, isoDay, calendar = ES.GetISO8601Calendar(), referenceISOYear = 1972) {
-    isoMonth = ES.ToIntegerThrowOnInfinity(isoMonth);
-    isoDay = ES.ToIntegerThrowOnInfinity(isoDay);
-    calendar = ES.ToTemporalCalendar(calendar);
-    referenceISOYear = ES.ToIntegerThrowOnInfinity(referenceISOYear);
+  constructor(isoMonth, isoDay, calendar = 'iso8601', referenceISOYear = 1972) {
+    const month = ES.ToIntegerWithTruncation(isoMonth);
+    const day = ES.ToIntegerWithTruncation(isoDay);
+    calendar = calendar === undefined ? 'iso8601' : ES.RequireString(calendar);
+    calendar = ES.CanonicalizeCalendar(calendar);
+    const year = ES.ToIntegerWithTruncation(referenceISOYear);
 
-    // Note: if the arguments are not passed,
-    //       ToIntegerThrowOnInfinity(undefined) will have returned 0, which will
-    //       be rejected by RejectISODate in CreateTemporalMonthDaySlots. This
-    //       check exists only to improve the error message.
-    if (arguments.length < 2) {
-      throw new RangeError('missing argument: isoMonth and isoDay are required');
-    }
-
-    ES.CreateTemporalMonthDaySlots(this, isoMonth, isoDay, calendar, referenceISOYear);
+    ES.RejectISODate(year, month, day);
+    ES.CreateTemporalMonthDaySlots(this, { year, month, day }, calendar);
   }
 
   get monthCode() {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
-    return ES.CalendarMonthCode(GetSlot(this, CALENDAR), this);
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
+    const isoDate = GetSlot(this, ISO_DATE);
+    return ES.calendarImplForObj(this).isoToDate(isoDate, { monthCode: true }).monthCode;
   }
   get day() {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
-    return ES.CalendarDay(GetSlot(this, CALENDAR), this);
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
+    const isoDate = GetSlot(this, ISO_DATE);
+    return ES.calendarImplForObj(this).isoToDate(isoDate, { day: true }).day;
   }
-  get calendar() {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
+  get calendarId() {
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
     return GetSlot(this, CALENDAR);
   }
 
   with(temporalMonthDayLike, options = undefined) {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
     if (ES.Type(temporalMonthDayLike) !== 'Object') {
-      throw new TypeError('invalid argument');
+      throw new TypeErrorCtor('invalid argument');
     }
-    if (HasSlot(temporalMonthDayLike, CALENDAR) || HasSlot(temporalMonthDayLike, TIME_ZONE)) {
-      throw new TypeError('with() does not support a calendar or timeZone property');
-    }
-    if (temporalMonthDayLike.calendar !== undefined) {
-      throw new TypeError('with() does not support a calendar property');
-    }
-    if (temporalMonthDayLike.timeZone !== undefined) {
-      throw new TypeError('with() does not support a timeZone property');
-    }
+    ES.RejectTemporalLikeObject(temporalMonthDayLike);
 
     const calendar = GetSlot(this, CALENDAR);
-    const fieldNames = ES.CalendarFields(calendar, ['day', 'month', 'monthCode', 'year']);
-    const props = ES.ToPartialRecord(temporalMonthDayLike, fieldNames);
-    if (!props) {
-      throw new TypeError('invalid month-day-like');
-    }
-    let fields = ES.ToTemporalMonthDayFields(this, fieldNames);
-    fields = ES.CalendarMergeFields(calendar, fields, props);
-    fields = ES.ToTemporalMonthDayFields(fields, fieldNames);
+    let fields = ES.ISODateToFields(calendar, GetSlot(this, ISO_DATE), 'month-day');
+    const partialMonthDay = ES.PrepareCalendarFields(
+      calendar,
+      temporalMonthDayLike,
+      ['year', 'month', 'monthCode', 'day'],
+      [],
+      'partial'
+    );
+    fields = ES.CalendarMergeFields(calendar, fields, partialMonthDay);
 
-    options = ES.GetOptionsObject(options);
-    return ES.MonthDayFromFields(calendar, fields, options);
+    const overflow = ES.GetTemporalOverflowOption(ES.GetOptionsObject(options));
+    const isoDate = ES.CalendarMonthDayFromFields(calendar, fields, overflow);
+    return ES.CreateTemporalMonthDay(isoDate, calendar);
   }
   equals(other) {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
     other = ES.ToTemporalMonthDay(other);
-    for (const slot of [ISO_MONTH, ISO_DAY, ISO_YEAR]) {
-      const val1 = GetSlot(this, slot);
-      const val2 = GetSlot(other, slot);
-      if (val1 !== val2) return false;
-    }
+    if (ES.CompareISODate(GetSlot(this, ISO_DATE), GetSlot(other, ISO_DATE)) !== 0) return false;
     return ES.CalendarEquals(GetSlot(this, CALENDAR), GetSlot(other, CALENDAR));
   }
   toString(options = undefined) {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
-    options = ES.GetOptionsObject(options);
-    const showCalendar = ES.ToShowCalendarOption(options);
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
+    const resolvedOptions = ES.GetOptionsObject(options);
+    const showCalendar = ES.GetTemporalShowCalendarNameOption(resolvedOptions);
     return ES.TemporalMonthDayToString(this, showCalendar);
   }
   toJSON() {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
     return ES.TemporalMonthDayToString(this);
   }
   toLocaleString(locales = undefined, options = undefined) {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
     return new DateTimeFormat(locales, options).format(this);
   }
   valueOf() {
-    throw new TypeError('use equals() to compare Temporal.PlainMonthDay');
+    ES.ValueOfThrows('PlainMonthDay');
   }
   toPlainDate(item) {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
-    if (ES.Type(item) !== 'Object') throw new TypeError('argument should be an object');
+    if (!ES.IsTemporalMonthDay(this)) throw new TypeErrorCtor('invalid receiver');
+    if (ES.Type(item) !== 'Object') throw new TypeErrorCtor('argument should be an object');
     const calendar = GetSlot(this, CALENDAR);
 
-    const receiverFieldNames = ES.CalendarFields(calendar, ['day', 'monthCode']);
-    let fields = ES.ToTemporalMonthDayFields(this, receiverFieldNames);
-
-    const inputFieldNames = ES.CalendarFields(calendar, ['year']);
-    const inputEntries = [['year', undefined]];
-    // Add extra fields from the calendar at the end
-    inputFieldNames.forEach((fieldName) => {
-      if (!inputEntries.some(([name]) => name === fieldName)) {
-        inputEntries.push([fieldName, undefined]);
-      }
-    });
-    const inputFields = ES.PrepareTemporalFields(item, inputEntries);
+    const fields = ES.ISODateToFields(calendar, GetSlot(this, ISO_DATE), 'month-day');
+    const inputFields = ES.PrepareCalendarFields(calendar, item, ['year'], [], []);
     let mergedFields = ES.CalendarMergeFields(calendar, fields, inputFields);
+    const isoDate = ES.CalendarDateFromFields(calendar, mergedFields, 'constrain');
+    return ES.CreateTemporalDate(isoDate, calendar);
+  }
 
-    const mergedFieldNames = [...new Set([...receiverFieldNames, ...inputFieldNames])];
-    const mergedEntries = [];
-    mergedFieldNames.forEach((fieldName) => {
-      if (!mergedEntries.some(([name]) => name === fieldName)) {
-        mergedEntries.push([fieldName, undefined]);
-      }
-    });
-    mergedFields = ES.PrepareTemporalFields(mergedFields, mergedEntries);
-    const options = ObjectCreate(null);
-    return ES.DateFromFields(calendar, mergedFields, options);
-  }
-  getISOFields() {
-    if (!ES.IsTemporalMonthDay(this)) throw new TypeError('invalid receiver');
-    return {
-      calendar: GetSlot(this, CALENDAR),
-      isoDay: GetSlot(this, ISO_DAY),
-      isoMonth: GetSlot(this, ISO_MONTH),
-      isoYear: GetSlot(this, ISO_YEAR)
-    };
-  }
   static from(item, options = undefined) {
-    options = ES.GetOptionsObject(options);
-    if (ES.IsTemporalMonthDay(item)) {
-      ES.ToTemporalOverflow(options); // validate and ignore
-      return ES.CreateTemporalMonthDay(
-        GetSlot(item, ISO_MONTH),
-        GetSlot(item, ISO_DAY),
-        GetSlot(item, CALENDAR),
-        GetSlot(item, ISO_YEAR)
-      );
-    }
     return ES.ToTemporalMonthDay(item, options);
   }
 }

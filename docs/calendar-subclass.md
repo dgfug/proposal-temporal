@@ -1,6 +1,6 @@
 # Subclass-based Temporal Calendar API
 
-[calendar-draft.md](calendar.md) documents the design for calendar support in Temporal based on a single shared Temporal.PlainDate type with a Temporal.Calendar. This document discusses an alternative approach based on subclassing of Temporal.PlainDate types. This idea was not pursued further due to the drawbacks discussed in this document.
+[calendar-draft.md](calendar-draft.md) documents the design for calendar support in Temporal based on a single shared Temporal.PlainDate type with a Temporal.Calendar. This document discusses an alternative approach based on subclassing of Temporal.PlainDate types. This idea was not pursued further due to the drawbacks discussed in this document.
 
 In this document, the _Temporal.Calendar Approach_ refers to the solution proposed in [calendar-draft.md](calendar-draft.md), and the _Temporal.PlainDate Subclassing Approach_ refers to the alternative, but eliminated, solution proposed in this document.
 
@@ -14,7 +14,7 @@ In this document, the _Temporal.Calendar Approach_ refers to the solution propos
 
 **Temporal.Calendar Approach:** All built-in calendars, including 402 calendars, are all instances of Temporal.Calendar
 
-**Temporal.PlainDate Subclassing Approach:** Every built-in 402 calendar has a corresponding type heirarchy in the Intl namespace
+**Temporal.PlainDate Subclassing Approach:** Every built-in 402 calendar has a corresponding type hierarchy in the Intl namespace
 
 ### Custom Calendars
 
@@ -82,7 +82,7 @@ The Temporal.Calendar Approach has a more natural way to implement calendars tha
 
 ### MonthDay
 
-MonthDay is a type more naturaly represented by the subclassing approach.
+MonthDay is a type more naturally represented by the subclassing approach.
 
 **Temporal.Calendar Approach:** There are several imperfect solutions for the Temporal.PlainMonthDay data model, discussed in [#391](https://github.com/tc39/proposal-temporal/issues/391). The current workable proposed solution is to make the MonthDay data model the same as the Date data model.
 

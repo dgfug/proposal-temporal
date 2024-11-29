@@ -8,12 +8,12 @@ function bigIntAbs(n) {
 // number of digits.
 function formatExpandedYear(year) {
   let yearString;
-  if (year < 1000 || year > 9999) {
+  if (year < 0 || year > 9999) {
     let sign = year < 0 ? '-' : '+';
     let yearNumber = bigIntAbs(year);
     yearString = sign + `${yearNumber}`.padStart(10, '0');
   } else {
-    yearString = `${year}`;
+    yearString = `${year}`.padStart(4, '0');
   }
   return yearString;
 }
@@ -53,7 +53,7 @@ const expandedYears = new WeakMap();
 
 class ExpandedPlainDate extends Temporal.PlainDate {
   // The expanded-year versions of the Temporal types are limited to using the
-  // ISO calendar.
+  // ISO 8601 calendar.
   constructor(year, isoMonth, isoDay) {
     year = BigInt(year);
     const isoYear = isLeapYear(year) ? 1972 : 1970;
@@ -63,8 +63,8 @@ class ExpandedPlainDate extends Temporal.PlainDate {
 
   static _convert(plainDate, expandedYear) {
     if (plainDate instanceof ExpandedPlainDate) return plainDate;
-    const f = plainDate.getISOFields();
-    return new ExpandedPlainDate(expandedYear, f.isoMonth, f.isoDay);
+    const iso = plainDate.withCalendar('iso8601');
+    return new ExpandedPlainDate(expandedYear, iso.month, iso.day);
   }
 
   static from(item) {
@@ -92,9 +92,9 @@ class ExpandedPlainDate extends Temporal.PlainDate {
 
   toString() {
     const year = formatExpandedYear(this.year);
-    const { isoMonth, isoDay } = this.getISOFields();
-    const month = `${isoMonth}`.padStart(2, '0');
-    const day = `${isoDay}`.padStart(2, '0');
+    const iso = this.withCalendar('iso8601');
+    const month = `${iso.month}`.padStart(2, '0');
+    const day = `${iso.day}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 }
@@ -109,17 +109,17 @@ class ExpandedPlainDateTime extends Temporal.PlainDateTime {
 
   static _convert(plainDateTime, expandedYear) {
     if (plainDateTime instanceof ExpandedPlainDateTime) return plainDateTime;
-    const f = plainDateTime.getISOFields();
+    const iso = plainDateTime.withCalendar('iso8601');
     return new ExpandedPlainDateTime(
       expandedYear,
-      f.isoMonth,
-      f.isoDay,
-      f.isoHour,
-      f.isoMinute,
-      f.isoSecond,
-      f.isoMillisecond,
-      f.isoMicrosecond,
-      f.isoNanosecond
+      iso.month,
+      iso.day,
+      plainDateTime.hour,
+      plainDateTime.minute,
+      plainDateTime.second,
+      plainDateTime.millisecond,
+      plainDateTime.microsecond,
+      plainDateTime.nanosecond
     );
   }
 
@@ -156,23 +156,11 @@ class ExpandedPlainDateTime extends Temporal.PlainDateTime {
   }
 }
 
-class ExpandedPlainTime extends Temporal.PlainTime {
-  toPlainDateTime(date) {
-    return ExpandedPlainDateTime._convert(super.toPlainDateTime(date), date.year);
-  }
-
-  static from(item) {
-    const { hour, minute, second, millisecond, microsecond, nanosecond } = super.from(item);
-    return new ExpandedPlainTime(hour, minute, second, millisecond, microsecond, nanosecond);
-  }
-}
-
 function makeExpandedTemporal() {
   return {
     ...Temporal,
     PlainDate: ExpandedPlainDate,
-    PlainDateTime: ExpandedPlainDateTime,
-    PlainTime: ExpandedPlainTime
+    PlainDateTime: ExpandedPlainDateTime
   };
 }
 
@@ -180,7 +168,5 @@ const ExpandedTemporal = makeExpandedTemporal();
 
 const date = ExpandedTemporal.PlainDate.from({ year: 635427810, month: 2, day: 2 });
 assert.equal(date.toString(), '+0635427810-02-02');
-const dateTime = ExpandedTemporal.PlainTime.from('10:23').toPlainDateTime(date);
-assert.equal(dateTime.toString(), '+0635427810-02-02T10:23:00');
 const dateFromString = ExpandedTemporal.PlainDateTime.from('-0075529144-02-29T12:53:27.55');
 assert.equal(dateFromString.year, -75529144n);

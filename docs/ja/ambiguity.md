@@ -100,8 +100,8 @@ zdt = dateTime.toZonedDateTime('Asia/Tokyo');
 // exact timeから、UNIX epochからの経過秒、ミリ秒、ナノ秒を得る
 inst = zdt.toInstant();
 epochNano = inst.epochNanoseconds; // => 1576536480000000000n
-epochMicro = inst.epochMilliseconds; // => 1576536480000
-epochSecs = inst.epochSeconds; // => 1576536480
+epochMilli = inst.epochMilliseconds; // => 1576536480000
+epochSecs = Math.floor(inst.epochMilliseconds / 1000); // => 1576536480
 ```
 <!-- prettier-ignore-end -->
 

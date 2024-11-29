@@ -1,5 +1,7 @@
 # Temporal
 
+> **注:** このドキュメントは[原文](https://tc39.es/proposal-temporal/docs/index.html)を部分的に日本語に翻訳したものです。全てのドキュメント，および最新の内容を確認したい場合は[原文](https://tc39.es/proposal-temporal/docs/index.html)を参照してください。
+
 <details>
   <summary><strong>Table of Contents</strong></summary>
 <!-- toc -->
@@ -27,7 +29,7 @@ Temporal は、日付のみ、時間のみ、およびその他の限定的な�
 
 Temporal の API では、タイムゾーンが関連付けられていない日付を表すオブジェクトは、「Plain」から始まる名前を持ちます。（例：`Temporal.PlainDate`、`Temporal.PlainTime`、`Temporal.PlainDateTime`）。このようなオブジェクトと exact time（カレンダーや場所によらない特定の時点での時刻）の変換は、タイムゾーンとサマータイムのために曖昧になることがあります。そして、Temporal の API は開発者にこの曖昧さを解決する方法を提供します。
 
-いくつかの重要なコンセプトについては次のドキュメントを参照してください：[Temporal におけるタイムゾーンとサマータイム、曖昧性の解決](./ambiguity.md)
+いくつかの重要なコンセプトについては次のドキュメントを参照してください：[Temporal におけるタイムゾーンとサマータイム、曖昧性の解決](./timezone.md)
 
 ### **Temporal.now**
 
@@ -80,7 +82,7 @@ const zonedDateTime = Temporal.ZonedDateTime.from({
 }); // => 1995-12-07T03:24:30.0000035-08:00[America/Los_Angeles]
 ```
 
-これは Tempral において最も多くの情報を持つタイプであり、`Temporal.TimeZone`、`Temporal.Instant`、`Temporal.PlainDateTime`（これには `Temporal.Calendar` が含まれます）の組み合わせとしてみなせます。
+これは Temporal において最も多くの情報を持つタイプであり、`Temporal.TimeZone`、`Temporal.Instant`、`Temporal.PlainDateTime`（これには `Temporal.Calendar` が含まれます）の組み合わせとしてみなせます。
 
 より詳しくは[Temporal.ZonedDateTime Documentation](../zoneddatetime.md)を参照してください。
 
@@ -199,7 +201,7 @@ timeZone.getPreviousTransition(Temporal.now.instant()); // => 2014-09-25T21:00:0
 timeZone.getNextTransition(Temporal.now.instant()); // => null
 ```
 
-より詳しくは[Temporal.TimeZone Documentation](../timezone.md)を参照してください。また、これらのコンセプトを説明した[Temporal におけるタイムゾーンとサマータイム、曖昧性の解決](./ambiguity.md)もご覧ください。
+より詳しくは[Temporal.TimeZone Documentation](../timezone.md)を参照してください。また、これらのコンセプトを説明した[Temporal におけるタイムゾーンとサマータイム、曖昧性の解決](./timezone.md)もご覧ください。
 
 ### **Temporal.Calendar**
 
@@ -232,7 +234,6 @@ date.daysInYear; // => 365
 
 ### **キーコンセプト**
 
-- [曖昧性](./ambiguity.md) &mdash; 時間に関する情報が欠落して曖昧さを引き起こす仕組み、2 つのタイプの時間オブジェクトが必要な理由、サマータイムやタイムゾーンの定義変更による影響
+- [曖昧性](./timezone.md) &mdash; 時間に関する情報が欠落して曖昧さを引き起こす仕組み、2 つのタイプの時間オブジェクトが必要な理由、サマータイムやタイムゾーンの定義変更による影響
 - [バランシング](./balancing.md) &mdash; `Temporal.Duration`の単位が、いつ繰り上げされる（またはされない）のかについての説明
-- [ISO 文字列の拡張](./iso-string-ext.md) &mdash; `Temporal`で使用されている ISO 8601 および RFC 3339 の拡張に関する議論、IETF と連携した標準化への取り組み
-- [なぜ Temporal インスタンスはカレンダーの情報を持っているのか？](./calendar-review.md) &mdash; `Temporal.PlainDate`や`Temporal.PlainDate`がカレンダーシステムを保持している理由と背景
+- [なぜ Temporal インスタンスはカレンダーの情報を持っているのか？](./calendar-review.md) &mdash; `Temporal.PlainDate`や`Temporal.ZonedDateTime`がカレンダーシステムを保持している理由と背景

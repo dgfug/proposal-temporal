@@ -1,55 +1,48 @@
-import { ES } from './ecmascript.mjs';
+import { ObjectDefineProperty, SymbolToStringTag } from './primordials.mjs';
+
+import * as ES from './ecmascript.mjs';
 import { GetIntrinsic } from './intrinsicclass.mjs';
+
+function SystemDateTime(timeZone) {
+  return ES.GetISODateTimeFor(timeZone, ES.SystemUTCEpochNanoSeconds());
+}
 
 const instant = () => {
   const Instant = GetIntrinsic('%Temporal.Instant%');
   return new Instant(ES.SystemUTCEpochNanoSeconds());
 };
-const plainDateTime = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  const timeZone = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.ToTemporalCalendar(calendarLike);
-  const inst = instant();
-  return ES.BuiltinTimeZoneGetPlainDateTimeFor(timeZone, inst, calendar);
+const plainDateTimeISO = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalDateTime(isoDateTime, 'iso8601');
 };
-const plainDateTimeISO = (temporalTimeZoneLike = timeZone()) => {
-  const timeZone = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.GetISO8601Calendar();
-  const inst = instant();
-  return ES.BuiltinTimeZoneGetPlainDateTimeFor(timeZone, inst, calendar);
+const zonedDateTimeISO = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  return ES.CreateTemporalZonedDateTime(ES.SystemUTCEpochNanoSeconds(), timeZone, 'iso8601');
 };
-const zonedDateTime = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  const timeZone = ES.ToTemporalTimeZone(temporalTimeZoneLike);
-  const calendar = ES.ToTemporalCalendar(calendarLike);
-  return ES.CreateTemporalZonedDateTime(ES.SystemUTCEpochNanoSeconds(), timeZone, calendar);
+const plainDateISO = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalDate(isoDateTime.isoDate, 'iso8601');
 };
-const zonedDateTimeISO = (temporalTimeZoneLike = timeZone()) => {
-  return zonedDateTime(ES.GetISO8601Calendar(), temporalTimeZoneLike);
+const plainTimeISO = (temporalTimeZoneLike = ES.DefaultTimeZone()) => {
+  const timeZone = ES.ToTemporalTimeZoneIdentifier(temporalTimeZoneLike);
+  const isoDateTime = SystemDateTime(timeZone);
+  return ES.CreateTemporalTime(isoDateTime.time);
 };
-const plainDate = (calendarLike, temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToDate(plainDateTime(calendarLike, temporalTimeZoneLike));
-};
-const plainDateISO = (temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToDate(plainDateTimeISO(temporalTimeZoneLike));
-};
-const plainTimeISO = (temporalTimeZoneLike = timeZone()) => {
-  return ES.TemporalDateTimeToTime(plainDateTimeISO(temporalTimeZoneLike));
-};
-const timeZone = () => {
-  return ES.SystemTimeZone();
+const timeZoneId = () => {
+  return ES.DefaultTimeZone();
 };
 
 export const Now = {
   instant,
-  plainDateTime,
   plainDateTimeISO,
-  plainDate,
   plainDateISO,
   plainTimeISO,
-  timeZone,
-  zonedDateTime,
+  timeZoneId,
   zonedDateTimeISO
 };
-Object.defineProperty(Now, Symbol.toStringTag, {
+ObjectDefineProperty(Now, SymbolToStringTag, {
   value: 'Temporal.Now',
   writable: false,
   enumerable: false,

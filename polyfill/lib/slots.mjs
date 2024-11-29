@@ -1,19 +1,22 @@
+import {
+  WeakMap as WeakMapCtor,
+
+  // class static functions and methods
+  ArrayPrototypeReduce,
+  ObjectCreate,
+  WeakMapPrototypeGet,
+  WeakMapPrototypeSet
+} from './primordials.mjs';
+
+import Call from 'es-abstract/2024/Call.js';
+
 // Instant
 export const EPOCHNANOSECONDS = 'slot-epochNanoSeconds';
 
-// TimeZone
-export const TIMEZONE_ID = 'slot-timezone-identifier';
-
 // DateTime, Date, Time, YearMonth, MonthDay
-export const ISO_YEAR = 'slot-year';
-export const ISO_MONTH = 'slot-month';
-export const ISO_DAY = 'slot-day';
-export const ISO_HOUR = 'slot-hour';
-export const ISO_MINUTE = 'slot-minute';
-export const ISO_SECOND = 'slot-second';
-export const ISO_MILLISECOND = 'slot-millisecond';
-export const ISO_MICROSECOND = 'slot-microsecond';
-export const ISO_NANOSECOND = 'slot-nanosecond';
+export const ISO_DATE = 'slot-iso-date';
+export const ISO_DATE_TIME = 'slot-iso-date-time';
+export const TIME = 'slot-time';
 export const CALENDAR = 'slot-calendar';
 // Date, YearMonth, and MonthDay all have the same slots, disambiguation needed:
 export const DATE_BRAND = 'slot-date-brand';
@@ -21,7 +24,6 @@ export const YEAR_MONTH_BRAND = 'slot-year-month-brand';
 export const MONTH_DAY_BRAND = 'slot-month-day-brand';
 
 // ZonedDateTime
-export const INSTANT = 'slot-cached-instant';
 export const TIME_ZONE = 'slot-time-zone';
 
 // Duration
@@ -36,20 +38,17 @@ export const MILLISECONDS = 'slot-milliseconds';
 export const MICROSECONDS = 'slot-microseconds';
 export const NANOSECONDS = 'slot-nanoseconds';
 
-// Calendar
-export const CALENDAR_ID = 'slot-calendar-identifier';
-
-const slots = new WeakMap();
+const slots = new WeakMapCtor();
 export function CreateSlots(container) {
-  slots.set(container, Object.create(null));
+  Call(WeakMapPrototypeSet, slots, [container, ObjectCreate(null)]);
 }
 function GetSlots(container) {
-  return slots.get(container);
+  return Call(WeakMapPrototypeGet, slots, [container]);
 }
 export function HasSlot(container, ...ids) {
   if (!container || 'object' !== typeof container) return false;
   const myslots = GetSlots(container);
-  return !!myslots && ids.reduce((all, id) => all && id in myslots, true);
+  return !!myslots && Call(ArrayPrototypeReduce, ids, [(all, id) => all && id in myslots, true]);
 }
 export function GetSlot(container, id) {
   return GetSlots(container)[id];

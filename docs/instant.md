@@ -7,16 +7,66 @@
 
 A `Temporal.Instant` is a single point in time (called **"exact time"**), with a precision in nanoseconds.
 No time zone or calendar information is present.
-As such `Temporal.Instant` has no concept of days, months or even hours.
+To obtain local date/time units like year, month, day, or hour, a `Temporal.Instant` must be combined with a time zone identifier.
 
-For convenience of interoperability, it internally uses nanoseconds since the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) (midnight UTC on January 1, 1970).
-However, a `Temporal.Instant` can be created from any of several expressions that refer to an exact time, including an ISO 8601 string with a time zone such as `'2020-01-23T17:04:36.491865121-08:00'`.
+<!-- prettier-ignore-start -->
+```javascript
+instant = Temporal.Instant.from('2020-01-01T00:00+05:30'); // => 2019-12-31T18:30:00Z
+instant.epochNanoseconds; // => 1577817000000000000n
 
-If you have a legacy `Date` instance, you can use its `toTemporalInstant()` method to convert to a `Temporal.Instant`.
+// `Temporal.Instant` lacks properties that depend on time zone or calendar
+instant.year; // => undefined
 
-Since `Temporal.Instant` doesn't contain any information about time zones, a `Temporal.TimeZone` is needed in order to convert it into a `Temporal.PlainDateTime` (and from there into any of the other `Temporal` objects.)
+zdtTokyo = instant.toZonedDateTimeISO('Asia/Tokyo'); // => 2020-01-01T03:30:00+09:00[Asia/Tokyo]
+zdtTokyo.year; // => 2020
+zdtTokyo.toPlainDate(); // => 2020-01-01
+```
+<!-- prettier-ignore-end -->
+
+`Temporal.Instant` stores an integer count of nanoseconds since the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC, ignoring leap seconds.
+For interoperability with `Date` and other APIs, `Temporal.Instant` also offers conversion properties and methods for seconds, milliseconds, or microseconds since epoch.
+A `Temporal.Instant` can also be created from an ISO 8601 / RFC 3339 string like `'2020-01-23T17:04:36.491865121-08:00'` or `'2020-01-24T01:04Z'`.
 
 Like Unix time, `Temporal.Instant` ignores leap seconds.
+
+## Interoperability with `Date`
+
+`Temporal.Instant` is the easiest way to interoperate between `Temporal` objects and code using `Date`.
+Because `Date` and `Temporal.Instant` both use a time-since-epoch data model, conversions between them are zero-parameter method calls that are lossless (except sub-millisecond precision is truncated when converting to `Date`).
+
+<!-- prettier-ignore-start -->
+```javascript
+// Convert from `Temporal.Instant` to `Date` (which uses millisecond precision)
+instant = Temporal.Instant.from('2020-01-01T00:00:00.123456789+05:30');
+                                                           // => 2019-12-31T18:30:00.123456789Z
+date = new Date(instant.epochMilliseconds);
+date.toISOString();                                        // => 2019-12-31T18:30:00.123Z
+
+// Convert from `Date` to `Temporal.Instant`
+sameInstant = date.toTemporalInstant();                    // => 2019-12-31T18:30:00.123Z
+```
+<!-- prettier-ignore-end -->
+
+A `Date` that's been converted to a `Temporal.Instant` can be easily converted to a `Temporal.ZonedDateTime` object by providing a time zone.
+From there, calendar and clock properties like `day` or `hour` are available.
+Conversions to narrower types like `Temporal.PlainDate` or `Temporal.PlainTime` are also provided.
+
+<!-- prettier-ignore-start -->
+```javascript
+date = new Date(2019, 11, 31, 18, 30);  // => Tue Dec 31 2019 18:30:00 GMT-0800 (Pacific Standard Time)
+instant = date.toTemporalInstant();     // => 2020-01-01T02:30:00Z
+zonedDateTime = instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
+                                        // => 2019-12-31T18:30:00-08:00[America/Los_Angeles]
+zonedDateTime.day;                      // => 31
+dateOnly = zonedDateTime.toPlainDate(); // => 2019-12-31
+```
+<!-- prettier-ignore-end -->
+
+Bugs in `Date`=>`Temporal` conversions can be caused by picking the wrong time zone when converting from `Temporal.Instant` to `Temporal.ZonedDateTime`.
+For example, the example above constructs the `Date` using local-timezone parameters, so it uses the system time zone: `Temporal.Now.timeZoneId()`.
+But if the `Date` had been initialized with a string like `'2019-12-31'`, then getting the same date back in a `Temporal.PlainDate` would require using the `'UTC'` time zone instead.
+
+For discussion and code examples about picking the correct time zone, and also about `Date`<=>`Temporal` interoperability in general, see [Converting between `Temporal` types and legacy `Date`](cookbook.md#converting-between-temporal-types-and-legacy-date) in the documentation cookbook.
 
 ## Constructor
 
@@ -30,7 +80,7 @@ Like Unix time, `Temporal.Instant` ignores leap seconds.
 
 Creates a new `Temporal.Instant` object that represents an exact time.
 
-`epochNanoseconds` is the number of nanoseconds (10<sup>&minus;9</sup> seconds) between the Unix epoch (midnight UTC on January 1, 1970) and the desired exact time.
+`epochNanoseconds` is the number of nanoseconds (10<sup>&minus;9</sup> seconds) from the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC until the desired exact time, ignoring leap seconds.
 
 Use this constructor directly if you know the precise number of nanoseconds already and have it in bigint form, for example from a database.
 Otherwise, `Temporal.Instant.from()`, which accepts more kinds of input, is probably more convenient.
@@ -50,18 +100,18 @@ turnOfTheCentury = new Temporal.Instant(-2208988800000000000n); // => 1900-01-01
 
 ## Static methods
 
-### Temporal.Instant.**from**(_thing_: any) : Temporal.Instant
+### Temporal.Instant.**from**(_item_: Temporal.Instant | string) : Temporal.Instant
 
 **Parameters:**
 
-- `thing`: The value representing the desired exact time.
+- `item`: a value convertible to a `Temporal.Instant`.
 
 **Returns:** a new `Temporal.Instant` object.
 
 This static method creates a new `Temporal.Instant` object from another value.
 If the value is another `Temporal.Instant` object, a new object representing the same exact time is returned.
 
-Any other value is converted to a string, which is expected to be in ISO 8601 format, including a date, a time, and a time zone.
+Otherwise, the value must be a string, which is expected to be in ISO 8601 format, including a date, a time, and a time zone.
 The time zone name, if given, is ignored; only the time zone offset is taken into account.
 
 Example usage:
@@ -75,32 +125,9 @@ instant === Temporal.Instant.from(instant); // => false
 
 // Not enough information to denote an exact time:
 /* WRONG */ instant = Temporal.Instant.from('2019-03-30'); // => throws, no time
-/* WRONG */ instant = Temporal.Instant.from('2019-03-30T01:45'); // => throws, no time zone
+/* WRONG */ instant = Temporal.Instant.from('2019-03-30T01:45'); // => throws, no UTC offset
 ```
 <!-- prettier-ignore-end -->
-
-### Temporal.Instant.**fromEpochSeconds**(_epochSeconds_: number) : Temporal.Instant
-
-**Parameters:**
-
-- `epochSeconds` (number): A number of seconds.
-
-**Returns:** a new `Temporal.Instant` object.
-
-This static method creates a new `Temporal.Instant` object with seconds precision.
-`epochSeconds` is the number of seconds between the Unix epoch (midnight UTC on January 1, 1970) and the desired exact time.
-
-The number of seconds since the Unix epoch is a common measure of exact time in many computer systems.
-Use this method if you need to interface with such a system.
-
-Example usage:
-
-```js
-// Same examples as in new Temporal.Instant(), but with seconds precision
-instant = Temporal.Instant.fromEpochSeconds(1553906700);
-epoch = Temporal.Instant.fromEpochSeconds(0); // => 1970-01-01T00:00:00Z
-turnOfTheCentury = Temporal.Instant.fromEpochSeconds(-2208988800); // => 1900-01-01T00:00:00Z
-```
 
 ### Temporal.Instant.**fromEpochMilliseconds**(_epochMilliseconds_: number) : Temporal.Instant
 
@@ -110,31 +137,28 @@ turnOfTheCentury = Temporal.Instant.fromEpochSeconds(-2208988800); // => 1900-01
 
 **Returns:** a new `Temporal.Instant` object.
 
-Same as `Temporal.Instant.fromEpochSeconds()`, but with millisecond (10<sup>&minus;3</sup> second) precision.
+This static method creates a new `Temporal.Instant` object with milliseconds precision (i.e., zero values in all units smaller than a millisecond).
+`epochMilliseconds` is the number of milliseconds from the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC until the desired exact time, ignoring leap seconds.
+
+The number of seconds or milliseconds since the Unix epoch is a common measure of exact time in many computer systems.
+Use this method if you need to interface with such a system.
 
 The number of milliseconds since the Unix epoch is also returned from the `getTime()` and `valueOf()` methods of legacy JavaScript `Date` objects, as well as `Date.now()`.
 However, for conversion from legacy `Date` to `Temporal.Instant`, use `Date.prototype.toTemporalInstant`:
 
 ```js
-legacyDate = new Date('December 17, 1995 03:24:00 GMT');
+legacyDate = new Date('1995-12-17T03:24Z');
 instant = Temporal.Instant.fromEpochMilliseconds(legacyDate.getTime()); // => 1995-12-17T03:24:00Z
-instant = Temporal.Instant.fromEpochMilliseconds(+legacyDate); // valueOf() called implicitly
+instant = Temporal.Instant.fromEpochMilliseconds(legacyDate); // valueOf() called implicitly
 instant = legacyDate.toTemporalInstant(); // recommended
 
-// Use fromEpochMilliseconds, for example, if you have epoch millisecond
-// data stored in a file:
+// Use fromEpochMilliseconds, for example, if you have epoch millisecond data stored in a file
 todayMs = Temporal.Instant.fromEpochMilliseconds(msReadFromFile);
+
+// If you have epoch seconds data:
+epochSecs = 1553906700;  // e.g., read from a file
+instant = Temporal.Instant.fromEpochMilliseconds(epochSecs * 1000);
 ```
-
-### Temporal.Instant.**fromEpochMicroseconds**(_epochMilliseconds_ : bigint) : Temporal.Instant
-
-**Parameters:**
-
-- `epochMicroseconds` (bigint): A number of microseconds.
-
-**Returns:** a new `Temporal.Instant` object.
-
-Same as `Temporal.Instant.fromEpochSeconds()`, but with microsecond (10<sup>&minus;6</sup> second) precision.
 
 ### Temporal.Instant.**fromEpochNanoseconds**(_epochNanoseconds_ : bigint) : Temporal.Instant
 
@@ -144,8 +168,14 @@ Same as `Temporal.Instant.fromEpochSeconds()`, but with microsecond (10<sup>&min
 
 **Returns:** a new `Temporal.Instant` object.
 
-Same as `Temporal.Instant.fromEpochSeconds()`, but with nanosecond (10<sup>&minus;9</sup> second) precision.
+Same as `Temporal.Instant.fromEpochMilliseconds()`, but with nanosecond (10<sup>&minus;9</sup> second) precision.
 Also the same as `new Temporal.Instant(epochNanoseconds)`.
+
+If you have epoch microseconds data, you can use this function to create a `Temporal.Instant` from that:
+```js
+epochMicros = 1553906700_000_000n;
+instant = Temporal.Instant.fromEpochNanoseconds(epochMicros * 1000n);
+```
 
 ### Temporal.Instant.**compare**(_one_: Temporal.Instant | string, _two_: Temporal.Instant | string) : number
 
@@ -169,9 +199,9 @@ This function can be used to sort arrays of `Temporal.Instant` objects.
 For example:
 
 ```javascript
-one = Temporal.Instant.fromEpochSeconds(1.0e9);
-two = Temporal.Instant.fromEpochSeconds(1.1e9);
-three = Temporal.Instant.fromEpochSeconds(1.2e9);
+one = Temporal.Instant.fromEpochMilliseconds(1.0e12);
+two = Temporal.Instant.fromEpochMilliseconds(1.1e12);
+three = Temporal.Instant.fromEpochMilliseconds(1.2e12);
 sorted = [three, one, two].sort(Temporal.Instant.compare);
 sorted.join(' ');
 // => '2001-09-09T01:46:40Z 2004-11-09T11:33:20Z 2008-01-10T21:20:00Z'
@@ -179,25 +209,13 @@ sorted.join(' ');
 
 ## Properties
 
-### instant.**epochSeconds** : number
-
-The value of this property is an integer number of seconds between the Unix epoch (midnight UTC on January 1, 1970) and `instant`.
-This number will be negative if `instant` is before 1970.
-The number of seconds is truncated towards zero.
-
-Use this property if you need to interface with some other system that reckons time in seconds since the Unix epoch.
-
-Example usage:
-
-```js
-instant = Temporal.Instant.from('2019-03-30T01:45+01:00');
-instant.epochSeconds; // => 1553906700
-```
-
 ### instant.**epochMilliseconds** : number
 
-Same as `epochSeconds`, but with millisecond (10<sup>&minus;3</sup> second) precision.
-The number of seconds is truncated towards zero.
+The value of this property is an integer number of milliseconds from the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC until `instant`, ignoring leap seconds.
+This number will be negative if `instant` is before 1970.
+The number of milliseconds is truncated towards the beginning of time.
+
+Use this property if you need to interface with some other system that reckons time in milliseconds since the Unix epoch.
 
 This method can be useful in particular to create an old-style JavaScript `Date` object, if one is needed.
 An example:
@@ -205,18 +223,24 @@ An example:
 ```js
 instant = Temporal.Instant.from('2019-03-30T00:45Z');
 new Date(instant.epochMilliseconds); // => 2019-03-30T00:45:00.000Z
+
+// If you need epoch seconds data:
+epochSecs = Math.floor(instant.epochMillieconds / 1000); // => 1553906700
 ```
-
-### instant.**epochMicroseconds** : bigint
-
-Same as `epochSeconds`, but the value is a bigint with microsecond (10<sup>&minus;6</sup> second) precision.
-The number of seconds is truncated towards zero.
 
 ### instant.**epochNanoseconds** : bigint
 
-Same as `epochSeconds`, but the value is a bigint with nanosecond (10<sup>&minus;9</sup> second) precision.
+Same as `epochMilliseconds`, but the value is a bigint with nanosecond (10<sup>&minus;9</sup> second) precision.
 
 The value of this property is suitable to be passed to `new Temporal.Instant()`.
+
+If you need epoch microseconds data, you can divide the epoch nanoseconds by 1000, but note that bigint division is a truncation, whereas you should use floor rounding to calculate epoch microseconds in the case of a negative value.
+That can be done with bigints like this:
+
+```js
+ns = instant.epochNanoseconds;
+epochMicros = ns / 1000n + ((ns % 1000n) < 0n ? -1n : 0n);
+```
 
 ## Methods
 
@@ -224,62 +248,32 @@ The value of this property is suitable to be passed to `new Temporal.Instant()`.
 
 **Parameters:**
 
-- `timeZone` (object or string): either
-  - a `Temporal.TimeZone` object
-  - an object implementing the [time zone protocol](./timezone.md#custom-time-zones)
-  - a string description of the time zone; either its IANA name or UTC offset
-  - an object with a `timeZone` property whose value is any of the above.
+- `timeZone` (string or `Temporal.ZonedDateTime`): The time zone to use for the conversion. Can be the time zone's string identifier, or a `Temporal.ZonedDateTime` object, whose time zone will be used.
 
 **Returns:** a `Temporal.ZonedDateTime` object representing the calendar date, wall-clock time, time zone offset, and `timeZone`, according to the reckoning of the ISO 8601 calendar, at the exact time indicated by `instant`.
 
 For a list of IANA time zone names, see the current version of the [IANA time zone database](https://www.iana.org/time-zones).
 A convenient list is also available [on Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), although it might not reflect the latest official status.
 
-This method is one way to convert a `Temporal.Instant` to a `Temporal.ZonedDateTime`.
-It is the same as `toZonedDateTime()`, but always uses the ISO 8601 calendar.
-Use this method if you are not doing computations in other calendars.
+This method always returns a `Temporal.ZonedDateTime` with the ISO 8601 calendar.
+Remember to use `withCalendar()` on the result if you need to do computations in other calendars.
 
 Example usage:
 
 ```js
 // Converting a specific exact time to a calendar date / wall-clock time
-timestamp = Temporal.Instant.fromEpochSeconds(1553993100);
+timestamp = Temporal.Instant.fromEpochMilliseconds(1553993100_000);
 timestamp.toZonedDateTimeISO('Europe/Berlin'); // => 2019-03-31T01:45:00+01:00[Europe/Berlin]
 timestamp.toZonedDateTimeISO('UTC'); // => 2019-03-31T00:45:00+00:00[UTC]
 timestamp.toZonedDateTimeISO('-08:00'); // => 2019-03-30T16:45:00-08:00[-08:00]
-```
 
-### instant.**toZonedDateTime**(_item_: object) : Temporal.ZonedDateTime
-
-**Parameters:**
-
-- `item` (object): an object with properties to be combined with `instant`. The following properties are recognized:
-  - `calendar` (required calendar identifier string, `Temporal.Calendar` object, or object implementing the calendar protocol): the calendar in which to interpret `instant`.
-  - `timeZone` (required time zone identifier string, `Temporal.TimeZone` object, or object implementing the [time zone protocol](./timezone.md#custom-time-zones)): the time zone in which to interpret `instant`.
-
-**Returns:** a `Temporal.ZonedDateTime` object representing the calendar date, wall-clock time, time zone offset, and `timeZone`, according to the reckoning of `calendar`, at the exact time indicated by `instant`.
-
-For a list of IANA time zone names, see the current version of the [IANA time zone database](https://www.iana.org/time-zones).
-A convenient list is also available [on Wikipedia](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), although it might not reflect the latest official status.
-
-For a list of calendar identifiers, see the documentation for [Intl.DateTimeFormat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#Parameters).
-
-If you only want to use the ISO 8601 calendar, use `toZonedDateTimeISO()`.
-
-Example usage:
-
-<!-- prettier-ignore-start -->
-```js
 // What time was the Unix epoch (timestamp 0) in Bell Labs (Murray Hill, New Jersey, USA) in the Gregorian calendar?
-epoch = Temporal.Instant.fromEpochSeconds(0);
-timeZone = Temporal.TimeZone.from('America/New_York');
-epoch.toZonedDateTime({ timeZone, calendar: 'gregory' });
+epoch = Temporal.Instant.fromEpochMilliseconds(0);
+epoch.toZonedDateTimeISO('America/New_York').withCalendar('gregory');
   // => 1969-12-31T19:00:00-05:00[America/New_York][u-ca=gregory]
 
 // What time was the Unix epoch in Tokyo in the Japanese calendar?
-timeZone = Temporal.TimeZone.from('Asia/Tokyo');
-calendar = Temporal.Calendar.from('japanese');
-zdt = epoch.toZonedDateTime({ timeZone, calendar });
+zdt = epoch.toZonedDateTimeISO('Asia/Tokyo').withCalendar('japanese');
   // => 1970-01-01T09:00:00+09:00[Asia/Tokyo][u-ca=japanese]
 console.log(zdt.eraYear, zdt.era);
   // => '45 showa'
@@ -302,7 +296,7 @@ If `duration` is not a `Temporal.Duration` object, then it will be converted to 
 The `years`, `months`, `weeks`, and `days` fields of `duration` must be zero.
 `Temporal.Instant` is independent of time zones and calendars, and so years, months, weeks, and days may be different lengths depending on which calendar or time zone they are reckoned in.
 This makes an addition with those units ambiguous.
-If you need to do this, convert the `Temporal.Instant` to a `Temporal.PlainDateTime` by specifying the desired calendar and time zone, add the duration, and then convert it back.
+To add those units, convert the `Temporal.Instant` to a `Temporal.ZonedDateTime` by specifying the desired calendar and time zone, add the duration, and then convert it back.
 
 If the result is earlier or later than the range that `Temporal.Instant` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), a `RangeError` will be thrown.
 
@@ -333,7 +327,7 @@ If `duration` is not a `Temporal.Duration` object, then it will be converted to 
 The `years`, `months`, `weeks`, and `days` fields of `duration` must be zero.
 `Temporal.Instant` is independent of time zones and calendars, and so years, months, weeks, and days may be different lengths depending on which calendar or time zone they are reckoned in.
 This makes a subtraction with those units ambiguous.
-If you need to do this, convert the `Temporal.Instant` to a `Temporal.PlainDateTime` by specifying the desired calendar and time zone, subtract the duration, and then convert it back.
+To subtract those units, convert the `Temporal.Instant` to a `Temporal.ZonedDateTime` by specifying the desired calendar and time zone, subtract the duration, and then convert it back.
 
 If the result is earlier or later than the range that `Temporal.Instant` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), a `RangeError` will be thrown.
 
@@ -364,7 +358,7 @@ Temporal.Now.instant().subtract(oneHour);
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the difference between `instant` and `other`.
@@ -381,17 +375,17 @@ However, a difference of 30 seconds will still be 30 seconds even if `largestUni
 A value of `'auto'` means `'second'`, unless `smallestUnit` is `'hour'` or `'minute'`, in which case `largestUnit` is equal to `smallestUnit`.
 
 By default, the largest unit in the result is seconds.
-Weeks, months, years, and days are not allowed, unlike the difference methods of the other Temporal types.
+Weeks, months, years, and days are not allowed, unlike the difference methods of other Temporal types.
 This is because months and years can be different lengths depending on which month is meant, and whether the year is a leap year, which all depends on the start and end date of the difference.
 You cannot determine the start and end date of a difference between `Temporal.Instant`s, because `Temporal.Instant` has no time zone or calendar.
 In addition, weeks can be different lengths in different calendars, and days can be different lengths when the time zone has a daylight saving transition.
 
+To calculate the difference in days or larger units between two `Temporal.Instant`s, first convert both (using the `toZonedDateTimeISO` or `toZonedDateTime` methods) to `Temporal.ZonedDateTime` objects in the same time zone and calendar.
+For example, you might decide to base the calculation on your user's current time zone, or on UTC, in the Gregorian calendar.
+
 You can round the result using the `smallestUnit`, `roundingIncrement`, and `roundingMode` options.
 These behave as in the `Temporal.Duration.round()` method.
 The default is to do no rounding.
-
-If you do need to calculate the difference between two `Temporal.Instant`s in years, months, weeks, or days, then you can make an explicit choice on how to eliminate this ambiguity, choosing your starting point by converting to a `Temporal.PlainDateTime`.
-For example, you might decide to base the calculation on your user's current time zone, or on UTC, in the Gregorian calendar.
 
 Take care when using milliseconds, microseconds, or nanoseconds as the largest unit.
 For some durations, the resulting value may overflow `Number.MAX_SAFE_INTEGER` and lose precision in its least significant digit(s).
@@ -416,8 +410,8 @@ approxMissionLength = startOfMoonMission.until(endOfMoonMission, {
   // => PT195H
 
 // A billion (10^9) seconds since the epoch in different units
-epoch = Temporal.Instant.fromEpochSeconds(0);
-billion = Temporal.Instant.fromEpochSeconds(1e9);
+epoch = Temporal.Instant.fromEpochMilliseconds(0);
+billion = Temporal.Instant.fromEpochMilliseconds(1e9);
 epoch.until(billion);
   // => PT1000000000S
 epoch.until(billion, { largestUnit: 'hour' });
@@ -454,7 +448,7 @@ epoch.toZonedDateTimeISO('UTC').until(
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the difference between `instant` and `other`.
@@ -474,25 +468,28 @@ billion = Temporal.Instant.fromEpochSeconds(1e9);
 billion.since(epoch); // => PT1000000000S
 ```
 
-### instant.**round**(_options_: object) : Temporal.Instant
+### instant.**round**(_roundTo_: string | object) : Temporal.Instant
 
 **Parameters:**
 
-- `options` (object): An object with properties representing options for the operation.
-  The following options are recognized:
-  - `smallestUnit` (required string): The unit to round to.
+- `roundTo` (string | object): A required string or object to control the operation.
+  - If a string is provided, the resulting `Temporal.Instant` object will be rounded to that unit.
     Valid values are `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-  - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
-    The default is 1.
-  - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
-    The default is `'halfExpand'`.
+    A string parameter is treated the same as an object whose `smallestUnit` property value is that string.
+  - If an object is passed, the following properties are recognized:
+    - `smallestUnit` (required string): The unit to round to.
+      Valid values are `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+    - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
+      The default is 1.
+    - `roundingMode` (string): How to handle the remainder.
+      Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
+      The default is `'halfExpand'`.
 
-**Returns:** a new `Temporal.Instant` object which is `instant` rounded to `roundingIncrement` of `smallestUnit`.
+**Returns:** a new `Temporal.Instant` object which is `instant` rounded to `roundTo` (if a string parameter is used) or `roundingIncrement` of `smallestUnit` (if an object parameter is used).
 
 Rounds `instant` to the given unit and increment, and returns the result as a new `Temporal.Instant` object.
 
-The `smallestUnit` option determines the unit to round to.
+The `smallestUnit` option (or the value of `roundTo` if a string parameter is used) determines the unit to round to.
 For example, to round to the nearest minute, use `smallestUnit: 'minute'`.
 This option is required.
 
@@ -505,11 +502,19 @@ The combination of `roundingIncrement` and `smallestUnit` must make an increment
 
 The `roundingMode` option controls how the rounding is performed.
 
-- `ceil`: Always round up, towards the end of time.
-- `floor`, `trunc`: Always round down, towards the beginning of time.
-  (These two modes behave the same, but are both included for consistency with `Temporal.Duration.round()`, where they are not the same.)
-- `halfExpand`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
-  When there is a tie, round up, like `ceil`.
+- `'ceil'`, `'expand'`: Always round up, towards the end of time.
+- `'floor'`, `'trunc'`: Always round down, towards the beginning of time.
+- `'halfCeil'`, `'halfExpand'`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
+  When there is a tie, round up, like `'ceil'`.
+- `'halfFloor'`, `'halfTrunc'`: Round to the nearest of the allowed values, like `'halfExpand'`, but when there is a tie, round down, like `'floor'`.
+- `'halfEven'`: Round to the nearest of the allowed values, but when there is a tie, round towards the value that is an even multiple of `roundingIncrement`.
+  For example, with a `roundingIncrement` of 2, the number 7 would round up to 8 instead of down to 6, because 8 is an even multiple of 2 (2 × 4 = 8, and 4 is even), whereas 6 is an odd multiple (2 × 3 = 6, and 3 is odd).
+
+Several pairs of modes behave the same as each other, but are both included for consistency with `Temporal.Duration.round()`, where they are not the same.
+
+The default rounding mode is `'halfExpand'` to match how rounding is often taught in school.
+Note that this is different than the `'trunc'` default used by `until` and `since` options because rounding up would be an unexpected default for those operations.
+Other properties behave identically between these methods.
 
 Example usage:
 
@@ -547,8 +552,8 @@ If `other` is not a `Temporal.Instant` object, then it will be converted to one 
 Example usage:
 
 ```javascript
-one = Temporal.Instant.fromEpochSeconds(1.0e9);
-two = Temporal.Instant.fromEpochSeconds(1.1e9);
+one = Temporal.Instant.fromEpochMilliseconds(1.0e12);
+two = Temporal.Instant.fromEpochMilliseconds(1.1e12);
 one.equals(two); // => false
 one.equals(one); // => true
 ```
@@ -559,7 +564,7 @@ one.equals(one); // => true
 
 - `options` (optional object): An object with properties representing options for the operation.
   The following options are recognized:
-  - `timeZone` (string or object): the time zone to express `instant` in, as a `Temporal.TimeZone` object, an object implementing the [time zone protocol](./timezone.md#custom-time-zones), or a string.
+  - `timeZone` (string or `Temporal.ZonedDateTime`): the time zone to express `instant` in, as a string identifier, or a `Temporal.ZonedDateTime` object whose time zone will be used.
     The default is to use UTC.
   - `fractionalSecondDigits` (number or string): How many digits to print after the decimal point in the output string.
     Valid values are `'auto'`, 0, 1, 2, 3, 4, 5, 6, 7, 8, or 9.
@@ -568,28 +573,29 @@ one.equals(one); // => true
     This option overrides `fractionalSecondDigits` if both are given.
     Valid values are `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
   - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'ceil'`, `'floor'`, `'trunc'`, and `'halfExpand'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`.
 
 **Returns:** a string in the ISO 8601 date format representing `instant`.
 
-This method overrides the `Object.prototype.toString()` method and provides a convenient, unambiguous string representation of `instant`.
+This method overrides the `Object.prototype.toString()` method and provides a convenient string representation of `instant`.
 The string can be passed to `Temporal.Instant.from()` to create a new `Temporal.Instant` object.
 
 The output precision can be controlled with the `fractionalSecondDigits` or `smallestUnit` option.
 If no options are given, the default is `fractionalSecondDigits: 'auto'`, which omits trailing zeroes after the decimal point.
 
-The value is truncated to fit the requested precision, unless a different rounding mode is given with the `roundingMode` option, as in `Temporal.PlainDateTime.round()`.
+The value is truncated to fit the requested precision, unless a different rounding mode is given with the `roundingMode` option, as in `Temporal.ZonedDateTime.round()`.
 Note that rounding may change the value of other units as well.
 
-If the `timeZone` option is given, then the string will express the time in the given time zone, and contain the time zone's UTC offset.
+If the `timeZone` option is not provided or is `undefined`, then the string will express the date and time in UTC and the `Z` offset designator will be appended.
+However, if the `timeZone` option is given, then the string will express the date and time in the given time zone, and contain the time zone's numeric UTC offset, rounded to the nearest minute.
 
 Example usage:
 
 ```js
 instant = Temporal.Instant.fromEpochMilliseconds(1574074321816);
 instant.toString(); // => '2019-11-18T10:52:01.816Z'
-instant.toString({ timeZone: Temporal.TimeZone.from('UTC') });
+instant.toString({ timeZone: 'UTC' });
 // => '2019-11-18T10:52:01.816+00:00'
 instant.toString({ timeZone: 'Asia/Seoul' });
 // => '2019-11-18T19:52:01.816+09:00'
@@ -615,7 +621,7 @@ instant.toString({ smallestUnit: 'second', roundingMode: 'halfExpand' });
 
 This method overrides `Object.prototype.toLocaleString()` to provide a human-readable, language-sensitive representation of `instant`.
 
-The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat).
+The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters).
 
 Because `Temporal.Instant` does not carry a time zone, the time zone used for the output will be the `timeZone` property of `options`, if present; and otherwise, the current time zone from the environment, which is usually the system's time zone.
 

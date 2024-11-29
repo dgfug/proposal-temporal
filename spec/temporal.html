@@ -16,51 +16,61 @@
 
   <emu-clause id="sec-value-properties-of-the-temporal-object">
     <h1>Value Properties of the Temporal Object</h1>
-    <emu-clause id="sec-temporal-@@tostringtag">
-      <h1>Temporal [ @@toStringTag ]</h1>
-      <p>The initial value of the @@toStringTag property is the String value *"Temporal"*.</p>
+
+    <emu-clause id="sec-temporal-%symbol.tostringtag%">
+      <h1>Temporal [ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String value *"Temporal"*.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
     </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-constructor-properties-of-the-temporal-object">
     <h1>Constructor Properties of the Temporal Object</h1>
+
     <emu-clause id="sec-temporal-instant">
       <h1>Temporal.Instant ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-instant-objects"></emu-xref>.</p>
     </emu-clause>
+
     <emu-clause id="sec-temporal-plaindatetime">
       <h1>Temporal.PlainDateTime ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-plaindatetime-objects"></emu-xref>.</p>
     </emu-clause>
+
     <emu-clause id="sec-temporal-plaindate">
       <h1>Temporal.PlainDate ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-plaindate-objects"></emu-xref>.</p>
     </emu-clause>
+
     <emu-clause id="sec-temporal-plaintime">
       <h1>Temporal.PlainTime ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-plaintime-objects"></emu-xref>.</p>
     </emu-clause>
+
     <emu-clause id="sec-temporal-plainyearmonth">
       <h1>Temporal.PlainYearMonth ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-plainyearmonth-objects"></emu-xref>.</p>
     </emu-clause>
+
     <emu-clause id="sec-temporal-plainmonthday">
       <h1>Temporal.PlainMonthDay ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-plainmonthday-objects"></emu-xref>.</p>
     </emu-clause>
-    <emu-clause id="sec-temporal-timezone">
-      <h1>Temporal.TimeZone ( . . . )</h1>
-      <p>See <emu-xref href="#sec-temporal-timezone-objects"></emu-xref>.</p>
-    </emu-clause>
+
     <emu-clause id="sec-temporal-duration">
       <h1>Temporal.Duration ( . . . )</h1>
       <p>See <emu-xref href="#sec-temporal-duration-objects"></emu-xref>.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-zoneddatetime">
+      <h1>Temporal.ZonedDateTime ( . . . )</h1>
+      <p>See <emu-xref href="#sec-temporal-zoneddatetime-objects"></emu-xref>.</p>
     </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-other-properties-of-the-temporal-object">
     <h1>Other Properties of the Temporal Object</h1>
+
     <emu-clause id="sec-temporal-now">
       <h1>Temporal.Now</h1>
       <p>See <emu-xref href="#sec-temporal-now-object"></emu-xref>.</p>
@@ -81,9 +91,10 @@
 
   <emu-clause id="sec-value-properties-of-the-temporal-now-object">
     <h1>Value Properties of the Temporal.Now Object</h1>
-    <emu-clause id="sec-temporal-now-@@tostringtag">
-      <h1>Temporal.Now [ @@toStringTag ]</h1>
-      <p>The initial value of the @@toStringTag property is the String value *"Temporal.Now"*.</p>
+
+    <emu-clause id="sec-temporal-now-%symbol.tostringtag%">
+      <h1>Temporal.Now [ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String value *"Temporal.Now"*.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
     </emu-clause>
   </emu-clause>
@@ -91,173 +102,142 @@
   <emu-clause id="sec-function-properties-of-the-temporal-now-object">
     <h1>Function Properties of the Temporal.Now Object</h1>
 
-    <emu-clause id="sec-temporal.now.timezone">
-      <h1>Temporal.Now.timeZone ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+    <emu-clause id="sec-temporal.now.timezoneid">
+      <h1>Temporal.Now.timeZoneId ( )</h1>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Return ! SystemTimeZone().
+        1. Return SystemTimeZoneIdentifier().
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.now.instant">
       <h1>Temporal.Now.instant ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Return ! SystemInstant().
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.now.plaindatetime">
-      <h1>Temporal.Now.plainDateTime ( _calendar_ [ , _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `plainDateTime` method takes two arguments, _calendar_ and _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Return ? SystemDateTime(_temporalTimeZoneLike_, _calendar_).
+        1. Let _ns_ be SystemUTCEpochNanoseconds().
+        1. Return ! CreateTemporalInstant(_ns_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.now.plaindatetimeiso">
       <h1>Temporal.Now.plainDateTimeISO ( [ _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `plainDateTimeISO` method takes one argument _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _calendar_ be ! GetISO8601Calendar().
-        1. Return ? SystemDateTime(_temporalTimeZoneLike_, _calendar_).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.now.zoneddatetime">
-      <h1>Temporal.Now.zonedDateTime ( _calendar_ [ , _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `zonedDateTime` method takes two arguments, _calendar_ and _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Return ? SystemZonedDateTime(_temporalTimeZoneLike_, _calendar_).
+        1. Let _isoDateTime_ be ? SystemDateTime(_temporalTimeZoneLike_).
+        1. Return ! CreateTemporalDateTime(_isoDateTime_, *"iso8601"*).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.now.zoneddatetimeiso">
       <h1>Temporal.Now.zonedDateTimeISO ( [ _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `zonedDateTimeISO` method takes one argument _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _calendar_ be ! GetISO8601Calendar().
-        1. Return ? SystemZonedDateTime(_temporalTimeZoneLike_, _calendar_).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.now.plaindate">
-      <h1>Temporal.Now.plainDate ( _calendar_ [ , _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `plainDate` method takes two arguments, _calendar_ and _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _dateTime_ be ? SystemDateTime(_temporalTimeZoneLike_, _calendar_).
-        1. Return ! CreateTemporalDate(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[Calendar]]).
+        1. If _temporalTimeZoneLike_ is *undefined*, then
+          1. Let _timeZone_ be SystemTimeZoneIdentifier().
+        1. Else,
+          1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_temporalTimeZoneLike_).
+        1. Let _ns_ be SystemUTCEpochNanoseconds().
+        1. Return ! CreateTemporalZonedDateTime(_ns_, _timeZone_, *"iso8601"*).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.now.plaindateiso">
       <h1>Temporal.Now.plainDateISO ( [ _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `plainDateISO` method takes one argument _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _calendar_ be ! GetISO8601Calendar().
-        1. Let _dateTime_ be ? SystemDateTime(_temporalTimeZoneLike_, _calendar_).
-        1. Return ! CreateTemporalDate(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[Calendar]]).
+        1. Let _isoDateTime_ be ? SystemDateTime(_temporalTimeZoneLike_).
+        1. Return ! CreateTemporalDate(_isoDateTime_.[[ISODate]], *"iso8601"*).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.now.plaintimeiso">
       <h1>Temporal.Now.plainTimeISO ( [ _temporalTimeZoneLike_ ] )</h1>
-      <p>
-        The `plainTimeISO` method takes one argument _temporalTimeZoneLike_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _calendar_ be ! GetISO8601Calendar().
-        1. Let _dateTime_ be ? SystemDateTime(_temporalTimeZoneLike_, _calendar_).
-        1. Return ! CreateTemporalTime(_dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]]).
+        1. Let _isoDateTime_ be ? SystemDateTime(_temporalTimeZoneLike_).
+        1. Return ! CreateTemporalTime(_isoDateTime_.[[Time]]).
       </emu-alg>
     </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-temporal-now-abstract-ops">
-    <h1>Abstract operations</h1>
+    <h1>Abstract Operations</h1>
 
-    <emu-clause id="sec-temporal-systemtimezone" aoid="SystemTimeZone">
-      <h1>SystemTimeZone ( )</h1>
-      <emu-alg>
-        1. Let _identifier_ be ! DefaultTimeZone().
-        1. Return ! CreateTemporalTimeZone(_identifier_).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal-systemutcepochnanoseconds" aoid="SystemUTCEpochNanoseconds">
-      <h1>SystemUTCEpochNanoseconds ( )</h1>
-      <emu-alg>
-        1. Let _ns_ be the approximate current UTC date and time, in nanoseconds since the epoch.
-        1. [id="step-temporal-systemutcepochnanoseconds-clamp"] Set _ns_ to the result of clamping _ns_ between −8.64 × 10<sup>21</sup> and 8.64 × 10<sup>21</sup>.
-        1. Return ℤ(_ns_).
-      </emu-alg>
-      <emu-note>
-        <p>The precision of the result depends on the host. In particular, web browsers artificially
-        limit it to prevent abuse of security flaws (e.g., Spectre) and to avoid certain methods of
-        fingerprinting.</p>
-      </emu-note>
+    <emu-clause id="sec-hostsystemutcepochnanoseconds" type="host-defined abstract operation">
+      <h1>
+        HostSystemUTCEpochNanoseconds (
+          _global_: a global object,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It allows host environments to reduce the precision of the result.
+          In particular, web browsers artificially limit it to prevent abuse of security flaws
+          (e.g., Spectre) and to avoid certain methods of fingerprinting.
+        </dd>
+      </dl>
+      <p>An implementation of HostSystemUTCEpochNanoseconds must conform to the following requirements:</p>
+      <ul>
+        <li>Its result must be between nsMinInstant and nsMaxInstant.</li>
+      </ul>
       <emu-note>
         <p>
-          Step <emu-xref href="#step-temporal-systemutcepochnanoseconds-clamp"></emu-xref> is necessary if the system clock is set to a time outside the range that Temporal.Instant can represent.
+          This requirement is necessary if the system clock is set to a time outside the range that Temporal.Instant can represent.
           This is not expected to affect implementations in practice.
         </p>
       </emu-note>
+      <p>The default implementation of HostSystemUTCEpochNanoseconds performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _ns_ be the approximate current UTC date and time, in nanoseconds since the epoch.
+        1. Return the result of clamping _ns_ between nsMinInstant and nsMaxInstant.
+      </emu-alg>
+      <p>ECMAScript hosts that are not web browsers must use the default implementation of HostSystemUTCEpochNanoseconds.</p>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-systeminstant" aoid="SystemInstant">
-      <h1>SystemInstant ( )</h1>
+    <emu-clause id="sec-temporal-systemutcepochmilliseconds" type="abstract operation">
+      <h1>SystemUTCEpochMilliseconds ( ): a Number</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Let _ns_ be ! SystemUTCEpochNanoseconds().
-        1. Return ! CreateTemporalInstant(_ns_).
+        1. Let _global_ be GetGlobalObject().
+        1. Let _nowNs_ be HostSystemUTCEpochNanoseconds(_global_).
+        1. Return 𝔽(floor(_nowNs_ / 10<sup>6</sup>)).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-systemdatetime" aoid="SystemDateTime">
-      <h1>SystemDateTime ( _temporalTimeZoneLike_, _calendarLike_ )</h1>
+    <emu-clause id="sec-temporal-systemutcepochnanoseconds" type="abstract operation">
+      <h1>SystemUTCEpochNanoseconds ( ): a BigInt</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. If _temporalTimeZoneLike_ is *undefined*, then
-          1. Let _timeZone_ be ! SystemTimeZone().
-        1. Else,
-          1. Let _timeZone_ be ? ToTemporalTimeZone(_temporalTimeZoneLike_).
-        1. Let _calendar_ be ? ToTemporalCalendar(_calendarLike_).
-        1. Let _instant_ be ! SystemInstant().
-        1. Return ? BuiltinTimeZoneGetPlainDateTimeFor(_timeZone_, _instant_, _calendar_).
+        1. Let _global_ be GetGlobalObject().
+        1. Let _nowNs_ be HostSystemUTCEpochNanoseconds(_global_).
+        1. Return ℤ(_nowNs_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-systemzoneddatetime" aoid="SystemZonedDateTime">
-      <h1>SystemZonedDateTime ( _temporalTimeZoneLike_, _calendarLike_ )</h1>
+    <emu-clause id="sec-temporal-systemdatetime" type="abstract operation">
+      <h1>
+        SystemDateTime (
+          _temporalTimeZoneLike_: an ECMAScript language value,
+        ): either a normal completion containing an ISO Date-Time Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
         1. If _temporalTimeZoneLike_ is *undefined*, then
-          1. Let _timeZone_ be ! SystemTimeZone().
+          1. Let _timeZone_ be SystemTimeZoneIdentifier().
         1. Else,
-          1. Let _timeZone_ be ? ToTemporalTimeZone(_temporalTimeZoneLike_).
-        1. Let _calendar_ be ? ToTemporalCalendar(_calendarLike_).
-        1. Let _ns_ be ! SystemUTCEpochNanoseconds().
-        1. Return ! CreateTemporalZonedDateTime(_ns_, _timeZone_, _calendar_).
+          1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_temporalTimeZoneLike_).
+        1. Let _epochNs_ be SystemUTCEpochNanoseconds().
+        1. Return GetISODateTimeFor(_timeZone_, _epochNs_).
       </emu-alg>
     </emu-clause>
   </emu-clause>

@@ -1,11 +1,11 @@
 // Display local time zone and three others
 const browserCalendar = new Intl.DateTimeFormat().resolvedOptions().calendar;
-const now = Temporal.Now.zonedDateTime(browserCalendar);
+const now = Temporal.Now.zonedDateTimeISO().withCalendar(browserCalendar);
 const timeZones = [
-  { name: 'Here', tz: now.timeZone },
-  { name: 'New York', tz: Temporal.TimeZone.from('America/New_York') },
-  { name: 'London', tz: Temporal.TimeZone.from('Europe/London') },
-  { name: 'Tokyo', tz: Temporal.TimeZone.from('Asia/Tokyo') }
+  { name: 'Here', tz: now.timeZoneId },
+  { name: 'New York', tz: 'America/New_York' },
+  { name: 'London', tz: 'Europe/London' },
+  { name: 'Tokyo', tz: 'Asia/Tokyo' }
 ];
 
 // Start the table at midnight local time

@@ -6,8 +6,6 @@ Provides standard objects and functions for working with dates and times.
 
 This proposal is currently [Stage 3](https://github.com/tc39/proposals#stage-3) and was reviewed for Stage 3 by Richard Gibson, Bradley Farias, and Daniel Ehrenberg.
 
-**NOTE: Although this proposal's API is not expected to change, implementers of this proposal MUST NOT ship unflagged Temporal implementations until IETF standardizes timezone/calendar string serialization formats. See [#1450](https://github.com/tc39/proposal-temporal/issues/1450) for updates.**
-
 This proposal is now in the hands of ECMAScript engine implementers, so the bar for making API changes is extremely high.
 Nonetheless, changes may occur as the result of feedback from implementation in JS engines.
 Editorial changes to the spec and bug fixes to the spec, tests, and docs are also ongoing, as is customary for Stage 3 proposals.
@@ -47,17 +45,18 @@ The specification text can be found [here](https://tc39.es/proposal-temporal/).
 
 Reference documentation and examples can be found below.
 
-- [Temporal Document(en)](https://tc39.es/proposal-temporal/docs/index.html)
-- [Temporal のドキュメント(ja)](https://tc39.es/proposal-temporal/docs/ja/index.html) (translated a part of the English document into Japanese)
-- [Temporal 文档(zh_CN)](https://tc39.es/proposal-temporal/docs/zh_CN/index.html) (translated a part of the English document into Chinese)
+- [Temporal Documentation (English)](https://tc39.es/proposal-temporal/docs/index.html)
+- [Temporal のドキュメント (Japanese)](https://tc39.es/proposal-temporal/docs/ja/index.html) (translated a part of the English document into Japanese)
+- [Temporal 文档 (Chinese)](https://tc39.es/proposal-temporal/docs/zh_CN/index.html) (translated a part of the English document into Chinese)
 
 A cookbook to help you get started and learn the ins and outs of Temporal is available [here](https://tc39.es/proposal-temporal/docs/cookbook.html)
 
 ## Polyfills
 
-| Polyfill                                                                         | Repo                                                                              | Status                  |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------- |
-| **[@js-temporal/polyfill](https://www.npmjs.com/package/@js-temporal/polyfill)** | [js-temporal/temporal-polyfill](https://github.com/js-temporal/temporal-polyfill) | Alpha release available |
+| Polyfill                                                                         | Repo                                                                                | Status                  |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------- |
+| **[@js-temporal/polyfill](https://www.npmjs.com/package/@js-temporal/polyfill)** | [js-temporal/temporal-polyfill](https://github.com/js-temporal/temporal-polyfill)   | Alpha release available |
+| **[temporal-polyfill](https://www.npmjs.com/package/temporal-polyfill)**         | [fullcalendar/temporal-polyfill](https://github.com/fullcalendar/temporal-polyfill) | Beta release available  |
 
 If you're working on a polyfill, please file an issue or PR so we can add yours here.
 

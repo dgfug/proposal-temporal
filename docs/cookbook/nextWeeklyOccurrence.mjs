@@ -5,7 +5,7 @@
  * @param {Temporal.ZonedDateTime} now - Starting point
  * @param {number} weekday - Weekday event occurs on (Monday=1, Sunday=7)
  * @param {Temporal.PlainTime} eventTime - Time event occurs at
- * @param {Temporal.TimeZone} eventTimeZone - Time zone where event is planned
+ * @param {string} eventTimeZone - Time zone where event is planned
  * @returns {Temporal.ZonedDateTime} Local date and time of next occurrence
  */
 function nextWeeklyOccurrence(now, weekday, eventTime, eventTimeZone) {
@@ -18,13 +18,13 @@ function nextWeeklyOccurrence(now, weekday, eventTime, eventTimeZone) {
     nextOccurrence = nextOccurrence.add({ weeks: 1 });
   }
 
-  return nextOccurrence.withTimeZone(now.timeZone);
+  return nextOccurrence.withTimeZone(now.timeZoneId);
 }
 
 // "Weekly on Thursdays at 08:45 California time":
 const weekday = 4;
 const eventTime = Temporal.PlainTime.from('08:45');
-const eventTimeZone = Temporal.TimeZone.from('America/Los_Angeles');
+const eventTimeZone = 'America/Los_Angeles';
 
 const rightBefore = Temporal.ZonedDateTime.from('2020-03-26T15:30+00:00[Europe/London]');
 let next = nextWeeklyOccurrence(rightBefore, weekday, eventTime, eventTimeZone);

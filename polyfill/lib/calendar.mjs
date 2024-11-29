@@ -1,352 +1,285 @@
-/* global __debug__ */
-
-import { ES } from './ecmascript.mjs';
-import { GetIntrinsic, MakeIntrinsicClass, DefineIntrinsic } from './intrinsicclass.mjs';
 import {
-  CALENDAR_ID,
-  ISO_YEAR,
-  ISO_MONTH,
-  ISO_DAY,
-  YEARS,
-  MONTHS,
-  WEEKS,
-  DAYS,
-  HOURS,
-  MINUTES,
-  SECONDS,
-  MILLISECONDS,
-  MICROSECONDS,
-  NANOSECONDS,
-  CreateSlots,
-  GetSlot,
-  HasSlot,
-  SetSlot
-} from './slots.mjs';
+  // constructors and similar
+  Date as DateCtor,
+  Map as MapCtor,
+  Set as SetCtor,
+  WeakMap as WeakMapCtor,
 
-const ArrayIncludes = Array.prototype.includes;
-const ArrayPrototypePush = Array.prototype.push;
-const IntlDateTimeFormat = globalThis.Intl.DateTimeFormat;
-const MathAbs = Math.abs;
-const MathFloor = Math.floor;
-const ObjectAssign = Object.assign;
-const ObjectEntries = Object.entries;
-const ObjectKeys = Object.keys;
+  // error constructors
+  RangeError as RangeErrorCtor,
+  TypeError as TypeErrorCtor,
+
+  // class static functions and methods
+  ArrayFrom,
+  ArrayPrototypeFilter,
+  ArrayPrototypeFind,
+  ArrayPrototypeForEach,
+  ArrayPrototypeIncludes,
+  ArrayPrototypeIndexOf,
+  ArrayPrototypeSort,
+  DatePrototypeSetUTCDate,
+  DatePrototypeToLocaleDateString,
+  IntlDateTimeFormat,
+  IntlDateTimeFormatPrototypeFormatToParts,
+  JSONStringify,
+  MapPrototypeEntries,
+  MapPrototypeGet,
+  MapPrototypeSet,
+  MathAbs,
+  MathFloor,
+  MathTrunc,
+  MathMax,
+  NumberIsNaN,
+  MathSign,
+  ObjectAssign,
+  ObjectEntries,
+  RegExpPrototypeExec,
+  RegExpPrototypeTest,
+  SetPrototypeAdd,
+  SetPrototypeValues,
+  StringPrototypeEndsWith,
+  StringPrototypeIndexOf,
+  StringPrototypeNormalize,
+  StringPrototypePadStart,
+  StringPrototypeReplace,
+  StringPrototypeSlice,
+  StringPrototypeSplit,
+  StringPrototypeStartsWith,
+  StringPrototypeToLowerCase,
+  SymbolIterator,
+  WeakMapPrototypeGet,
+  WeakMapPrototypeSet,
+  MapIteratorPrototypeNext,
+  SetIteratorPrototypeNext,
+
+  // miscellaneous
+  now
+} from './primordials.mjs';
+
+import Call from 'es-abstract/2024/Call.js';
+import Type from 'es-abstract/2024/Type.js';
+
+import * as ES from './ecmascript.mjs';
+import { DefineIntrinsic } from './intrinsicclass.mjs';
+
+function arrayFromSet(src) {
+  const valuesIterator = Call(SetPrototypeValues, src, []);
+  return ArrayFrom({
+    [SymbolIterator]() {
+      return this;
+    },
+    next() {
+      return Call(SetIteratorPrototypeNext, valuesIterator, []);
+    }
+  });
+}
+
+function calendarDateWeekOfYear(id, isoDate) {
+  // Supports only Gregorian and ISO8601 calendar; can be updated to add support for other calendars.
+  // Returns undefined for calendars without a well-defined week calendar system.
+  // eslint-disable-next-line max-len
+  // Also see: https://github.com/unicode-org/icu/blob/ab72ab1d4a3c3f9beeb7d92b0c7817ca93dfdb04/icu4c/source/i18n/calendar.cpp#L1606
+  if (id !== 'gregory' && id !== 'iso8601') {
+    return { week: undefined, year: undefined };
+  }
+  const calendar = impl[id];
+  let yow = isoDate.year;
+  const { dayOfWeek, dayOfYear, daysInYear } = calendar.isoToDate(isoDate, {
+    dayOfWeek: true,
+    dayOfYear: true,
+    daysInYear: true
+  });
+  const fdow = id === 'iso8601' ? 1 : calendar.helper.getFirstDayOfWeek();
+  const mdow = id === 'iso8601' ? 4 : calendar.helper.getMinimalDaysInFirstWeek();
+
+  // For both the input date and the first day of its calendar year, calculate the day of week
+  // relative to first day of week in the relevant calendar (e.g., in iso8601, relative to Monday).
+  var relDow = (dayOfWeek + 7 - fdow) % 7;
+  // Assuming the year length is less than 7000 days.
+  var relDowJan1 = (dayOfWeek - dayOfYear + 7001 - fdow) % 7;
+
+  var woy = MathFloor((dayOfYear - 1 + relDowJan1) / 7);
+  if (7 - relDowJan1 >= mdow) {
+    ++woy;
+  }
+
+  // Adjust for weeks at the year end that overlap into the previous or next calendar year.
+  if (woy == 0) {
+    // Check for last week of previous year; if true, handle the case for
+    // first week of next year
+    const prevYearCalendar = calendar.isoToDate(calendar.dateAdd(isoDate, { years: -1 }, 'constrain'), {
+      daysInYear: true
+    });
+    var prevDoy = dayOfYear + prevYearCalendar.daysInYear;
+    woy = weekNumber(fdow, mdow, prevDoy, dayOfWeek);
+    yow--;
+  } else {
+    // For it to be week 1 of the next year, dayOfYear must be >= lastDoy - 5
+    //          L-5                  L
+    // doy: 359 360 361 362 363 364 365 001
+    // dow:      1   2   3   4   5   6   7
+    var lastDoy = daysInYear;
+    if (dayOfYear >= lastDoy - 5) {
+      var lastRelDow = (relDow + lastDoy - dayOfYear) % 7;
+      if (lastRelDow < 0) {
+        lastRelDow += 7;
+      }
+      if (6 - lastRelDow >= mdow && dayOfYear + 7 - relDow > lastDoy) {
+        woy = 1;
+        yow++;
+      }
+    }
+  }
+  return { week: woy, year: yow };
+}
+
+function ISODateSurpasses(sign, y1, m1, d1, isoDate2) {
+  if (y1 !== isoDate2.year) {
+    if (sign * (y1 - isoDate2.year) > 0) return true;
+  } else if (m1 !== isoDate2.month) {
+    if (sign * (m1 - isoDate2.month) > 0) return true;
+  } else if (d1 !== isoDate2.day) {
+    if (sign * (d1 - isoDate2.day) > 0) return true;
+  }
+  return false;
+}
 
 const impl = {};
 
-export class Calendar {
-  constructor(id) {
-    // Note: if the argument is not passed, IsBuiltinCalendar("undefined") will fail. This check
-    //       exists only to improve the error message.
-    if (arguments.length < 1) {
-      throw new RangeError('missing argument: id is required');
-    }
-
-    id = ES.ToString(id);
-    if (!IsBuiltinCalendar(id)) throw new RangeError(`invalid calendar identifier ${id}`);
-    CreateSlots(this);
-    SetSlot(this, CALENDAR_ID, id);
-
-    if (typeof __debug__ !== 'undefined' && __debug__) {
-      Object.defineProperty(this, '_repr_', {
-        value: `${this[Symbol.toStringTag]} <${id}>`,
-        writable: false,
-        enumerable: false,
-        configurable: false
-      });
-    }
-  }
-  get id() {
-    return ES.ToString(this);
-  }
-  dateFromFields(fields, options = undefined) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (ES.Type(fields) !== 'Object') throw new TypeError('invalid fields');
-    options = ES.GetOptionsObject(options);
-    return impl[GetSlot(this, CALENDAR_ID)].dateFromFields(fields, options, this);
-  }
-  yearMonthFromFields(fields, options = undefined) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (ES.Type(fields) !== 'Object') throw new TypeError('invalid fields');
-    options = ES.GetOptionsObject(options);
-    return impl[GetSlot(this, CALENDAR_ID)].yearMonthFromFields(fields, options, this);
-  }
-  monthDayFromFields(fields, options = undefined) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (ES.Type(fields) !== 'Object') throw new TypeError('invalid fields');
-    options = ES.GetOptionsObject(options);
-    return impl[GetSlot(this, CALENDAR_ID)].monthDayFromFields(fields, options, this);
-  }
-  fields(fields) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    const fieldsArray = [];
-    const allowed = new Set([
-      'year',
-      'month',
-      'monthCode',
-      'day',
-      'hour',
-      'minute',
-      'second',
-      'millisecond',
-      'microsecond',
-      'nanosecond'
-    ]);
-    for (const name of fields) {
-      if (ES.Type(name) !== 'String') throw new TypeError('invalid fields');
-      if (!allowed.has(name)) throw new RangeError(`invalid field name ${name}`);
-      allowed.delete(name);
-      ArrayPrototypePush.call(fieldsArray, name);
-    }
-    return impl[GetSlot(this, CALENDAR_ID)].fields(fieldsArray);
-  }
-  mergeFields(fields, additionalFields) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    return impl[GetSlot(this, CALENDAR_ID)].mergeFields(fields, additionalFields);
-  }
-  dateAdd(date, duration, options = undefined) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    date = ES.ToTemporalDate(date);
-    duration = ES.ToTemporalDuration(duration);
-    options = ES.GetOptionsObject(options);
-    const overflow = ES.ToTemporalOverflow(options);
-    const { days } = ES.BalanceDuration(
-      GetSlot(duration, DAYS),
-      GetSlot(duration, HOURS),
-      GetSlot(duration, MINUTES),
-      GetSlot(duration, SECONDS),
-      GetSlot(duration, MILLISECONDS),
-      GetSlot(duration, MICROSECONDS),
-      GetSlot(duration, NANOSECONDS),
-      'day'
-    );
-    return impl[GetSlot(this, CALENDAR_ID)].dateAdd(
-      date,
-      GetSlot(duration, YEARS),
-      GetSlot(duration, MONTHS),
-      GetSlot(duration, WEEKS),
-      days,
-      overflow,
-      this
-    );
-  }
-  dateUntil(one, two, options = undefined) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    one = ES.ToTemporalDate(one);
-    two = ES.ToTemporalDate(two);
-    options = ES.GetOptionsObject(options);
-    const largestUnit = ES.ToLargestTemporalUnit(
-      options,
-      'auto',
-      ['hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond'],
-      'day'
-    );
-    const { years, months, weeks, days } = impl[GetSlot(this, CALENDAR_ID)].dateUntil(one, two, largestUnit);
-    const Duration = GetIntrinsic('%Temporal.Duration%');
-    return new Duration(years, months, weeks, days, 0, 0, 0, 0, 0, 0);
-  }
-  year(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].year(date);
-  }
-  month(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (ES.IsTemporalMonthDay(date)) throw new TypeError('use monthCode on PlainMonthDay instead');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].month(date);
-  }
-  monthCode(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date) && !ES.IsTemporalMonthDay(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].monthCode(date);
-  }
-  day(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalMonthDay(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].day(date);
-  }
-  era(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].era(date);
-  }
-  eraYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].eraYear(date);
-  }
-  dayOfWeek(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].dayOfWeek(date);
-  }
-  dayOfYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].dayOfYear(date);
-  }
-  weekOfYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].weekOfYear(date);
-  }
-  daysInWeek(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].daysInWeek(date);
-  }
-  daysInMonth(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].daysInMonth(date);
-  }
-  daysInYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].daysInYear(date);
-  }
-  monthsInYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].monthsInYear(date);
-  }
-  inLeapYear(date) {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    if (!ES.IsTemporalYearMonth(date)) date = ES.ToTemporalDate(date);
-    return impl[GetSlot(this, CALENDAR_ID)].inLeapYear(date);
-  }
-  toString() {
-    if (!ES.IsTemporalCalendar(this)) throw new TypeError('invalid receiver');
-    return GetSlot(this, CALENDAR_ID);
-  }
-  toJSON() {
-    return ES.ToString(this);
-  }
-  static from(item) {
-    return ES.ToTemporalCalendar(item);
-  }
-}
-
-MakeIntrinsicClass(Calendar, 'Temporal.Calendar');
-DefineIntrinsic('Temporal.Calendar.from', Calendar.from);
-
 impl['iso8601'] = {
-  dateFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    fields = ES.PrepareTemporalFields(fields, [['day'], ['month', undefined], ['monthCode', undefined], ['year']]);
-    fields = resolveNonLunisolarMonth(fields);
-    let { year, month, day } = fields;
-    ({ year, month, day } = ES.RegulateISODate(year, month, day, overflow));
-    return ES.CreateTemporalDate(year, month, day, calendar);
-  },
-  yearMonthFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    fields = ES.PrepareTemporalFields(fields, [['month', undefined], ['monthCode', undefined], ['year']]);
-    fields = resolveNonLunisolarMonth(fields);
-    let { year, month } = fields;
-    ({ year, month } = ES.RegulateISOYearMonth(year, month, overflow));
-    return ES.CreateTemporalYearMonth(year, month, calendar, /* referenceISODay = */ 1);
-  },
-  monthDayFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    fields = ES.PrepareTemporalFields(fields, [
-      ['day'],
-      ['month', undefined],
-      ['monthCode', undefined],
-      ['year', undefined]
-    ]);
-    if (fields.month !== undefined && fields.year === undefined && fields.monthCode === undefined) {
-      throw new TypeError('either year or monthCode required with month');
+  resolveFields(fields, type) {
+    if ((type === 'date' || type === 'year-month') && fields.year === undefined) {
+      throw new TypeErrorCtor('year is required');
     }
-    const useYear = fields.monthCode === undefined;
+    if ((type === 'date' || type === 'month-day') && fields.day === undefined) {
+      throw new TypeErrorCtor('day is required');
+    }
+    ObjectAssign(fields, resolveNonLunisolarMonth(fields));
+  },
+  dateToISO(fields, overflow) {
+    return ES.RegulateISODate(fields.year, fields.month, fields.day, overflow);
+  },
+  monthDayToISOReferenceDate(fields, overflow) {
     const referenceISOYear = 1972;
-    fields = resolveNonLunisolarMonth(fields);
-    let { month, day, year } = fields;
-    ({ month, day } = ES.RegulateISODate(useYear ? year : referenceISOYear, month, day, overflow));
-    return ES.CreateTemporalMonthDay(month, day, calendar, referenceISOYear);
+    const { month, day } = ES.RegulateISODate(fields.year ?? referenceISOYear, fields.month, fields.day, overflow);
+    return { month, day, year: referenceISOYear };
   },
-  fields(fields) {
-    return fields;
+  extraFields() {
+    return [];
   },
-  mergeFields(fields, additionalFields) {
-    const merged = {};
-    for (const nextKey of ObjectKeys(fields)) {
-      if (nextKey === 'month' || nextKey === 'monthCode') continue;
-      merged[nextKey] = fields[nextKey];
+  fieldKeysToIgnore(keys) {
+    const result = new SetCtor();
+    for (let ix = 0; ix < keys.length; ix++) {
+      const key = keys[ix];
+      Call(SetPrototypeAdd, result, [key]);
+      if (key === 'month') {
+        Call(SetPrototypeAdd, result, ['monthCode']);
+      } else if (key === 'monthCode') {
+        Call(SetPrototypeAdd, result, ['month']);
+      }
     }
-    const newKeys = ObjectKeys(additionalFields);
-    for (const nextKey of newKeys) {
-      merged[nextKey] = additionalFields[nextKey];
-    }
-    if (!ArrayIncludes.call(newKeys, 'month') && !ArrayIncludes.call(newKeys, 'monthCode')) {
-      const { month, monthCode } = fields;
-      if (month !== undefined) merged.month = month;
-      if (monthCode !== undefined) merged.monthCode = monthCode;
-    }
-    return merged;
+    return arrayFromSet(result);
   },
-  dateAdd(date, years, months, weeks, days, overflow, calendar) {
-    let year = GetSlot(date, ISO_YEAR);
-    let month = GetSlot(date, ISO_MONTH);
-    let day = GetSlot(date, ISO_DAY);
-    ({ year, month, day } = ES.AddISODate(year, month, day, years, months, weeks, days, overflow));
-    return ES.CreateTemporalDate(year, month, day, calendar);
+  dateAdd({ year, month, day }, { years = 0, months = 0, weeks = 0, days = 0 }, overflow) {
+    year += years;
+    month += months;
+    ({ year, month } = ES.BalanceISOYearMonth(year, month));
+    ({ year, month, day } = ES.RegulateISODate(year, month, day, overflow));
+    day += days + 7 * weeks;
+    return ES.BalanceISODate(year, month, day);
   },
   dateUntil(one, two, largestUnit) {
-    return ES.DifferenceISODate(
-      GetSlot(one, ISO_YEAR),
-      GetSlot(one, ISO_MONTH),
-      GetSlot(one, ISO_DAY),
-      GetSlot(two, ISO_YEAR),
-      GetSlot(two, ISO_MONTH),
-      GetSlot(two, ISO_DAY),
-      largestUnit
-    );
+    const sign = -ES.CompareISODate(one, two);
+    if (sign === 0) return { years: 0, months: 0, weeks: 0, days: 0 };
+
+    let years = 0;
+    let months = 0;
+    let intermediate;
+    if (largestUnit === 'year' || largestUnit === 'month') {
+      // We can skip right to the neighbourhood of the correct number of years,
+      // it'll be at least one less than two.year - one.year (unless it's zero)
+      let candidateYears = two.year - one.year;
+      if (candidateYears !== 0) candidateYears -= sign;
+      // loops at most twice
+      while (!ISODateSurpasses(sign, one.year + candidateYears, one.month, one.day, two)) {
+        years = candidateYears;
+        candidateYears += sign;
+      }
+
+      let candidateMonths = sign;
+      intermediate = ES.BalanceISOYearMonth(one.year + years, one.month + candidateMonths);
+      // loops at most 12 times
+      while (!ISODateSurpasses(sign, intermediate.year, intermediate.month, one.day, two)) {
+        months = candidateMonths;
+        candidateMonths += sign;
+        intermediate = ES.BalanceISOYearMonth(intermediate.year, intermediate.month + sign);
+      }
+
+      if (largestUnit === 'month') {
+        months += years * 12;
+        years = 0;
+      }
+    }
+
+    intermediate = ES.BalanceISOYearMonth(one.year + years, one.month + months);
+    const constrained = ES.ConstrainISODate(intermediate.year, intermediate.month, one.day);
+
+    let weeks = 0;
+    let days =
+      ES.ISODateToEpochDays(two.year, two.month - 1, two.day) -
+      ES.ISODateToEpochDays(constrained.year, constrained.month - 1, constrained.day);
+
+    if (largestUnit === 'week') {
+      weeks = MathTrunc(days / 7);
+      days %= 7;
+    }
+
+    return { years, months, weeks, days };
   },
-  year(date) {
-    return GetSlot(date, ISO_YEAR);
-  },
-  era() {
-    return undefined;
-  },
-  eraYear() {
-    return undefined;
-  },
-  month(date) {
-    return GetSlot(date, ISO_MONTH);
-  },
-  monthCode(date) {
-    return buildMonthCode(GetSlot(date, ISO_MONTH));
-  },
-  day(date) {
-    return GetSlot(date, ISO_DAY);
-  },
-  dayOfWeek(date) {
-    return ES.DayOfWeek(GetSlot(date, ISO_YEAR), GetSlot(date, ISO_MONTH), GetSlot(date, ISO_DAY));
-  },
-  dayOfYear(date) {
-    return ES.DayOfYear(GetSlot(date, ISO_YEAR), GetSlot(date, ISO_MONTH), GetSlot(date, ISO_DAY));
-  },
-  weekOfYear(date) {
-    return ES.WeekOfYear(GetSlot(date, ISO_YEAR), GetSlot(date, ISO_MONTH), GetSlot(date, ISO_DAY));
-  },
-  daysInWeek() {
-    return 7;
-  },
-  daysInMonth(date) {
-    return ES.ISODaysInMonth(GetSlot(date, ISO_YEAR), GetSlot(date, ISO_MONTH));
-  },
-  daysInYear(date) {
-    if (!HasSlot(date, ISO_YEAR)) date = ES.ToTemporalDate(date);
-    return ES.LeapYear(GetSlot(date, ISO_YEAR)) ? 366 : 365;
-  },
-  monthsInYear() {
-    return 12;
-  },
-  inLeapYear(date) {
-    if (!HasSlot(date, ISO_YEAR)) date = ES.ToTemporalDate(date);
-    return ES.LeapYear(GetSlot(date, ISO_YEAR));
+  isoToDate({ year, month, day }, requestedFields) {
+    // requestedFields parameter is not part of the spec text. It's an
+    // illustration of one way implementations may choose to optimize this
+    // operation.
+    const date = {
+      era: undefined,
+      eraYear: undefined,
+      year,
+      month,
+      day,
+      daysInWeek: 7,
+      monthsInYear: 12
+    };
+    if (requestedFields.monthCode) date.monthCode = buildMonthCode(month);
+    if (requestedFields.dayOfWeek) {
+      // https://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week#Disparate_variation
+      const shiftedMonth = month + (month < 3 ? 10 : -2);
+      const shiftedYear = year - (month < 3 ? 1 : 0);
+
+      const century = MathFloor(shiftedYear / 100);
+      const yearInCentury = shiftedYear - century * 100;
+
+      const monthTerm = MathFloor(2.6 * shiftedMonth - 0.2);
+      const yearTerm = yearInCentury + MathFloor(yearInCentury / 4);
+      const centuryTerm = MathFloor(century / 4) - 2 * century;
+
+      const dow = (day + monthTerm + yearTerm + centuryTerm) % 7;
+
+      date.dayOfWeek = dow + (dow <= 0 ? 7 : 0);
+    }
+    if (requestedFields.dayOfYear) {
+      let days = day;
+      for (let m = month - 1; m > 0; m--) {
+        days += ES.ISODaysInMonth(year, m);
+      }
+      date.dayOfYear = days;
+    }
+    if (requestedFields.weekOfYear) date.weekOfYear = calendarDateWeekOfYear('iso8601', { year, month, day });
+    if (requestedFields.daysInMonth) date.daysInMonth = ES.ISODaysInMonth(year, month);
+    if (requestedFields.daysInYear || requestedFields.inLeapYear) {
+      date.inLeapYear = ES.LeapYear(year);
+      date.daysInYear = date.inLeapYear ? 366 : 365;
+    }
+    return date;
   }
 };
 
@@ -355,16 +288,18 @@ impl['iso8601'] = {
 // ECMA-402.
 
 function monthCodeNumberPart(monthCode) {
-  if (!monthCode.startsWith('M')) {
-    throw new RangeError(`Invalid month code: ${monthCode}.  Month codes must start with M.`);
+  if (!Call(StringPrototypeStartsWith, monthCode, ['M'])) {
+    throw new RangeErrorCtor(`Invalid month code: ${monthCode}.  Month codes must start with M.`);
   }
-  const month = +monthCode.slice(1);
-  if (isNaN(month)) throw new RangeError(`Invalid month code: ${monthCode}`);
+  const month = +Call(StringPrototypeSlice, monthCode, [1]);
+  if (NumberIsNaN(month)) throw new RangeErrorCtor(`Invalid month code: ${monthCode}`);
   return month;
 }
 
 function buildMonthCode(month, leap = false) {
-  return `M${month.toString().padStart(2, '0')}${leap ? 'L' : ''}`;
+  const digitPart = Call(StringPrototypePadStart, `${month}`, [2, '0']);
+  const leapMarker = leap ? 'L' : '';
+  return `M${digitPart}${leapMarker}`;
 }
 
 /**
@@ -375,7 +310,7 @@ function buildMonthCode(month, leap = false) {
 function resolveNonLunisolarMonth(calendarDate, overflow = undefined, monthsPerYear = 12) {
   let { month, monthCode } = calendarDate;
   if (monthCode === undefined) {
-    if (month === undefined) throw new TypeError('Either month or monthCode are required');
+    if (month === undefined) throw new TypeErrorCtor('Either month or monthCode are required');
     // The ISO calendar uses the default (undefined) value because it does
     // constrain/reject after this method returns. Non-ISO calendars, however,
     // rely on this function to constrain/reject out-of-range `month` values.
@@ -384,16 +319,26 @@ function resolveNonLunisolarMonth(calendarDate, overflow = undefined, monthsPerY
     monthCode = buildMonthCode(month);
   } else {
     const numberPart = monthCodeNumberPart(monthCode);
-    if (month !== undefined && month !== numberPart) {
-      throw new RangeError(`monthCode ${monthCode} and month ${month} must match if both are present`);
-    }
     if (monthCode !== buildMonthCode(numberPart)) {
-      throw new RangeError(`Invalid month code: ${monthCode}`);
+      throw new RangeErrorCtor(`Invalid month code: ${monthCode}`);
+    }
+    if (month !== undefined && month !== numberPart) {
+      throw new RangeErrorCtor(`monthCode ${monthCode} and month ${month} must match if both are present`);
     }
     month = numberPart;
-    if (month < 1 || month > monthsPerYear) throw new RangeError(`Invalid monthCode: ${monthCode}`);
+    if (month < 1 || month > monthsPerYear) throw new RangeErrorCtor(`Invalid monthCode: ${monthCode}`);
   }
   return { ...calendarDate, month, monthCode };
+}
+
+function weekNumber(firstDayOfWeek, minimalDaysInFirstWeek, desiredDay, dayOfWeek) {
+  var periodStartDayOfWeek = (dayOfWeek - firstDayOfWeek - desiredDay + 1) % 7;
+  if (periodStartDayOfWeek < 0) periodStartDayOfWeek += 7;
+  var weekNo = MathFloor((desiredDay + periodStartDayOfWeek - 1) / 7);
+  if (7 - periodStartDayOfWeek >= minimalDaysInFirstWeek) {
+    ++weekNo;
+  }
+  return weekNo;
 }
 
 // Note: other built-in calendars than iso8601 are not part of the Temporal
@@ -412,21 +357,24 @@ function resolveNonLunisolarMonth(calendarDate, overflow = undefined, monthsPerY
  */
 class OneObjectCache {
   constructor(cacheToClone = undefined) {
-    this.map = new Map();
+    this.map = new MapCtor();
     this.calls = 0;
-    this.now = globalThis.performance ? globalThis.performance.now() : Date.now();
+    this.now = now();
     this.hits = 0;
     this.misses = 0;
     if (cacheToClone !== undefined) {
-      let i = cacheToClone.length;
-      for (const entry of cacheToClone.map.entries()) {
+      let i = 0;
+      const entriesIterator = Call(MapPrototypeEntries, cacheToClone.map, []);
+      for (;;) {
+        const iterResult = Call(MapIteratorPrototypeNext, entriesIterator, []);
+        if (iterResult.done) break;
         if (++i > OneObjectCache.MAX_CACHE_ENTRIES) break;
-        this.map.set(...entry);
+        Call(MapPrototypeSet, this.map, iterResult.value);
       }
     }
   }
   get(key) {
-    const result = this.map.get(key);
+    const result = Call(MapPrototypeGet, this.map, [key]);
     if (result) {
       this.hits++;
       this.report();
@@ -435,25 +383,26 @@ class OneObjectCache {
     return result;
   }
   set(key, value) {
-    this.map.set(key, value);
+    Call(MapPrototypeSet, this.map, [key, value]);
     this.misses++;
     this.report();
   }
   report() {
     /*
     if (this.calls === 0) return;
-    const ms = (globalThis.performance ? globalThis.performance.now() : Date.now()) - this.now;
-    const hitRate = ((100 * this.hits) / this.calls).toFixed(0);
-    console.log(`${this.calls} calls in ${ms.toFixed(2)}ms. Hits: ${this.hits} (${hitRate}%). Misses: ${this.misses}.`);
+    const ms = now() - this.now;
+    const hitRate = Call(NumberPrototypeToFixed, (100 * this.hits) / this.calls, [0]);
+    const t = `${Call(NumberPrototypeToFixed, ms, [2])}ms`;
+    log(`${this.calls} calls in ${t}. Hits: ${this.hits} (${hitRate}%). Misses: ${this.misses}.`);
     */
   }
   setObject(obj) {
-    if (OneObjectCache.objectMap.get(obj)) throw new RangeError('object already cached');
-    OneObjectCache.objectMap.set(obj, this);
+    if (Call(WeakMapPrototypeGet, OneObjectCache.objectMap, [obj])) throw new RangeErrorCtor('object already cached');
+    Call(WeakMapPrototypeSet, OneObjectCache.objectMap, [obj, this]);
     this.report();
   }
 }
-OneObjectCache.objectMap = new WeakMap();
+OneObjectCache.objectMap = new WeakMapCtor();
 OneObjectCache.MAX_CACHE_ENTRIES = 1000;
 /**
  * Returns a WeakMap-backed cache that's used to store expensive results
@@ -462,10 +411,10 @@ OneObjectCache.MAX_CACHE_ENTRIES = 1000;
  * @param obj - object to associate with the cache
  */
 OneObjectCache.getCacheForObject = function (obj) {
-  let cache = OneObjectCache.objectMap.get(obj);
+  let cache = Call(WeakMapPrototypeGet, OneObjectCache.objectMap, [obj]);
   if (!cache) {
     cache = new OneObjectCache();
-    OneObjectCache.objectMap.set(obj, cache);
+    Call(WeakMapPrototypeSet, OneObjectCache.objectMap, [obj, cache]);
   }
   return cache;
 };
@@ -495,22 +444,22 @@ const nonIsoHelperBase = {
     // https://bugs.chromium.org/p/v8/issues/detail?id=6528#c4, we cache one
     // DateTimeFormat instance per calendar. Caching is lazy so we only pay for
     // calendars that are used. Note that the nonIsoHelperBase object is spread
-    // into each each calendar's implementation before any cache is created, so
+    // into each calendar's implementation before any cache is created, so
     // each calendar gets its own separate cached formatter.
     if (typeof this.formatter === 'undefined') {
       this.formatter = new IntlDateTimeFormat(`en-US-u-ca-${this.id}`, {
         day: 'numeric',
         month: 'numeric',
         year: 'numeric',
-        era: this.eraLength,
+        era: 'short',
         timeZone: 'UTC'
       });
     }
     return this.formatter;
   },
   isoToCalendarDate(isoDate, cache) {
-    let { year: isoYear, month: isoMonth, day: isoDay } = isoDate;
-    const key = JSON.stringify({ func: 'isoToCalendarDate', isoYear, isoMonth, isoDay, id: this.id });
+    const { year: isoYear, month: isoMonth, day: isoDay } = isoDate;
+    const key = JSONStringify({ func: 'isoToCalendarDate', isoYear, isoMonth, isoDay, id: this.id });
     const cached = cache.get(key);
     if (cached) return cached;
 
@@ -518,30 +467,49 @@ const nonIsoHelperBase = {
     let parts, isoString;
     try {
       isoString = toUtcIsoDateString({ isoYear, isoMonth, isoDay });
-      parts = dateTimeFormat.formatToParts(new Date(isoString));
+      parts = ES.Call(IntlDateTimeFormatPrototypeFormatToParts, dateTimeFormat, [new DateCtor(isoString)]);
     } catch (e) {
-      throw new RangeError(`Invalid ISO date: ${JSON.stringify({ isoYear, isoMonth, isoDay })}`);
+      throw new RangeErrorCtor(`Invalid ISO date: ${JSONStringify({ isoYear, isoMonth, isoDay })}`);
     }
     const result = {};
-    for (let { type, value } of parts) {
-      if (type === 'year') result.eraYear = +value;
-      if (type === 'relatedYear') result.eraYear = +value;
+    for (let i = 0; i < parts.length; i++) {
+      let { type, value } = parts[i];
+      if (type === 'year' || type === 'relatedYear') {
+        if (this.hasEra) {
+          result.eraYear = +value;
+        } else {
+          result.year = +value;
+        }
+      }
       if (type === 'month') {
-        const matches = /^([-0-9.]+)(.*?)$/.exec(value);
-        if (!matches || matches.length != 3) throw new RangeError(`Unexpected month: ${value}`);
-        result.month = +matches[1];
+        const matches = ES.Call(RegExpPrototypeExec, /^([0-9]*)(.*?)$/, [value]);
+        if (!matches || matches.length != 3 || (!matches[1] && !matches[2])) {
+          throw new RangeErrorCtor(`Unexpected month: ${value}`);
+        }
+        // If the month has no numeric part (should only see this for the Hebrew
+        // calendar with newer FF / Chromium versions; see
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1751833) then set a
+        // placeholder month index of `1` and rely on the derived class to
+        // calculate the correct month index from the month name stored in
+        // `monthExtra`.
+        result.month = matches[1] ? +matches[1] : 1;
         if (result.month < 1) {
-          throw new RangeError(
+          throw new RangeErrorCtor(
             `Invalid month ${value} from ${isoString}[u-ca-${this.id}]` +
               ' (probably due to https://bugs.chromium.org/p/v8/issues/detail?id=10527)'
           );
         }
         if (result.month > 13) {
-          throw new RangeError(
+          throw new RangeErrorCtor(
             `Invalid month ${value} from ${isoString}[u-ca-${this.id}]` +
               ' (probably due to https://bugs.chromium.org/p/v8/issues/detail?id=10529)'
           );
         }
+
+        // The ICU formats for the Hebrew calendar no longer support a numeric
+        // month format. So we'll rely on the derived class to interpret it.
+        // `monthExtra` is also used on the Chinese calendar to handle a suffix
+        // "bis" indicating a leap month.
         if (matches[2]) result.monthExtra = matches[2];
       }
       if (type === 'day') result.day = +value;
@@ -553,20 +521,25 @@ const nonIsoHelperBase = {
         // The call to normalize() and the replacement regex deals with era
         // names that contain non-ASCII characters like Japanese eras. Also
         // ignore extra content in parentheses like JPN era date ranges.
-        value = value.split(' (')[0];
-        result.era = value
-          .normalize('NFD')
-          .replace(/[^-0-9 \p{L}]/gu, '')
-          .replace(' ', '-')
-          .toLowerCase();
+        value = ES.Call(StringPrototypeSplit, value, [' ('])[0];
+        value = ES.Call(StringPrototypeNormalize, value, ['NFD']);
+        value = ES.Call(StringPrototypeReplace, value, [/[^-0-9 \p{L}]/gu, '']);
+        value = ES.Call(StringPrototypeReplace, value, [/ /g, '-']);
+        value = ES.Call(StringPrototypeToLowerCase, value, []);
+        result.era = value;
       }
     }
-    if (result.eraYear === undefined) {
+    if (this.hasEra && result.eraYear === undefined) {
       // Node 12 has outdated ICU data that lacks the `relatedYear` field in the
       // output of Intl.DateTimeFormat.formatToParts.
-      throw new RangeError(
+      throw new RangeErrorCtor(
         `Intl.DateTimeFormat.formatToParts lacks relatedYear in ${this.id} calendar. Try Node 14+ or modern browsers.`
       );
+    }
+    // Translate old ICU era codes "ERA0" etc. into canonical era names.
+    if (this.hasEra) {
+      const replacement = ES.Call(ArrayPrototypeFind, this.eras, [(e) => result.era === e.genericName]);
+      if (replacement) result.era = replacement.code;
     }
     // Translate eras that may be handled differently by Temporal vs. by Intl
     // (e.g. Japanese pre-Meiji eras). See #526 for details.
@@ -575,16 +548,17 @@ const nonIsoHelperBase = {
       result.era = era;
       result.eraYear = eraYear;
     }
-    if (this.checkIcuBugs) this.checkIcuBugs(result, isoDate);
-
+    if (this.checkIcuBugs) this.checkIcuBugs(isoDate);
     const calendarDate = this.adjustCalendarDate(result, cache, 'constrain', true);
-    if (calendarDate.year === undefined) throw new RangeError(`Missing year converting ${JSON.stringify(isoDate)}`);
-    if (calendarDate.month === undefined) throw new RangeError(`Missing month converting ${JSON.stringify(isoDate)}`);
-    if (calendarDate.day === undefined) throw new RangeError(`Missing day converting ${JSON.stringify(isoDate)}`);
+    if (calendarDate.year === undefined) throw new RangeErrorCtor(`Missing year converting ${JSONStringify(isoDate)}`);
+    if (calendarDate.month === undefined) {
+      throw new RangeErrorCtor(`Missing month converting ${JSONStringify(isoDate)}`);
+    }
+    if (calendarDate.day === undefined) throw new RangeErrorCtor(`Missing day converting ${JSONStringify(isoDate)}`);
     cache.set(key, calendarDate);
     // Also cache the reverse mapping
-    ['constrain', 'reject'].forEach((overflow) => {
-      const keyReverse = JSON.stringify({
+    const cacheReverse = (overflow) => {
+      const keyReverse = JSONStringify({
         func: 'calendarToIsoDate',
         year: calendarDate.year,
         month: calendarDate.month,
@@ -593,29 +567,31 @@ const nonIsoHelperBase = {
         id: this.id
       });
       cache.set(keyReverse, isoDate);
-    });
+    };
+    ES.Call(ArrayPrototypeForEach, ['constrain', 'reject'], [cacheReverse]);
     return calendarDate;
   },
   validateCalendarDate(calendarDate) {
-    let { era, month, year, day, eraYear, monthCode, monthExtra } = calendarDate;
+    const { month, year, day, eraYear, monthCode, monthExtra } = calendarDate;
     // When there's a suffix (e.g. "5bis" for a leap month in Chinese calendar)
     // the derived class must deal with it.
-    if (monthExtra !== undefined) throw new RangeError('Unexpected `monthExtra` value');
-    if (year === undefined && eraYear === undefined) throw new TypeError('year or eraYear is required');
-    if (month === undefined && monthCode === undefined) throw new TypeError('month or monthCode is required');
-    if (day === undefined) throw new RangeError('Missing day');
+    if (monthExtra !== undefined) throw new RangeErrorCtor('Unexpected `monthExtra` value');
+    if (year === undefined && eraYear === undefined) throw new TypeErrorCtor('year or eraYear is required');
+    if (month === undefined && monthCode === undefined) throw new TypeErrorCtor('month or monthCode is required');
+    if (day === undefined) throw new RangeErrorCtor('Missing day');
     if (monthCode !== undefined) {
       if (typeof monthCode !== 'string') {
-        throw new RangeError(`monthCode must be a string, not ${ES.Type(monthCode).toLowerCase()}`);
+        throw new RangeErrorCtor(
+          `monthCode must be a string, not ${ES.Call(StringPrototypeToLowerCase, Type(monthCode), [])}`
+        );
       }
-      if (!/^M([01]?\d)(L?)$/.test(monthCode)) throw new RangeError(`Invalid monthCode: ${monthCode}`);
+      if (!ES.Call(RegExpPrototypeTest, /^M([01]?\d)(L?)$/, [monthCode])) {
+        throw new RangeErrorCtor(`Invalid monthCode: ${monthCode}`);
+      }
     }
-    if (this.constantEra) {
-      if (era !== undefined && era !== this.constantEra) {
-        throw new RangeError(`era must be ${this.constantEra}, not ${era}`);
-      }
-      if (eraYear !== undefined && year !== undefined && eraYear !== year) {
-        throw new RangeError(`eraYear ${eraYear} does not match year ${year}`);
+    if (this.hasEra) {
+      if ((calendarDate['era'] === undefined) !== (calendarDate['eraYear'] === undefined)) {
+        throw new TypeErrorCtor('properties era and eraYear must be provided together');
       }
     }
   },
@@ -627,24 +603,14 @@ const nonIsoHelperBase = {
    *
    * The base implementation fills in missing values by assuming the simplest
    * possible calendar:
-   * - no eras or a constant era defined in `.constantEra`
+   * - no eras
    * - non-lunisolar calendar (no leap months)
    * */
   adjustCalendarDate(calendarDate, cache, overflow /*, fromLegacyDate = false */) {
-    if (this.calendarType === 'lunisolar') throw new RangeError('Override required for lunisolar calendars');
+    if (this.calendarType === 'lunisolar') throw new RangeErrorCtor('Override required for lunisolar calendars');
     this.validateCalendarDate(calendarDate);
     const largestMonth = this.monthsInYear(calendarDate, cache);
-    let { month, year, eraYear, monthCode } = calendarDate;
-
-    // For calendars that always use the same era, set it here so that derived
-    // calendars won't need to implement this method simply to set the era.
-    if (this.constantEra) {
-      // year and eraYear always match when there's only one possible era
-      if (year === undefined) year = eraYear;
-      if (eraYear === undefined) eraYear = year;
-      calendarDate = { ...calendarDate, era: this.constantEra, year, eraYear };
-    }
-
+    let { month, monthCode } = calendarDate;
     ({ month, monthCode } = resolveNonLunisolarMonth(calendarDate, overflow, largestMonth));
     return { ...calendarDate, month, monthCode };
   },
@@ -672,7 +638,7 @@ const nonIsoHelperBase = {
     date = this.regulateMonthDayNaive(date, overflow, cache);
 
     const { year, month, day } = date;
-    const key = JSON.stringify({ func: 'calendarToIsoDate', year, month, day, overflow, id: this.id });
+    const key = JSONStringify({ func: 'calendarToIsoDate', year, month, day, overflow, id: this.id });
     let cached = cache.get(key);
     if (cached) return cached;
     // If YMD are present in the input but the input has been constrained
@@ -684,7 +650,7 @@ const nonIsoHelperBase = {
       originalDate.day !== undefined &&
       (originalDate.year !== date.year || originalDate.month !== date.month || originalDate.day !== date.day)
     ) {
-      keyOriginal = JSON.stringify({
+      keyOriginal = JSONStringify({
         func: 'calendarToIsoDate',
         year: originalDate.year,
         month: originalDate.month,
@@ -702,11 +668,12 @@ const nonIsoHelperBase = {
       // If the estimate is in the same year & month as the target, then we can
       // calculate the result exactly and short-circuit any additional logic.
       // This optimization assumes that months are continuous. It would break if
-      // a calendar skipped days, like the Julian->Gregorian switchover. But the
-      // only ICU calendars that currently skip days (japanese/roc/buddhist) is
+      // a calendar skipped days, like the Julian->Gregorian switchover. But
+      // current ICU calendars only skip days (japanese/roc/buddhist) because of
       // a bug (https://bugs.chromium.org/p/chromium/issues/detail?id=1173158)
-      // that's currently detected by `checkIcuBugs()` which will throw. So
-      // this optimization should be safe for all ICU calendars.
+      // that's currently worked around by a custom calendarToIsoDate
+      // implementation in those calendars. So this optimization should be safe
+      // for all ICU calendars.
       let testIsoEstimate = this.addDaysIso(isoEstimate, diffDays);
       if (date.day > this.minimumMonthLength(date)) {
         // There's a chance that the calendar date is out of range. Throw or
@@ -714,7 +681,7 @@ const nonIsoHelperBase = {
         let testCalendarDate = this.isoToCalendarDate(testIsoEstimate, cache);
         while (testCalendarDate.month !== month || testCalendarDate.year !== year) {
           if (overflow === 'reject') {
-            throw new RangeError(`day ${day} does not exist in month ${month} of year ${year}`);
+            throw new RangeErrorCtor(`day ${day} does not exist in month ${month} of year ${year}`);
           }
           // Back up a day at a time until we're not hanging over the month end
           testIsoEstimate = this.addDaysIso(testIsoEstimate, -1);
@@ -737,10 +704,9 @@ const nonIsoHelperBase = {
         sign = this.compareCalendarDates(date, roundtripEstimate);
       }
     }
-    // If the initial guess is not in the same month, then then bisect the
+    // If the initial guess is not in the same month, then bisect the
     // distance to the target, starting with 8 days per step.
     let increment = 8;
-    let maybeConstrained = false;
     while (sign) {
       isoEstimate = this.addDaysIso(isoEstimate, sign * increment);
       const oldRoundtripEstimate = roundtripEstimate;
@@ -753,11 +719,6 @@ const nonIsoHelperBase = {
           isoEstimate = calculateSameMonthResult(diff.days);
           // Signal the loop condition that there's a match.
           sign = 0;
-          // If the calendar day is larger than the minimal length for this
-          // month, then it might be larger than the actual length of the month.
-          // So we won't cache it as the correct calendar date for this ISO
-          // date.
-          maybeConstrained = date.day > this.minimumMonthLength(date);
         } else if (oldSign && sign !== oldSign) {
           if (increment > 1) {
             // If the estimate overshot the target, try again with a smaller increment
@@ -769,13 +730,12 @@ const nonIsoHelperBase = {
             // original date was an invalid value that will be constrained or
             // rejected here.
             if (overflow === 'reject') {
-              throw new RangeError(`Can't find ISO date from calendar date: ${JSON.stringify({ ...originalDate })}`);
+              throw new RangeErrorCtor(`Can't find ISO date from calendar date: ${JSONStringify({ ...originalDate })}`);
             } else {
               // To constrain, pick the earliest value
               const order = this.compareCalendarDates(roundtripEstimate, oldRoundtripEstimate);
               // If current value is larger, then back up to the previous value.
               if (order > 0) isoEstimate = this.addDaysIso(isoEstimate, -1);
-              maybeConstrained = true;
               sign = 0;
             }
           }
@@ -791,31 +751,11 @@ const nonIsoHelperBase = {
       date.monthCode === undefined ||
       (this.hasEra && (date.era === undefined || date.eraYear === undefined))
     ) {
-      throw new RangeError('Unexpected missing property');
-    }
-    if (!maybeConstrained) {
-      // Also cache the reverse mapping
-      const keyReverse = JSON.stringify({
-        func: 'isoToCalendarDate',
-        isoYear: isoEstimate.year,
-        isoMonth: isoEstimate.month,
-        isoDay: isoEstimate.day,
-        id: this.id
-      });
-      cache.set(keyReverse, date);
+      throw new RangeErrorCtor('Unexpected missing property');
     }
     return isoEstimate;
   },
-  temporalToCalendarDate(date, cache) {
-    const isoDate = { year: GetSlot(date, ISO_YEAR), month: GetSlot(date, ISO_MONTH), day: GetSlot(date, ISO_DAY) };
-    const result = this.isoToCalendarDate(isoDate, cache);
-    return result;
-  },
   compareCalendarDates(date1, date2) {
-    // `date1` and `date2` are already records. The calls below simply validate
-    // that all three required fields are present.
-    date1 = ES.PrepareTemporalFields(date1, [['day'], ['month'], ['year']]);
-    date2 = ES.PrepareTemporalFields(date2, [['day'], ['month'], ['year']]);
     if (date1.year !== date2.year) return ES.ComparisonResult(date1.year - date2.year);
     if (date1.month !== date2.month) return ES.ComparisonResult(date1.month - date2.month);
     if (date1.day !== date2.day) return ES.ComparisonResult(date1.day - date2.day);
@@ -827,7 +767,7 @@ const nonIsoHelperBase = {
     return this.isoToCalendarDate(isoDate, cache);
   },
   addDaysIso(isoDate, days) {
-    const added = ES.AddISODate(isoDate.year, isoDate.month, isoDate.day, 0, 0, 0, days, 'constrain');
+    const added = ES.BalanceISODate(isoDate.year, isoDate.month, isoDate.day + days);
     return added;
   },
   addDaysCalendar(calendarDate, days, cache) {
@@ -843,7 +783,7 @@ const nonIsoHelperBase = {
       const oldCalendarDate = calendarDate;
       const days =
         months < 0
-          ? -Math.max(day, this.daysInPreviousMonth(calendarDate, cache))
+          ? -MathMax(day, this.daysInPreviousMonth(calendarDate, cache))
           : this.daysInMonth(calendarDate, cache);
       const isoDate = this.calendarToIsoDate(calendarDate, 'constrain', cache);
       let addedIso = this.addDaysIso(isoDate, days, cache);
@@ -868,13 +808,14 @@ const nonIsoHelperBase = {
       }
     }
     if (overflow === 'reject' && calendarDate.day !== day) {
-      throw new RangeError(`Day ${day} does not exist in resulting calendar month`);
+      throw new RangeErrorCtor(`Day ${day} does not exist in resulting calendar month`);
     }
     return calendarDate;
   },
   addCalendar(calendarDate, { years = 0, months = 0, weeks = 0, days = 0 }, overflow, cache) {
-    const { year, month, day } = calendarDate;
-    const addedMonths = this.addMonthsCalendar({ year: year + years, month, day }, months, overflow, cache);
+    const { year, day, monthCode } = calendarDate;
+    const addedYears = this.adjustCalendarDate({ year: year + years, monthCode, day }, cache);
+    const addedMonths = this.addMonthsCalendar(addedYears, months, overflow, cache);
     days += weeks * 7;
     const addedDays = this.addDaysCalendar(addedMonths, days, cache);
     return addedDays;
@@ -896,12 +837,18 @@ const nonIsoHelperBase = {
       }
       case 'month':
       case 'year': {
-        const diffYears = calendarTwo.year - calendarOne.year;
-        const diffMonths = calendarTwo.month - calendarOne.month;
-        const diffDays = calendarTwo.day - calendarOne.day;
         const sign = this.compareCalendarDates(calendarTwo, calendarOne);
+        if (!sign) {
+          return { years: 0, months: 0, weeks: 0, days: 0 };
+        }
+        const diffYears = calendarTwo.year - calendarOne.year;
+        const diffDays = calendarTwo.day - calendarOne.day;
         if (largestUnit === 'year' && diffYears) {
-          const isOneFurtherInYear = diffMonths * sign < 0 || (diffMonths === 0 && diffDays * sign < 0);
+          let diffInYearSign = 0;
+          if (calendarTwo.monthCode > calendarOne.monthCode) diffInYearSign = 1;
+          if (calendarTwo.monthCode < calendarOne.monthCode) diffInYearSign = -1;
+          if (!diffInYearSign) diffInYearSign = MathSign(diffDays);
+          const isOneFurtherInYear = diffInYearSign * sign < 0;
           years = isOneFurtherInYear ? diffYears - sign : diffYears;
         }
         const yearsAdded = years ? this.addCalendar(calendarOne, { years }, 'constrain', cache) : calendarOne;
@@ -931,11 +878,11 @@ const nonIsoHelperBase = {
     // Add enough days to roll over to the next month. One we're in the next
     // month, we can calculate the length of the current month. NOTE: This
     // algorithm assumes that months are continuous. It would break if a
-    // calendar skipped days, like the Julian->Gregorian switchover. But the
-    // only ICU calendars that currently skip days (japanese/roc/buddhist) is a
-    // bug (https://bugs.chromium.org/p/chromium/issues/detail?id=1173158)
-    // that's currently detected by `checkIcuBugs()` which will throw. So this
-    // code should be safe for all ICU calendars.
+    // calendar skipped days, like the Julian->Gregorian switchover. But current
+    // ICU calendars only skip days (japanese/roc/buddhist) because of a bug
+    // (https://bugs.chromium.org/p/chromium/issues/detail?id=1173158) that's
+    // currently worked around by a custom calendarToIsoDate implementation in
+    // those calendars. So this code should be safe for all ICU calendars.
     const { day } = calendarDate;
     const max = this.maximumMonthLength(calendarDate);
     const min = this.minimumMonthLength(calendarDate);
@@ -971,7 +918,7 @@ const nonIsoHelperBase = {
     return lastDayOfPreviousMonthCalendar.day;
   },
   startOfCalendarYear(calendarDate) {
-    return { year: calendarDate.year, month: 1, day: 1 };
+    return { year: calendarDate.year, month: 1, monthCode: 'M01', day: 1 };
   },
   startOfCalendarMonth(calendarDate) {
     return { year: calendarDate.year, month: calendarDate.month, day: 1 };
@@ -979,42 +926,37 @@ const nonIsoHelperBase = {
   calendarDaysUntil(calendarOne, calendarTwo, cache) {
     const oneIso = this.calendarToIsoDate(calendarOne, 'constrain', cache);
     const twoIso = this.calendarToIsoDate(calendarTwo, 'constrain', cache);
-    return this.isoDaysUntil(oneIso, twoIso);
-  },
-  isoDaysUntil(oneIso, twoIso) {
-    const duration = ES.DifferenceISODate(
-      oneIso.year,
-      oneIso.month,
-      oneIso.day,
-      twoIso.year,
-      twoIso.month,
-      twoIso.day,
-      'day'
+    return (
+      ES.ISODateToEpochDays(twoIso.year, twoIso.month - 1, twoIso.day) -
+      ES.ISODateToEpochDays(oneIso.year, oneIso.month - 1, oneIso.day)
     );
-    return duration.days;
   },
-  // The short era format works for all calendars except Japanese, which will
-  // override.
-  eraLength: 'short',
-  // All built-in calendars except Chinese/Dangi and Hebrew use an era
-  hasEra: true,
+  // Override if calendar uses eras
+  hasEra: false,
   monthDayFromFields(fields, overflow, cache) {
-    let { year, month, monthCode, day, era, eraYear } = fields;
-    if (monthCode === undefined) {
-      if (year === undefined && (era === undefined || eraYear === undefined)) {
-        throw new TypeError('`monthCode`, `year`, or `era` and `eraYear` is required');
-      }
-      ({ monthCode, year } = this.adjustCalendarDate({ year, month, monthCode, day, era, eraYear }, cache, overflow));
+    let { era, eraYear, year, month, monthCode, day } = fields;
+    if (month !== undefined && year === undefined && (!this.hasEra || era === undefined || eraYear === undefined)) {
+      throw new TypeErrorCtor('when month is present, year (or era and eraYear) are required');
+    }
+    if (monthCode === undefined || year !== undefined || (this.hasEra && eraYear !== undefined)) {
+      // Apply overflow behaviour to year/month/day, to get correct monthCode/day
+      ({ monthCode, day } = this.isoToCalendarDate(this.calendarToIsoDate(fields, overflow, cache), cache));
     }
 
     let isoYear, isoMonth, isoDay;
     let closestCalendar, closestIso;
-    // Look backwards starting from the calendar year of 1972-01-01 up to 100
-    // calendar years to find a year that has this month and day. Normal months
-    // and days will match immediately, but for leap days and leap months we may
-    // have to look for a while.
-    const startDateIso = { year: 1972, month: 1, day: 1 };
-    const { year: calendarYear } = this.isoToCalendarDate(startDateIso, cache);
+    // Look backwards starting from one of the calendar years spanning ISO year
+    // 1972, up to 100 calendar years prior, to find a year that has this month
+    // and day. Normal months and days will match immediately, but for leap days
+    // and leap months we may have to look for a while.
+    const startDateIso = { year: 1972, month: 12, day: 31 };
+    const calendarOfStartDateIso = this.isoToCalendarDate(startDateIso, cache);
+    // Note: relies on lexicographical ordering of monthCodes
+    const calendarYear =
+      calendarOfStartDateIso.monthCode > monthCode ||
+      (calendarOfStartDateIso.monthCode === monthCode && calendarOfStartDateIso.day >= day)
+        ? calendarOfStartDateIso.year
+        : calendarOfStartDateIso.year - 1;
     for (let i = 0; i < 100; i++) {
       let testCalendarDate = this.adjustCalendarDate({ day, monthCode, year: calendarYear - i }, cache);
       const isoDate = this.calendarToIsoDate(testCalendarDate, 'constrain', cache);
@@ -1035,7 +977,7 @@ const nonIsoHelperBase = {
       }
     }
     if (overflow === 'constrain' && closestIso !== undefined) return closestIso;
-    throw new RangeError(`No recent ${this.id} year with monthCode ${monthCode} and day ${day}`);
+    throw new RangeErrorCtor(`No recent ${this.id} year with monthCode ${monthCode} and day ${day}`);
   }
 };
 
@@ -1063,8 +1005,8 @@ const helperHebrew = ObjectAssign({}, nonIsoHelperBase, {
   minMaxMonthLength(calendarDate, minOrMax) {
     const { month, year } = calendarDate;
     const monthCode = this.getMonthCode(year, month);
-    const monthInfo = ObjectEntries(this.months).find((m) => m[1].monthCode === monthCode);
-    if (monthInfo === undefined) throw new RangeError(`unmatched Hebrew month: ${month}`);
+    const monthInfo = ES.Call(ArrayPrototypeFind, ObjectEntries(this.months), [(m) => m[1].monthCode === monthCode]);
+    if (monthInfo === undefined) throw new RangeErrorCtor(`unmatched Hebrew month: ${month}`);
     const daysInMonth = monthInfo[1].days;
     return typeof daysInMonth === 'number' ? daysInMonth : daysInMonth[minOrMax];
   },
@@ -1097,9 +1039,8 @@ const helperHebrew = ObjectAssign({}, nonIsoHelperBase, {
     }
   },
   adjustCalendarDate(calendarDate, cache, overflow = 'constrain', fromLegacyDate = false) {
-    let { year, eraYear, month, monthCode, day, monthExtra } = calendarDate;
-    if (year === undefined) year = eraYear;
-    if (eraYear === undefined) eraYear = year;
+    let { year, month, monthCode, day, monthExtra } = calendarDate;
+    if (year === undefined) throw new TypeErrorCtor('Missing property: year');
     if (fromLegacyDate) {
       // In Pre Node-14 V8, DateTimeFormat.formatToParts `month: 'numeric'`
       // output returns the numeric equivalent of `month` as a string, meaning
@@ -1110,61 +1051,59 @@ const helperHebrew = ObjectAssign({}, nonIsoHelperBase, {
       // correct `month` using the string name as a key.
       if (monthExtra) {
         const monthInfo = this.months[monthExtra];
-        if (!monthInfo) throw new RangeError(`Unrecognized month from formatToParts: ${monthExtra}`);
+        if (!monthInfo) throw new RangeErrorCtor(`Unrecognized month from formatToParts: ${monthExtra}`);
         month = this.inLeapYear({ year }) ? monthInfo.leap : monthInfo.regular;
       }
       monthCode = this.getMonthCode(year, month);
-      const result = { year, month, day, era: undefined, eraYear, monthCode };
-      return result;
+      return { year, month, day, monthCode };
     } else {
       // When called without input coming from legacy Date output, simply ensure
       // that all fields are present.
       this.validateCalendarDate(calendarDate);
       if (month === undefined) {
-        if (monthCode.endsWith('L')) {
+        if (ES.Call(StringPrototypeEndsWith, monthCode, ['L'])) {
           if (monthCode !== 'M05L') {
-            throw new RangeError(`Hebrew leap month must have monthCode M05L, not ${monthCode}`);
+            throw new RangeErrorCtor(`Hebrew leap month must have monthCode M05L, not ${monthCode}`);
           }
           month = 6;
           if (!this.inLeapYear({ year })) {
             if (overflow === 'reject') {
-              throw new RangeError(`Hebrew monthCode M05L is invalid in year ${year} which is not a leap year`);
+              throw new RangeErrorCtor(`Hebrew monthCode M05L is invalid in year ${year} which is not a leap year`);
             } else {
-              // constrain to last day of previous month (Av)
-              month = 5;
-              day = 30;
-              monthCode = 'M05';
+              // constrain to same day of next month (Adar)
+              month = 6;
+              monthCode = 'M06';
             }
           }
         } else {
           month = monthCodeNumberPart(monthCode);
           // if leap month is before this one, the month index is one more than the month code
-          if (this.inLeapYear({ year }) && month > 6) month++;
+          if (this.inLeapYear({ year }) && month >= 6) month++;
           const largestMonth = this.monthsInYear({ year });
-          if (month < 1 || month > largestMonth) throw new RangeError(`Invalid monthCode: ${monthCode}`);
+          if (month < 1 || month > largestMonth) throw new RangeErrorCtor(`Invalid monthCode: ${monthCode}`);
         }
       } else {
         if (overflow === 'reject') {
           ES.RejectToRange(month, 1, this.monthsInYear({ year }));
-          ES.RejectToRange(day, 1, this.maximumMonthLength(calendarDate));
+          ES.RejectToRange(day, 1, this.maximumMonthLength({ year, month }));
         } else {
           month = ES.ConstrainToRange(month, 1, this.monthsInYear({ year }));
-          day = ES.ConstrainToRange(day, 1, this.maximumMonthLength({ ...calendarDate, month }));
+          day = ES.ConstrainToRange(day, 1, this.maximumMonthLength({ year, month }));
         }
         if (monthCode === undefined) {
           monthCode = this.getMonthCode(year, month);
         } else {
           const calculatedMonthCode = this.getMonthCode(year, month);
           if (calculatedMonthCode !== monthCode) {
-            throw new RangeError(`monthCode ${monthCode} doesn't correspond to month ${month} in Hebrew year ${year}`);
+            throw new RangeErrorCtor(
+              `monthCode ${monthCode} doesn't correspond to month ${month} in Hebrew year ${year}`
+            );
           }
         }
       }
-      return { ...calendarDate, day, month, monthCode, year, eraYear };
+      return { ...calendarDate, day, month, monthCode, year };
     }
-  },
-  // All built-in calendars except Chinese/Dangi and Hebrew use an era
-  hasEra: false
+  }
 });
 
 /**
@@ -1175,9 +1114,10 @@ const helperIslamic = ObjectAssign({}, nonIsoHelperBase, {
   id: 'islamic',
   calendarType: 'lunar',
   inLeapYear(calendarDate, cache) {
-    // In leap years, the 12th month has 30 days. In non-leap years: 29.
-    const days = this.daysInMonth({ year: calendarDate.year, month: 12, day: 1 }, cache);
-    return days === 30;
+    const startOfYearCalendar = { year: calendarDate.year, month: 1, monthCode: 'M01', day: 1 };
+    const startOfNextYearCalendar = { year: calendarDate.year + 1, month: 1, monthCode: 'M01', day: 1 };
+    const result = this.calendarDaysUntil(startOfYearCalendar, startOfNextYearCalendar, cache);
+    return result === 355;
   },
   monthsInYear(/* calendarYear, cache */) {
     return 12;
@@ -1186,7 +1126,6 @@ const helperIslamic = ObjectAssign({}, nonIsoHelperBase, {
   maximumMonthLength: (/* calendarDate */) => 30,
   DAYS_PER_ISLAMIC_YEAR: 354 + 11 / 30,
   DAYS_PER_ISO_YEAR: 365.2425,
-  constantEra: 'ah',
   estimateIsoDate(calendarDate) {
     const { year } = this.adjustCalendarDate(calendarDate);
     return { year: MathFloor((year * this.DAYS_PER_ISLAMIC_YEAR) / this.DAYS_PER_ISO_YEAR) + 622, month: 1, day: 1 };
@@ -1197,9 +1136,8 @@ const helperPersian = ObjectAssign({}, nonIsoHelperBase, {
   id: 'persian',
   calendarType: 'solar',
   inLeapYear(calendarDate, cache) {
-    // Same logic (count days in the last month) for Persian as for Islamic,
-    // even though Persian is solar and Islamic is lunar.
-    return helperIslamic.inLeapYear(calendarDate, cache);
+    // If the last month has 30 days, it's a leap year.
+    return this.daysInMonth({ year: calendarDate.year, month: 12, day: 1 }, cache) === 30;
   },
   monthsInYear(/* calendarYear, cache */) {
     return 12;
@@ -1214,7 +1152,6 @@ const helperPersian = ObjectAssign({}, nonIsoHelperBase, {
     if (month === 12) return 30;
     return month <= 6 ? 31 : 30;
   },
-  constantEra: 'ap',
   estimateIsoDate(calendarDate) {
     const { year } = this.adjustCalendarDate(calendarDate);
     return { year: year + 621, month: 1, day: 1 };
@@ -1241,7 +1178,6 @@ const helperIndian = ObjectAssign({}, nonIsoHelperBase, {
   maximumMonthLength(calendarDate) {
     return this.getMonthInfo(calendarDate).length;
   },
-  constantEra: 'saka',
   // Indian months always start at the same well-known Gregorian month and
   // day. So this conversion is easy and fast. See
   // https://en.wikipedia.org/wiki/Indian_national_calendar
@@ -1262,7 +1198,7 @@ const helperIndian = ObjectAssign({}, nonIsoHelperBase, {
   getMonthInfo(calendarDate) {
     const { month } = calendarDate;
     let monthInfo = this.months[month];
-    if (monthInfo === undefined) throw new RangeError(`Invalid month: ${month}`);
+    if (monthInfo === undefined) throw new RangeErrorCtor(`Invalid month: ${month}`);
     if (this.inLeapYear(calendarDate) && monthInfo.leap) monthInfo = monthInfo.leap;
     return monthInfo;
   },
@@ -1274,7 +1210,7 @@ const helperIndian = ObjectAssign({}, nonIsoHelperBase, {
     const isoYear = calendarDate.year + 78 + (monthInfo.nextYear ? 1 : 0);
     const isoMonth = monthInfo.month;
     const isoDay = monthInfo.day;
-    const isoDate = ES.AddISODate(isoYear, isoMonth, isoDay, 0, 0, 0, calendarDate.day - 1, 'constrain');
+    const isoDate = ES.BalanceISODate(isoYear, isoMonth, isoDay + calendarDate.day - 1);
     return isoDate;
   },
   // https://bugs.chromium.org/p/v8/issues/detail?id=10529 causes Intl's Indian
@@ -1282,10 +1218,13 @@ const helperIndian = ObjectAssign({}, nonIsoHelperBase, {
   // in Node 12 0000-01-01 is calculated as 6146/12/-583 instead of 10/11/-79 as
   // expected.
   vulnerableToBceBug:
-    new Date('0000-01-01T00:00Z').toLocaleDateString('en-US-u-ca-indian', { timeZone: 'UTC' }) !== '10/11/-79 Saka',
-  checkIcuBugs(calendarDate, isoDate) {
+    ES.Call(DatePrototypeToLocaleDateString, new DateCtor('0000-01-01T00:00Z'), [
+      'en-US-u-ca-indian',
+      { timeZone: 'UTC' }
+    ]) !== '10/11/-79 Saka',
+  checkIcuBugs(isoDate) {
     if (this.vulnerableToBceBug && isoDate.year < 1) {
-      throw new RangeError(
+      throw new RangeErrorCtor(
         `calendar '${this.id}' is broken for ISO dates before 0001-01-01` +
           ' (see https://bugs.chromium.org/p/v8/issues/detail?id=10529)'
       );
@@ -1298,111 +1237,134 @@ const helperIndian = ObjectAssign({}, nonIsoHelperBase, {
  * eras. Note that it mutates and normalizes the original era objects, which is
  * OK because this is non-observable, internal-only metadata.
  *
- * The result is an array of eras with this shape:
- * ```
- * interface Era {
- *   // name of the era
- *   name: string;
+ *  interface Era {
+ *   // Era code, used to populate the 'era' field of Temporal instances.
+ *   // See https://tc39.es/proposal-intl-era-monthcode/#table-eras
+ *   code: string;
+ *
+ *   // Names are additionally accepted as alternate era codes on input, and the
+ *   // first name is also output in error messages (and may be the era code if
+ *   // desired.)
+ *   // See https://tc39.es/proposal-intl-era-monthcode/#table-eras
+ *   // If absent, this field defaults to a single element matching the code.
+ *   names: string[];
  *
  *   // alternate name of the era used in old versions of ICU data
  *   // format is `era{n}` where n is the zero-based index of the era
  *   // with the oldest era being 0.
  *   genericName: string;
  *
- *   // Signed calendar year where this era begins. Will be
- *   // 1 (or 0 for zero-based eras) for the anchor era assuming that `year`
- *   // numbering starts at the beginning of the anchor era, which is true
- *   // for all ICU calendars except Japanese. If an era starts mid-year
- *   // then a calendar month and day are included. Otherwise
- *   // `{ month: 1, day: 1 }` is assumed.
- *   anchorEpoch:  { year: number } | { year: number, month: number, day: number }
+ *   // Signed calendar year where this era begins. Will be 1 (or 0 for zero-based
+ *   // eras) for the anchor era assuming that `year` numbering starts at the
+ *   // beginning of the anchor era, which is true for all ICU calendars except
+ *   // Japanese. For input, the month and day are optional. If an era starts
+ *   // mid-year then a calendar month and day are included.
+ *   // Otherwise `{ month: 1, day: 1 }` is assumed.
+ *   anchorEpoch: { year: number; month: number; day: number };
  *
  *   // ISO date of the first day of this era
- *   isoEpoch: { year: number, month: number, day: number}
+ *   isoEpoch: { year: number; month: number; day: number };
  *
  *   // If present, then this era counts years backwards like BC
  *   // and this property points to the forward era. This must be
  *   // the last (oldest) era in the array.
- *   reverseOf: Era;
+ *   reverseOf?: Era;
  *
  *   // If true, the era's years are 0-based. If omitted or false,
  *   // then the era's years are 1-based.
- *   hasYearZero: boolean = false;
+ *   hasYearZero?: boolean;
+ *
+ *   // Override if this era is the anchor. Not normally used because
+ *   // anchor eras are inferred.
+ *   isAnchor?: boolean;
  * }
  * ```
  * */
 function adjustEras(eras) {
   if (eras.length === 0) {
-    throw new RangeError('Invalid era data: eras are required');
+    throw new RangeErrorCtor('Invalid era data: eras are required');
   }
   if (eras.length === 1 && eras[0].reverseOf) {
-    throw new RangeError('Invalid era data: anchor era cannot count years backwards');
+    throw new RangeErrorCtor('Invalid era data: anchor era cannot count years backwards');
   }
-  if (eras.length === 1 && !eras[0].name) {
-    throw new RangeError('Invalid era data: at least one named era is required');
+  if (eras.length === 1 && !eras[0].code) {
+    throw new RangeErrorCtor('Invalid era data: at least one named era is required');
   }
-  if (eras.filter((e) => e.reverseOf != null).length > 1) {
-    throw new RangeError('Invalid era data: only one era can count years backwards');
+  if (ES.Call(ArrayPrototypeFilter, eras, [(e) => e.reverseOf != null]).length > 1) {
+    throw new RangeErrorCtor('Invalid era data: only one era can count years backwards');
   }
 
   // Find the "anchor era" which is the era used for (era-less) `year`. Reversed
   // eras can never be anchors. The era without an `anchorEpoch` property is the
   // anchor.
   let anchorEra;
-  eras.forEach((e) => {
-    if (e.isAnchor || (!e.anchorEpoch && !e.reverseOf)) {
-      if (anchorEra) throw new RangeError('Invalid era data: cannot have multiple anchor eras');
-      anchorEra = e;
-      e.anchorEpoch = { year: e.hasYearZero ? 0 : 1 };
-    } else if (!e.name) {
-      throw new RangeError('If era name is blank, it must be the anchor era');
+  ES.Call(ArrayPrototypeForEach, eras, [
+    (e) => {
+      if (e.isAnchor || (!e.anchorEpoch && !e.reverseOf)) {
+        if (anchorEra) throw new RangeErrorCtor('Invalid era data: cannot have multiple anchor eras');
+        anchorEra = e;
+        e.anchorEpoch = { year: e.hasYearZero ? 0 : 1 };
+      } else if (!e.code) {
+        throw new RangeErrorCtor('If era name is blank, it must be the anchor era');
+      }
     }
-  });
+  ]);
 
   // If the era name is undefined, then it's an anchor that doesn't interact
   // with eras at all. For example, Japanese `year` is always the same as ISO
   // `year`.  So this "era" is the anchor era but isn't used for era matching.
   // Strip it from the list that's returned.
-  eras = eras.filter((e) => e.name);
+  eras = ES.Call(ArrayPrototypeFilter, eras, [(e) => e.code]);
 
-  eras.forEach((e) => {
-    // Some eras are mirror images of another era e.g. B.C. is the reverse of A.D.
-    // Replace the string-valued "reverseOf" property with the actual era object
-    // that's reversed.
-    const { reverseOf } = e;
-    if (reverseOf) {
-      const reversedEra = eras.find((era) => era.name === reverseOf);
-      if (reversedEra === undefined) throw new RangeError(`Invalid era data: unmatched reverseOf era: ${reverseOf}`);
-      e.reverseOf = reversedEra;
-      e.anchorEpoch = reversedEra.anchorEpoch;
-      e.isoEpoch = reversedEra.isoEpoch;
+  ES.Call(ArrayPrototypeForEach, eras, [
+    (e) => {
+      // Some eras are mirror images of another era e.g. B.C. is the reverse of A.D.
+      // Replace the string-valued "reverseOf" property with the actual era object
+      // that's reversed.
+      const { reverseOf } = e;
+      if (reverseOf) {
+        const reversedEra = ES.Call(ArrayPrototypeFind, eras, [(era) => era.code === reverseOf]);
+        if (reversedEra === undefined) {
+          throw new RangeErrorCtor(`Invalid era data: unmatched reverseOf era: ${reverseOf}`);
+        }
+        e.reverseOf = reversedEra;
+        e.anchorEpoch = reversedEra.anchorEpoch;
+        e.isoEpoch = reversedEra.isoEpoch;
+      }
+      if (e.anchorEpoch.month === undefined) e.anchorEpoch.month = 1;
+      if (e.anchorEpoch.day === undefined) e.anchorEpoch.day = 1;
     }
-    if (e.anchorEpoch.month === undefined) e.anchorEpoch.month = 1;
-    if (e.anchorEpoch.day === undefined) e.anchorEpoch.day = 1;
-  });
+  ]);
 
   // Ensure that the latest epoch is first in the array. This lets us try to
   // match eras in index order, with the last era getting the remaining older
   // years. Any reverse-signed era must be at the end.
-  eras.sort((e1, e2) => {
-    if (e1.reverseOf) return 1;
-    if (e2.reverseOf) return -1;
-    return e2.isoEpoch.year - e1.isoEpoch.year;
-  });
+  Call(ArrayPrototypeSort, eras, [
+    (e1, e2) => {
+      if (e1.reverseOf) return 1;
+      if (e2.reverseOf) return -1;
+      if (!e1.isoEpoch || !e2.isoEpoch) throw new RangeErrorCtor('Invalid era data: missing ISO epoch');
+      return e2.isoEpoch.year - e1.isoEpoch.year;
+    }
+  ]);
 
   // If there's a reversed era, then the one before it must be the era that's
   // being reversed.
   const lastEraReversed = eras[eras.length - 1].reverseOf;
   if (lastEraReversed) {
-    if (lastEraReversed !== eras[eras.length - 2]) throw new RangeError('Invalid era data: invalid reverse-sign era');
+    if (lastEraReversed !== eras[eras.length - 2]) {
+      throw new RangeErrorCtor('Invalid era data: invalid reverse-sign era');
+    }
   }
 
   // Finally, add a "genericName" property in the format "era{n} where `n` is
   // zero-based index, with the oldest era being zero. This format is used by
   // older versions of ICU data.
-  eras.forEach((e, i) => {
-    e.genericName = `era${eras.length - 1 - i}`;
-  });
+  ES.Call(ArrayPrototypeForEach, eras, [
+    (e, i) => {
+      e.genericName = `era${eras.length - 1 - i}`;
+    }
+  ]);
 
   return { eras, anchorEra: anchorEra || eras[0] };
 }
@@ -1411,11 +1373,48 @@ function isGregorianLeapYear(year) {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
-/** Base for all Gregorian-like calendars. */
+/**
+ * Base for Gregorian-like calendars without eras, but a different year zero.
+ * Can be further overridden to implement fixed epoch for solar calendars with
+ * different months/days than Gregorian.
+ */
+function makeHelperGregorianFixedEpoch(id) {
+  return ObjectAssign({}, nonIsoHelperBase, {
+    id,
+    calendarType: 'solar',
+    inLeapYear(calendarDate /*, cache */) {
+      const { year } = this.estimateIsoDate(calendarDate);
+      return isGregorianLeapYear(year);
+    },
+    monthsInYear(/* calendarDate */) {
+      return 12;
+    },
+    minimumMonthLength(calendarDate) {
+      const { month } = calendarDate;
+      if (month === 2) return this.inLeapYear(calendarDate) ? 29 : 28;
+      return ES.Call(ArrayPrototypeIndexOf, [4, 6, 9, 11], [month]) >= 0 ? 30 : 31;
+    },
+    maximumMonthLength(calendarDate) {
+      return this.minimumMonthLength(calendarDate);
+    },
+    estimateIsoDate(calendarDate) {
+      calendarDate = this.adjustCalendarDate(calendarDate);
+      return ES.RegulateISODate(
+        calendarDate.year + this.isoEpoch.year,
+        calendarDate.month + this.isoEpoch.month,
+        calendarDate.day + this.isoEpoch.day,
+        'constrain'
+      );
+    }
+  });
+}
+
+/** Base for Gregorian-like calendars with eras. */
 const makeHelperGregorian = (id, originalEras) => {
   const { eras, anchorEra } = adjustEras(originalEras);
   return ObjectAssign({}, nonIsoHelperBase, {
     id,
+    hasEra: true,
     eras,
     anchorEra,
     calendarType: 'solar',
@@ -1429,59 +1428,68 @@ const makeHelperGregorian = (id, originalEras) => {
     minimumMonthLength(calendarDate) {
       const { month } = calendarDate;
       if (month === 2) return this.inLeapYear(calendarDate) ? 29 : 28;
-      return [4, 6, 9, 11].indexOf(month) >= 0 ? 30 : 31;
+      return ES.Call(ArrayPrototypeIndexOf, [4, 6, 9, 11], [month]) >= 0 ? 30 : 31;
     },
     maximumMonthLength(calendarDate) {
       return this.minimumMonthLength(calendarDate);
     },
     /** Fill in missing parts of the (year, era, eraYear) tuple */
     completeEraYear(calendarDate) {
-      const checkField = (name, value) => {
-        const currentValue = calendarDate[name];
-        if (currentValue != null && currentValue != value) {
-          throw new RangeError(`Input ${name} ${currentValue} doesn't match calculated value ${value}`);
+      const checkField = (property, value, names) => {
+        const currentValue = calendarDate[property];
+        if (
+          currentValue != null &&
+          currentValue != value &&
+          !ES.Call(ArrayPrototypeIncludes, names || [], [currentValue])
+        ) {
+          // Prefer displaying an era alias, instead of "gregory-inverse"
+          const preferredName = names?.[0];
+          const expected = preferredName ? `${value} (also called ${preferredName})` : value;
+          throw new RangeErrorCtor(`Input ${property} ${currentValue} doesn't match calculated value ${expected}`);
         }
       };
       const eraFromYear = (year) => {
         let eraYear;
         const adjustedCalendarDate = { ...calendarDate, year };
-        const matchingEra = this.eras.find((e, i) => {
-          if (i === this.eras.length - 1) {
-            if (e.reverseOf) {
-              // This is a reverse-sign era (like BCE) which must be the oldest
-              // era. Count years backwards.
-              if (year > 0) throw new RangeError(`Signed year ${year} is invalid for era ${e.name}`);
-              eraYear = e.anchorEpoch.year - year;
+        const matchingEra = ES.Call(ArrayPrototypeFind, this.eras, [
+          (e, i) => {
+            if (i === this.eras.length - 1) {
+              if (e.reverseOf) {
+                // This is a reverse-sign era (like BCE) which must be the oldest
+                // era. Count years backwards.
+                if (year > 0) throw new RangeErrorCtor(`Signed year ${year} is invalid for era ${e.name}`);
+                eraYear = e.anchorEpoch.year - year;
+                return true;
+              }
+              // last era always gets all "leftover" (older than epoch) years,
+              // so no need for a comparison like below.
+              eraYear = year - e.anchorEpoch.year + (e.hasYearZero ? 0 : 1);
               return true;
             }
-            // last era always gets all "leftover" (older than epoch) years,
-            // so no need for a comparison like below.
-            eraYear = year - e.anchorEpoch.year + (e.hasYearZero ? 0 : 1);
-            return true;
+            const comparison = nonIsoHelperBase.compareCalendarDates(adjustedCalendarDate, e.anchorEpoch);
+            if (comparison >= 0) {
+              eraYear = year - e.anchorEpoch.year + (e.hasYearZero ? 0 : 1);
+              return true;
+            }
+            return false;
           }
-          const comparison = nonIsoHelperBase.compareCalendarDates(adjustedCalendarDate, e.anchorEpoch);
-          if (comparison >= 0) {
-            eraYear = year - e.anchorEpoch.year + (e.hasYearZero ? 0 : 1);
-            return true;
-          }
-          return false;
-        });
-        if (!matchingEra) throw new RangeError(`Year ${year} was not matched by any era`);
-        return { eraYear, era: matchingEra.name };
+        ]);
+        if (!matchingEra) throw new RangeErrorCtor(`Year ${year} was not matched by any era`);
+        return { eraYear, era: matchingEra.code, eraNames: matchingEra.names };
       };
 
       let { year, eraYear, era } = calendarDate;
       if (year != null) {
-        ({ eraYear, era } = eraFromYear(year));
-        checkField('era', era);
+        const matchData = eraFromYear(year);
+        ({ eraYear, era } = matchData);
+        checkField('era', era, matchData?.eraNames);
         checkField('eraYear', eraYear);
       } else if (eraYear != null) {
-        const matchingEra =
-          era === undefined ? undefined : this.eras.find((e) => e.name === era || e.genericName === era);
-        if (!matchingEra) throw new RangeError(`Era ${era} (ISO year ${eraYear}) was not matched by any era`);
-        if (eraYear < 1 && matchingEra.reverseOf) {
-          throw new RangeError(`Years in ${era} era must be positive, not ${year}`);
-        }
+        if (era === undefined) throw new RangeErrorCtor('era and eraYear must be provided together');
+        const matchingEra = ES.Call(ArrayPrototypeFind, this.eras, [
+          ({ code, names = [] }) => code === era || ES.Call(ArrayPrototypeIncludes, names, [era])
+        ]);
+        if (!matchingEra) throw new RangeErrorCtor(`Era ${era} (ISO year ${eraYear}) was not matched by any era`);
         if (matchingEra.reverseOf) {
           year = matchingEra.anchorEpoch.year - eraYear;
         } else {
@@ -1494,7 +1502,7 @@ const makeHelperGregorian = (id, originalEras) => {
         // the `year`.
         ({ eraYear, era } = eraFromYear(year));
       } else {
-        throw new RangeError('Either `year` or `eraYear` and `era` are required');
+        throw new RangeErrorCtor('Either year or eraYear and era are required');
       }
       return { ...calendarDate, year, eraYear, era };
     },
@@ -1504,7 +1512,7 @@ const makeHelperGregorian = (id, originalEras) => {
       if (month === undefined) calendarDate = { ...calendarDate, month: monthCodeNumberPart(monthCode) };
       this.validateCalendarDate(calendarDate);
       calendarDate = this.completeEraYear(calendarDate);
-      calendarDate = ES.Call(nonIsoHelperBase.adjustCalendarDate, this, [calendarDate, cache, overflow]);
+      calendarDate = Call(nonIsoHelperBase.adjustCalendarDate, this, [calendarDate, cache, overflow]);
       return calendarDate;
     },
     estimateIsoDate(calendarDate) {
@@ -1513,30 +1521,33 @@ const makeHelperGregorian = (id, originalEras) => {
       const { anchorEra } = this;
       const isoYearEstimate = year + anchorEra.isoEpoch.year - (anchorEra.hasYearZero ? 0 : 1);
       return ES.RegulateISODate(isoYearEstimate, month, day, 'constrain');
-    },
-    // Several calendars based on the Gregorian calendar use Julian dates (not
-    // proleptic Gregorian dates) before the Julian switchover in Oct 1582. See
-    // https://bugs.chromium.org/p/chromium/issues/detail?id=1173158.
-    v8IsVulnerableToJulianBug: new Date('+001001-01-01T00:00Z')
-      .toLocaleDateString('en-US-u-ca-japanese', { timeZone: 'UTC' })
-      .startsWith('12'),
-    calendarIsVulnerableToJulianBug: false,
-    checkIcuBugs(calendarDate, isoDate) {
-      if (this.calendarIsVulnerableToJulianBug && this.v8IsVulnerableToJulianBug) {
-        const beforeJulianSwitch = ES.CompareISODate(isoDate.year, isoDate.month, isoDate.day, 1582, 10, 15) < 0;
-        if (beforeJulianSwitch) {
-          throw new RangeError(
-            `calendar '${this.id}' is broken for ISO dates before 1582-10-15` +
-              ' (see https://bugs.chromium.org/p/chromium/issues/detail?id=1173158)'
-          );
-        }
-      }
+    }
+  });
+};
+
+/**
+ * Some calendars are identical to Gregorian except era and year. For these
+ * calendars, we can avoid using Intl.DateTimeFormat and just calculate the
+ * year, era, and eraYear. This is faster (because Intl.DateTimeFormat is slow
+ * and uses a huge amount of RAM), and it avoids ICU bugs like
+ * https://bugs.chromium.org/p/chromium/issues/detail?id=1173158.
+ */
+const makeHelperSameMonthDayAsGregorian = (id, originalEras) => {
+  const base = makeHelperGregorian(id, originalEras);
+  return ObjectAssign(base, {
+    isoToCalendarDate(isoDate) {
+      // Month and day are same as ISO, so bypass Intl.DateTimeFormat and
+      // calculate the year, era, and eraYear here.
+      const { year: isoYear, month, day } = isoDate;
+      const monthCode = buildMonthCode(month);
+      const year = isoYear - this.anchorEra.isoEpoch.year + 1;
+      return this.completeEraYear({ year, month, monthCode, day });
     }
   });
 };
 
 const makeHelperOrthodox = (id, originalEras) => {
-  const base = makeHelperGregorian(id, originalEras);
+  const base = originalEras ? makeHelperGregorian(id, originalEras) : makeHelperGregorianFixedEpoch(id);
   return ObjectAssign(base, {
     inLeapYear(calendarDate /*, cache */) {
       // Leap years happen one year before the Julian leap year. Note that this
@@ -1572,55 +1583,53 @@ const makeHelperOrthodox = (id, originalEras) => {
 // - Coptic has a different epoch date
 // - Ethiopic has an additional second era that starts at the same date as the
 //   zero era of ethioaa.
-const helperEthioaa = makeHelperOrthodox('ethioaa', [{ name: 'era0', isoEpoch: { year: -5492, month: 7, day: 17 } }]);
+const helperEthioaa = ObjectAssign(makeHelperOrthodox('ethioaa'), { isoEpoch: { year: -5492, month: 7, day: 17 } });
 const helperCoptic = makeHelperOrthodox('coptic', [
-  { name: 'era1', isoEpoch: { year: 284, month: 8, day: 29 } },
-  { name: 'era0', reverseOf: 'era1' }
+  { code: 'coptic', isoEpoch: { year: 284, month: 8, day: 29 } },
+  { code: 'coptic-inverse', reverseOf: 'coptic' }
 ]);
 // Anchor is currently the older era to match ethioaa, but should it be the newer era?
 // See https://github.com/tc39/ecma402/issues/534 for discussion.
 const helperEthiopic = makeHelperOrthodox('ethiopic', [
-  { name: 'era0', isoEpoch: { year: -5492, month: 7, day: 17 } },
-  { name: 'era1', isoEpoch: { year: 8, month: 8, day: 27 }, anchorEpoch: { year: 5501 } }
+  { code: 'ethioaa', names: ['ethiopic-amete-alem', 'mundi'], isoEpoch: { year: -5492, month: 7, day: 17 } },
+  { code: 'ethiopic', names: ['incar'], isoEpoch: { year: 8, month: 8, day: 27 }, anchorEpoch: { year: 5501 } }
 ]);
 
-const helperRoc = ObjectAssign(
-  {},
-  makeHelperGregorian('roc', [
-    { name: 'minguo', isoEpoch: { year: 1912, month: 1, day: 1 } },
-    { name: 'before-roc', reverseOf: 'minguo' }
-  ]),
-  {
-    calendarIsVulnerableToJulianBug: true
-  }
-);
+const helperRoc = makeHelperSameMonthDayAsGregorian('roc', [
+  { code: 'roc', names: ['minguo'], isoEpoch: { year: 1912, month: 1, day: 1 } },
+  { code: 'roc-inverse', names: ['before-roc'], reverseOf: 'roc' }
+]);
 
-const helperBuddhist = ObjectAssign(
-  {},
-  makeHelperGregorian('buddhist', [{ name: 'be', hasYearZero: true, isoEpoch: { year: -543, month: 1, day: 1 } }]),
-  {
-    calendarIsVulnerableToJulianBug: true
-  }
-);
+const helperBuddhist = ObjectAssign(makeHelperGregorianFixedEpoch('buddhist'), {
+  isoEpoch: { year: -543, month: 1, day: 1 }
+});
 
 const helperGregory = ObjectAssign(
-  {},
-  makeHelperGregorian('gregory', [
-    { name: 'ce', isoEpoch: { year: 1, month: 1, day: 1 } },
-    { name: 'bce', reverseOf: 'ce' }
+  makeHelperSameMonthDayAsGregorian('gregory', [
+    { code: 'gregory', names: ['ad', 'ce'], isoEpoch: { year: 1, month: 1, day: 1 } },
+    { code: 'gregory-inverse', names: ['bc', 'bce'], reverseOf: 'gregory' }
   ]),
   {
     reviseIntlEra(calendarDate /*, isoDate*/) {
       let { era, eraYear } = calendarDate;
-      if (era === 'bc') era = 'bce';
-      if (era === 'ad') era = 'ce';
+      // Firefox 96 introduced a bug where the `'short'` format of the era
+      // option mistakenly returns the one-letter (narrow) format instead. The
+      // code below handles either the correct or Firefox-buggy format. See
+      // https://bugzilla.mozilla.org/show_bug.cgi?id=1752253
+      if (era === 'b') era = 'gregory-inverse';
+      if (era === 'a') era = 'gregory';
       return { era, eraYear };
+    },
+    getFirstDayOfWeek() {
+      return 1;
+    },
+    getMinimalDaysInFirstWeek() {
+      return 1;
     }
   }
 );
 
 const helperJapanese = ObjectAssign(
-  {},
   // NOTE: Only the 5 modern eras (Meiji and later) are included. For dates
   // before Meiji 1, the `ce` and `bce` eras are used. Challenges with pre-Meiji
   // eras include:
@@ -1650,27 +1659,24 @@ const helperJapanese = ObjectAssign(
   // '1 1, 6 Meiji, 12:00:00 PM'
   // > new Date('1872-12-31T12:00').toLocaleString(...args)
   // '12 31, 5 Meiji, 12:00:00 PM'
-  makeHelperGregorian('japanese', [
+  makeHelperSameMonthDayAsGregorian('japanese', [
     // The Japanese calendar `year` is just the ISO year, because (unlike other
     // ICU calendars) there's no obvious "default era", we use the ISO year.
-    { name: 'reiwa', isoEpoch: { year: 2019, month: 5, day: 1 }, anchorEpoch: { year: 2019, month: 5, day: 1 } },
-    { name: 'heisei', isoEpoch: { year: 1989, month: 1, day: 8 }, anchorEpoch: { year: 1989, month: 1, day: 8 } },
-    { name: 'showa', isoEpoch: { year: 1926, month: 12, day: 25 }, anchorEpoch: { year: 1926, month: 12, day: 25 } },
-    { name: 'taisho', isoEpoch: { year: 1912, month: 7, day: 30 }, anchorEpoch: { year: 1912, month: 7, day: 30 } },
-    { name: 'meiji', isoEpoch: { year: 1868, month: 9, day: 8 }, anchorEpoch: { year: 1868, month: 9, day: 8 } },
-    { name: 'ce', isoEpoch: { year: 1, month: 1, day: 1 } },
-    { name: 'bce', reverseOf: 'ce' }
+    { code: 'reiwa', isoEpoch: { year: 2019, month: 5, day: 1 }, anchorEpoch: { year: 2019, month: 5, day: 1 } },
+    { code: 'heisei', isoEpoch: { year: 1989, month: 1, day: 8 }, anchorEpoch: { year: 1989, month: 1, day: 8 } },
+    { code: 'showa', isoEpoch: { year: 1926, month: 12, day: 25 }, anchorEpoch: { year: 1926, month: 12, day: 25 } },
+    { code: 'taisho', isoEpoch: { year: 1912, month: 7, day: 30 }, anchorEpoch: { year: 1912, month: 7, day: 30 } },
+    { code: 'meiji', isoEpoch: { year: 1868, month: 9, day: 8 }, anchorEpoch: { year: 1868, month: 9, day: 8 } },
+    { code: 'japanese', names: ['japanese', 'gregory', 'ad', 'ce'], isoEpoch: { year: 1, month: 1, day: 1 } },
+    { code: 'japanese-inverse', names: ['japanese-inverse', 'gregory-inverse', 'bc', 'bce'], reverseOf: 'japanese' }
   ]),
   {
-    // The last 3 Japanese eras confusingly return only one character in the
-    // default "short" era, so need to use the long format.
-    eraLength: 'long',
-    calendarIsVulnerableToJulianBug: true,
+    erasBeginMidYear: true,
     reviseIntlEra(calendarDate, isoDate) {
       const { era, eraYear } = calendarDate;
       const { year: isoYear } = isoDate;
-      if (this.eras.find((e) => e.name === era)) return { era, eraYear };
-      return isoYear < 1 ? { era: 'bce', eraYear: 1 - isoYear } : { era: 'ce', eraYear: isoYear };
+      if (ES.Call(ArrayPrototypeFind, this.eras, [(e) => e.code === era])) return { era, eraYear };
+      return isoYear < 1 ? { era: 'japanese-inverse', eraYear: 1 - isoYear } : { era: 'japanese', eraYear: isoYear };
     }
   }
 );
@@ -1689,27 +1695,27 @@ const helperChinese = ObjectAssign({}, nonIsoHelperBase, {
   maximumMonthLength: (/* calendarDate */) => 30,
   getMonthList(calendarYear, cache) {
     if (calendarYear === undefined) {
-      throw new TypeError('Missing year');
+      throw new TypeErrorCtor('Missing year');
     }
-    const key = JSON.stringify({ func: 'getMonthList', calendarYear, id: this.id });
+    const key = JSONStringify({ func: 'getMonthList', calendarYear, id: this.id });
     const cached = cache.get(key);
     if (cached) return cached;
     const dateTimeFormat = this.getFormatter();
     const getCalendarDate = (isoYear, daysPastFeb1) => {
       const isoStringFeb1 = toUtcIsoDateString({ isoYear, isoMonth: 2, isoDay: 1 });
-      const legacyDate = new Date(isoStringFeb1);
+      const legacyDate = new DateCtor(isoStringFeb1);
       // Now add the requested number of days, which may wrap to the next month.
-      legacyDate.setUTCDate(daysPastFeb1 + 1);
-      const newYearGuess = dateTimeFormat.formatToParts(legacyDate);
-      const calendarMonthString = newYearGuess.find((tv) => tv.type === 'month').value;
-      const calendarDay = +newYearGuess.find((tv) => tv.type === 'day').value;
-      let calendarYearToVerify = newYearGuess.find((tv) => tv.type === 'relatedYear');
+      ES.Call(DatePrototypeSetUTCDate, legacyDate, [daysPastFeb1 + 1]);
+      const newYearGuess = ES.Call(IntlDateTimeFormatPrototypeFormatToParts, dateTimeFormat, [legacyDate]);
+      const calendarMonthString = ES.Call(ArrayPrototypeFind, newYearGuess, [(tv) => tv.type === 'month']).value;
+      const calendarDay = +ES.Call(ArrayPrototypeFind, newYearGuess, [(tv) => tv.type === 'day']).value;
+      let calendarYearToVerify = ES.Call(ArrayPrototypeFind, newYearGuess, [(tv) => tv.type === 'relatedYear']);
       if (calendarYearToVerify !== undefined) {
         calendarYearToVerify = +calendarYearToVerify.value;
       } else {
         // Node 12 has outdated ICU data that lacks the `relatedYear` field in the
         // output of Intl.DateTimeFormat.formatToParts.
-        throw new RangeError(
+        throw new RangeErrorCtor(
           `Intl.DateTimeFormat.formatToParts lacks relatedYear in ${this.id} calendar. Try Node 14+ or modern browsers.`
         );
       }
@@ -1763,49 +1769,47 @@ const helperChinese = ObjectAssign({}, nonIsoHelperBase, {
     return { year, month: month >= 12 ? 12 : month + 1, day: 1 };
   },
   adjustCalendarDate(calendarDate, cache, overflow = 'constrain', fromLegacyDate = false) {
-    let { year, month, monthExtra, day, monthCode, eraYear } = calendarDate;
+    let { year, month, monthExtra, day, monthCode } = calendarDate;
+    if (year === undefined) throw new TypeErrorCtor('Missing property: year');
     if (fromLegacyDate) {
       // Legacy Date output returns a string that's an integer with an optional
       // "bis" suffix used only by the Chinese/Dangi calendar to indicate a leap
       // month. Below we'll normalize the output.
-      year = eraYear;
-      if (monthExtra && monthExtra !== 'bis') throw new RangeError(`Unexpected leap month suffix: ${monthExtra}`);
+      if (monthExtra && monthExtra !== 'bis') throw new RangeErrorCtor(`Unexpected leap month suffix: ${monthExtra}`);
       const monthCode = buildMonthCode(month, monthExtra !== undefined);
       const monthString = `${month}${monthExtra || ''}`;
       const months = this.getMonthList(year, cache);
       const monthInfo = months[monthString];
-      if (monthInfo === undefined) throw new RangeError(`Unmatched month ${monthString} in Chinese year ${year}`);
+      if (monthInfo === undefined) throw new RangeErrorCtor(`Unmatched month ${monthString} in Chinese year ${year}`);
       month = monthInfo.monthIndex;
-      return { year, month, day, era: undefined, eraYear, monthCode };
+      return { year, month, day, monthCode };
     } else {
       // When called without input coming from legacy Date output,
       // simply ensure that all fields are present.
       this.validateCalendarDate(calendarDate);
-      if (year === undefined) year = eraYear;
-      if (eraYear === undefined) eraYear = year;
       if (month === undefined) {
         const months = this.getMonthList(year, cache);
-        let numberPart = monthCode.replace('L', 'bis').slice(1);
-        if (numberPart[0] === '0') numberPart = numberPart.slice(1);
+        let numberPart = ES.Call(StringPrototypeReplace, monthCode, [/^M|L$/g, (ch) => (ch === 'L' ? 'bis' : '')]);
+        if (numberPart[0] === '0') numberPart = ES.Call(StringPrototypeSlice, numberPart, [1]);
         let monthInfo = months[numberPart];
         month = monthInfo && monthInfo.monthIndex;
-        // If this leap month isn't present in this year, constrain down to the last day of the previous month.
+        // If this leap month isn't present in this year, constrain to the same
+        // day of the previous month.
         if (
           month === undefined &&
-          monthCode.endsWith('L') &&
-          !['M01L', 'M12L', 'M13L'].includes(monthCode) &&
+          ES.Call(StringPrototypeEndsWith, monthCode, ['L']) &&
+          monthCode != 'M13L' &&
           overflow === 'constrain'
         ) {
-          let withoutML = monthCode.slice(1, -1);
-          if (withoutML[0] === '0') withoutML = withoutML.slice(1);
+          const withoutML = ES.Call(StringPrototypeReplace, monthCode, [/^M0?|L$/g, '']);
           monthInfo = months[withoutML];
           if (monthInfo) {
-            ({ daysInMonth: day, monthIndex: month } = monthInfo);
+            month = monthInfo.monthIndex;
             monthCode = buildMonthCode(withoutML);
           }
         }
         if (month === undefined) {
-          throw new RangeError(`Unmatched month ${monthCode} in Chinese year ${year}`);
+          throw new RangeErrorCtor(`Unmatched month ${monthCode} in Chinese year ${year}`);
         }
       } else if (monthCode === undefined) {
         const months = this.getMonthList(year, cache);
@@ -1818,34 +1822,36 @@ const helperChinese = ObjectAssign({}, nonIsoHelperBase, {
           month = ES.ConstrainToRange(month, 1, largestMonth);
           day = ES.ConstrainToRange(day, 1, this.maximumMonthLength());
         }
-        const matchingMonthEntry = monthEntries.find(([, v]) => v.monthIndex === month);
+        const matchingMonthEntry = ES.Call(ArrayPrototypeFind, monthEntries, [
+          (entry) => entry[1].monthIndex === month
+        ]);
         if (matchingMonthEntry === undefined) {
-          throw new RangeError(`Invalid month ${month} in Chinese year ${year}`);
+          throw new RangeErrorCtor(`Invalid month ${month} in Chinese year ${year}`);
         }
         monthCode = buildMonthCode(
-          matchingMonthEntry[0].replace('bis', ''),
-          matchingMonthEntry[0].indexOf('bis') !== -1
+          ES.Call(StringPrototypeReplace, matchingMonthEntry[0], ['bis', '']),
+          ES.Call(StringPrototypeIndexOf, matchingMonthEntry[0], ['bis']) !== -1
         );
       } else {
         // Both month and monthCode are present. Make sure they don't conflict.
         const months = this.getMonthList(year, cache);
-        let numberPart = monthCode.replace('L', 'bis').slice(1);
-        if (numberPart[0] === '0') numberPart = numberPart.slice(1);
-        let monthInfo = months[numberPart];
-        if (!monthInfo) throw new RangeError(`Unmatched monthCode ${monthCode} in Chinese year ${year}`);
+        let numberPart = ES.Call(StringPrototypeReplace, monthCode, [/^M|L$/g, (ch) => (ch === 'L' ? 'bis' : '')]);
+        if (numberPart[0] === '0') numberPart = ES.Call(StringPrototypeSlice, numberPart, [1]);
+        const monthInfo = months[numberPart];
+        if (!monthInfo) throw new RangeErrorCtor(`Unmatched monthCode ${monthCode} in Chinese year ${year}`);
         if (month !== monthInfo.monthIndex) {
-          throw new RangeError(`monthCode ${monthCode} doesn't correspond to month ${month} in Chinese year ${year}`);
+          throw new RangeErrorCtor(
+            `monthCode ${monthCode} doesn't correspond to month ${month} in Chinese year ${year}`
+          );
         }
       }
-      return { ...calendarDate, year, eraYear, month, monthCode, day };
+      return { ...calendarDate, year, month, monthCode, day };
     }
-  },
-  // All built-in calendars except Chinese/Dangi and Hebrew use an era
-  hasEra: false
+  }
 });
 
 // Dangi (Korean) calendar has same implementation as Chinese
-const helperDangi = ObjectAssign({}, { ...helperChinese, id: 'dangi' });
+const helperDangi = { ...helperChinese, id: 'dangi' };
 
 /**
  * Common implementation of all non-ISO calendars.
@@ -1854,203 +1860,131 @@ const helperDangi = ObjectAssign({}, { ...helperChinese, id: 'dangi' });
  * ISO and non-ISO implementations vs. code that was very different.
  */
 const nonIsoGeneralImpl = {
-  dateFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    const cache = new OneObjectCache();
-    // Intentionally alphabetical
-    fields = ES.PrepareTemporalFields(fields, [
-      ['day'],
-      ['era', undefined],
-      ['eraYear', undefined],
-      ['month', undefined],
-      ['monthCode', undefined],
-      ['year', undefined]
-    ]);
-    const { year, month, day } = this.helper.calendarToIsoDate(fields, overflow, cache);
-    const result = ES.CreateTemporalDate(year, month, day, calendar);
-    cache.setObject(result);
-    return result;
-  },
-  yearMonthFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    const cache = new OneObjectCache();
-    // Intentionally alphabetical
-    fields = ES.PrepareTemporalFields(fields, [
-      ['era', undefined],
-      ['eraYear', undefined],
-      ['month', undefined],
-      ['monthCode', undefined],
-      ['year', undefined]
-    ]);
-    const { year, month, day } = this.helper.calendarToIsoDate({ ...fields, day: 1 }, overflow, cache);
-    const result = ES.CreateTemporalYearMonth(year, month, calendar, /* referenceISODay = */ day);
-    cache.setObject(result);
-    return result;
-  },
-  monthDayFromFields(fields, options, calendar) {
-    const overflow = ES.ToTemporalOverflow(options);
-    // All built-in calendars require `day`, but some allow other fields to be
-    // substituted for `month`. And for lunisolar calendars, either `monthCode`
-    // or `year` must be provided because `month` is ambiguous without a year or
-    // a code.
-    const cache = new OneObjectCache();
-    fields = ES.PrepareTemporalFields(fields, [
-      ['day'],
-      ['era', undefined],
-      ['eraYear', undefined],
-      ['month', undefined],
-      ['monthCode', undefined],
-      ['year', undefined]
-    ]);
-    const { year, month, day } = this.helper.monthDayFromFields(fields, overflow, cache);
-    // `year` is a reference year where this month/day exists in this calendar
-    const result = ES.CreateTemporalMonthDay(month, day, calendar, /* referenceISOYear = */ year);
-    cache.setObject(result);
-    return result;
-  },
-  fields(fields) {
-    if (fields.includes('year')) fields = [...fields, 'era', 'eraYear'];
-    return fields;
-  },
-  mergeFields(fields, additionalFields) {
-    const fieldsCopy = { ...fields };
-    const additionalFieldsCopy = { ...additionalFields };
-    // era and eraYear are intentionally unused
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { month, monthCode, year, era, eraYear, ...original } = fieldsCopy;
-    const {
-      month: newMonth,
-      monthCode: newMonthCode,
-      year: newYear,
-      era: newEra,
-      eraYear: newEraYear
-    } = additionalFieldsCopy;
-    if (newMonth === undefined && newMonthCode === undefined) {
-      original.month = month;
-      original.monthCode = monthCode;
+  extraFields(fields) {
+    if (this.helper.hasEra && Call(ArrayPrototypeIncludes, fields, ['year'])) {
+      return ['era', 'eraYear'];
     }
-    if (newYear === undefined && newEra === undefined && newEraYear === undefined) {
-      // Only `year` is needed. We don't set era and eraYear because it's
-      // possible to create a conflict for eras that start or end mid-year. See
-      // https://github.com/tc39/proposal-temporal/issues/1784.
-      original.year = year;
-    }
-    return { ...original, ...additionalFieldsCopy };
+    return [];
   },
-  dateAdd(date, years, months, weeks, days, overflow, calendar) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
+  resolveFields(fields /* , type */) {
+    if (this.helper.calendarType !== 'lunisolar') {
+      const cache = new OneObjectCache();
+      const largestMonth = this.helper.monthsInYear(fields, cache);
+      resolveNonLunisolarMonth(fields, undefined, largestMonth);
+    }
+  },
+  dateToISO(fields, overflow) {
+    const cache = new OneObjectCache();
+    const result = this.helper.calendarToIsoDate(fields, overflow, cache);
+    cache.setObject(result);
+    return result;
+  },
+  monthDayToISOReferenceDate(fields, overflow) {
+    const cache = new OneObjectCache();
+    const result = this.helper.monthDayFromFields(fields, overflow, cache);
+    // result.year is a reference year where this month/day exists in this calendar
+    cache.setObject(result);
+    return result;
+  },
+  fieldKeysToIgnore(keys) {
+    const result = new SetCtor();
+    for (let ix = 0; ix < keys.length; ix++) {
+      const key = keys[ix];
+      Call(SetPrototypeAdd, result, [key]);
+      switch (key) {
+        case 'era':
+          Call(SetPrototypeAdd, result, ['eraYear']);
+          Call(SetPrototypeAdd, result, ['year']);
+          break;
+        case 'eraYear':
+          Call(SetPrototypeAdd, result, ['era']);
+          Call(SetPrototypeAdd, result, ['year']);
+          break;
+        case 'year':
+          Call(SetPrototypeAdd, result, ['era']);
+          Call(SetPrototypeAdd, result, ['eraYear']);
+          break;
+        case 'month':
+          Call(SetPrototypeAdd, result, ['monthCode']);
+          // See https://github.com/tc39/proposal-temporal/issues/1784
+          if (this.helper.erasBeginMidYear) {
+            Call(SetPrototypeAdd, result, ['era']);
+            Call(SetPrototypeAdd, result, ['eraYear']);
+          }
+          break;
+        case 'monthCode':
+          Call(SetPrototypeAdd, result, ['month']);
+          if (this.helper.erasBeginMidYear) {
+            Call(SetPrototypeAdd, result, ['era']);
+            Call(SetPrototypeAdd, result, ['eraYear']);
+          }
+          break;
+        case 'day':
+          if (this.helper.erasBeginMidYear) {
+            Call(SetPrototypeAdd, result, ['era']);
+            Call(SetPrototypeAdd, result, ['eraYear']);
+          }
+          break;
+      }
+    }
+    return arrayFromSet(result);
+  },
+  dateAdd(isoDate, { years, months, weeks, days }, overflow) {
+    const cache = OneObjectCache.getCacheForObject(isoDate);
+    const calendarDate = this.helper.isoToCalendarDate(isoDate, cache);
     const added = this.helper.addCalendar(calendarDate, { years, months, weeks, days }, overflow, cache);
     const isoAdded = this.helper.calendarToIsoDate(added, 'constrain', cache);
-    const { year, month, day } = isoAdded;
-    const newTemporalObject = ES.CreateTemporalDate(year, month, day, calendar);
     // The new object's cache starts with the cache of the old object
-    const newCache = new OneObjectCache(cache);
-    newCache.setObject(newTemporalObject);
-    return newTemporalObject;
+    if (!OneObjectCache.getCacheForObject(isoAdded)) {
+      const newCache = new OneObjectCache(cache);
+      newCache.setObject(isoAdded);
+    }
+    return isoAdded;
   },
   dateUntil(one, two, largestUnit) {
     const cacheOne = OneObjectCache.getCacheForObject(one);
     const cacheTwo = OneObjectCache.getCacheForObject(two);
-    const calendarOne = this.helper.temporalToCalendarDate(one, cacheOne);
-    const calendarTwo = this.helper.temporalToCalendarDate(two, cacheTwo);
+    const calendarOne = this.helper.isoToCalendarDate(one, cacheOne);
+    const calendarTwo = this.helper.isoToCalendarDate(two, cacheTwo);
     const result = this.helper.untilCalendar(calendarOne, calendarTwo, largestUnit, cacheOne);
     return result;
   },
-  year(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.year;
-  },
-  month(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.month;
-  },
-  day(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.day;
-  },
-  era(date) {
-    if (!this.helper.hasEra) return undefined;
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.era;
-  },
-  eraYear(date) {
-    if (!this.helper.hasEra) return undefined;
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.eraYear;
-  },
-  monthCode(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    return calendarDate.monthCode;
-  },
-  dayOfWeek(date) {
-    return impl['iso8601'].dayOfWeek(date);
-  },
-  dayOfYear(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.isoToCalendarDate(date, cache);
-    const startOfYear = this.helper.startOfCalendarYear(calendarDate);
-    const diffDays = this.helper.calendarDaysUntil(startOfYear, calendarDate, cache);
-    return diffDays + 1;
-  },
-  weekOfYear(date) {
-    return impl['iso8601'].weekOfYear(date);
-  },
-  daysInWeek(date) {
-    return impl['iso8601'].daysInWeek(date);
-  },
-  daysInMonth(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-
-    // Easy case: if the helper knows the length without any heavy calculation.
-    const max = this.helper.maximumMonthLength(calendarDate);
-    const min = this.helper.minimumMonthLength(calendarDate);
-    if (max === min) return max;
-
-    // The harder case is where months vary every year, e.g. islamic calendars.
-    // Find the answer by calculating the difference in days between the first
-    // day of the current month and the first day of the next month.
-    const startOfMonthCalendar = this.helper.startOfCalendarMonth(calendarDate);
-    const startOfNextMonthCalendar = this.helper.addMonthsCalendar(startOfMonthCalendar, 1, 'constrain', cache);
-    const result = this.helper.calendarDaysUntil(startOfMonthCalendar, startOfNextMonthCalendar, cache);
-    return result;
-  },
-  daysInYear(date) {
-    if (!HasSlot(date, ISO_YEAR)) date = ES.ToTemporalDate(date);
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    const startOfYearCalendar = this.helper.startOfCalendarYear(calendarDate);
-    const startOfNextYearCalendar = this.helper.addCalendar(startOfYearCalendar, { years: 1 }, 'constrain', cache);
-    const result = this.helper.calendarDaysUntil(startOfYearCalendar, startOfNextYearCalendar, cache);
-    return result;
-  },
-  monthsInYear(date) {
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    const result = this.helper.monthsInYear(calendarDate, cache);
-    return result;
-  },
-  inLeapYear(date) {
-    if (!HasSlot(date, ISO_YEAR)) date = ES.ToTemporalDate(date);
-    const cache = OneObjectCache.getCacheForObject(date);
-    const calendarDate = this.helper.temporalToCalendarDate(date, cache);
-    const result = this.helper.inLeapYear(calendarDate, cache);
-    return result;
+  isoToDate(isoDate, requestedFields) {
+    const cache = OneObjectCache.getCacheForObject(isoDate);
+    const calendarDate = this.helper.isoToCalendarDate(isoDate, cache);
+    if (requestedFields.dayOfWeek) {
+      calendarDate.dayOfWeek = impl['iso8601'].isoToDate(isoDate, { dayOfWeek: true }).dayOfWeek;
+    }
+    if (requestedFields.dayOfYear) {
+      const startOfYear = this.helper.startOfCalendarYear(calendarDate);
+      const diffDays = this.helper.calendarDaysUntil(startOfYear, calendarDate, cache);
+      calendarDate.dayOfYear = diffDays + 1;
+    }
+    if (requestedFields.weekOfYear) calendarDate.weekOfYear = calendarDateWeekOfYear(this.helper.id, isoDate);
+    calendarDate.daysInWeek = 7;
+    if (requestedFields.daysInMonth) calendarDate.daysInMonth = this.helper.daysInMonth(calendarDate, cache);
+    if (requestedFields.daysInYear) {
+      const startOfYearCalendar = this.helper.startOfCalendarYear(calendarDate);
+      const startOfNextYearCalendar = this.helper.addCalendar(startOfYearCalendar, { years: 1 }, 'constrain', cache);
+      calendarDate.daysInYear = this.helper.calendarDaysUntil(startOfYearCalendar, startOfNextYearCalendar, cache);
+    }
+    if (requestedFields.monthsInYear) calendarDate.monthsInYear = this.helper.monthsInYear(calendarDate, cache);
+    if (requestedFields.inLeapYear) calendarDate.inLeapYear = this.helper.inLeapYear(calendarDate, cache);
+    return calendarDate;
   }
 };
 
 impl['hebrew'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperHebrew });
 impl['islamic'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperIslamic });
-['islamic-umalqura', 'islamic-tbla', 'islamic-civil', 'islamic-rgsa', 'islamicc'].forEach((id) => {
-  impl[id] = ObjectAssign({}, nonIsoGeneralImpl, { helper: { ...helperIslamic, id } });
-});
+ES.Call(
+  ArrayPrototypeForEach,
+  ['islamic-umalqura', 'islamic-tbla', 'islamic-civil', 'islamic-rgsa', 'islamicc'],
+  [
+    (id) => {
+      impl[id] = ObjectAssign({}, nonIsoGeneralImpl, { helper: { ...helperIslamic, id } });
+    }
+  ]
+);
 impl['persian'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperPersian });
 impl['ethiopic'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperEthiopic });
 impl['ethioaa'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperEthioaa });
@@ -2063,8 +1997,9 @@ impl['buddhist'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperBuddhist 
 impl['japanese'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperJapanese });
 impl['gregory'] = ObjectAssign({}, nonIsoGeneralImpl, { helper: helperGregory });
 
-const BUILTIN_CALENDAR_IDS = Object.keys(impl);
-
-export function IsBuiltinCalendar(id) {
-  return ArrayIncludes.call(BUILTIN_CALENDAR_IDS, id);
+function calendarImpl(calendar) {
+  return impl[calendar];
 }
+// Probably not what the intrinsics mechanism was intended for, but view this as
+// an export of calendarImpl while avoiding circular dependencies
+DefineIntrinsic('calendarImpl', calendarImpl);

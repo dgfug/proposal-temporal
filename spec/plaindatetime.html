@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <meta charset="utf8">
 
 <emu-clause id="sec-temporal-plaindatetime-objects">
@@ -24,25 +24,29 @@
     </ul>
 
     <emu-clause id="sec-temporal.plaindatetime">
-      <h1>Temporal.PlainDateTime ( _isoYear_, _isoMonth_, _isoDay_ [ , _hour_ [ , _minute_ [ , _second_ [ , _millisecond_ [ , _microsecond_ [ , _nanosecond_ [ , _calendarLike_ ] ] ] ] ] ] ] )</h1>
-      <p>
-        When the `Temporal.PlainDateTime` function is called, the following steps are taken:
-      </p>
-      <emu-note>The value of ? ToIntegerThrowOnInfinity(*undefined*) is 0.</emu-note>
+      <h1>Temporal.PlainDateTime ( _isoYear_, _isoMonth_, _isoDay_ [ , _hour_ [ , _minute_ [ , _second_ [ , _millisecond_ [ , _microsecond_ [ , _nanosecond_ [ , _calendar_ ] ] ] ] ] ] ] )</h1>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. If NewTarget is *undefined*, then
           1. Throw a *TypeError* exception.
-        1. Let _isoYear_ be ? ToIntegerThrowOnInfinity(_isoYear_).
-        1. Let _isoMonth_ be ? ToIntegerThrowOnInfinity(_isoMonth_).
-        1. Let _isoDay_ be ? ToIntegerThrowOnInfinity(_isoDay_).
-        1. Let _hour_ be ? ToIntegerThrowOnInfinity(_hour_).
-        1. Let _minute_ be ? ToIntegerThrowOnInfinity(_minute_).
-        1. Let _second_ be ? ToIntegerThrowOnInfinity(_second_).
-        1. Let _millisecond_ be ? ToIntegerThrowOnInfinity(_millisecond_).
-        1. Let _microsecond_ be ? ToIntegerThrowOnInfinity(_microsecond_).
-        1. Let _nanosecond_ be ? ToIntegerThrowOnInfinity(_nanosecond_).
-        1. Let _calendar_ be ? ToTemporalCalendarWithISODefault(_calendarLike_).
-        1. Return ? CreateTemporalDateTime(_isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _calendar_, NewTarget).
+        1. Set _isoYear_ to ? ToIntegerWithTruncation(_isoYear_).
+        1. Set _isoMonth_ to ? ToIntegerWithTruncation(_isoMonth_).
+        1. Set _isoDay_ to ? ToIntegerWithTruncation(_isoDay_).
+        1. If _hour_ is *undefined*, set _hour_ to 0; else set _hour_ to ? ToIntegerWithTruncation(_hour_).
+        1. If _minute_ is *undefined*, set _minute_ to 0; else set _minute_ to ? ToIntegerWithTruncation(_minute_).
+        1. If _second_ is *undefined*, set _second_ to 0; else set _second_ to ? ToIntegerWithTruncation(_second_).
+        1. If _millisecond_ is *undefined*, set _millisecond_ to 0; else set _millisecond_ to ? ToIntegerWithTruncation(_millisecond_).
+        1. If _microsecond_ is *undefined*, set _microsecond_ to 0; else set _microsecond_ to ? ToIntegerWithTruncation(_microsecond_).
+        1. If _nanosecond_ is *undefined*, set _nanosecond_ to 0; else set _nanosecond_ to ? ToIntegerWithTruncation(_nanosecond_).
+        1. If _calendar_ is *undefined*, set _calendar_ to *"iso8601"*.
+        1. If _calendar_ is not a String, throw a *TypeError* exception.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. If IsValidISODate(_isoYear_, _isoMonth_, _isoDay_) is *false*, throw a *RangeError* exception.
+        1. Let _isoDate_ be CreateISODateRecord(_isoYear_, _isoMonth_, _isoDay_).
+        1. If IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
+        1. Let _time_ be CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_isoDate_, _time_).
+        1. Return ? CreateTemporalDateTime(_isoDateTime_, _calendar_, NewTarget).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -52,7 +56,7 @@
     <p>The value of the [[Prototype]] internal slot of the Temporal.PlainDateTime constructor is the intrinsic object %Function.prototype%.</p>
     <p>The Temporal.PlainDateTime constructor has the following properties:</p>
 
-    <emu-clause id="sec-temporal-plaindatetime-prototype">
+    <emu-clause id="sec-temporal.plaindatetime.prototype">
       <h1>Temporal.PlainDateTime.prototype</h1>
       <p>The initial value of `Temporal.PlainDateTime.prototype` is %Temporal.PlainDateTime.prototype%.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
@@ -60,29 +64,19 @@
 
     <emu-clause id="sec-temporal.plaindatetime.from">
       <h1>Temporal.PlainDateTime.from ( _item_ [ , _options_ ] )</h1>
-      <p>
-        The `from` method takes two arguments, _item_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. If Type(_item_) is Object and _item_ has an [[InitializedTemporalDateTime]] internal slot, then
-          1. Perform ? ToTemporalOverflow(_options_).
-          1. Return ? CreateTemporalDateTime(_item_.[[ISOYear]], _item_.[[ISOMonth]], _item_.[[ISODay]], _item_.[[ISOHour]], _item_.[[ISOMinute]], _item_.[[ISOSecond]], _item_.[[ISOMillisecond]], _item_.[[ISOMicrosecond]], _item_.[[ISONanosecond]], _item_.[[Calendar]]).
         1. Return ? ToTemporalDateTime(_item_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.compare">
       <h1>Temporal.PlainDateTime.compare ( _one_, _two_ )</h1>
-      <p>
-        The `compare` method takes two arguments, _one_ and _two_.
-        The following steps are taken:
-      </p>
+      <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. Set _one_ to ? ToTemporalDateTime(_one_).
         1. Set _two_ to ? ToTemporalDateTime(_two_).
-        1. Return 𝔽(! CompareISODateTime(_one_.[[ISOYear]], _one_.[[ISOMonth]], _one_.[[ISODay]], _one_.[[ISOHour]], _one_.[[ISOMinute]], _one_.[[ISOSecond]], _one_.[[ISOMillisecond]], _one_.[[ISOMicrosecond]], _one_.[[ISONanosecond]], _two_.[[ISOYear]], _two_.[[ISOMonth]], _two_.[[ISODay]], _two_.[[ISOHour]], _two_.[[ISOMinute]], _two_.[[ISOSecond]], _two_.[[ISOMillisecond]], _two_.[[ISOMicrosecond]], _two_.[[ISONanosecond]])).
+        1. Return 𝔽(CompareISODateTime(_one_.[[ISODateTime]], _two_.[[ISODateTime]])).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -98,31 +92,59 @@
       <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
     </ul>
 
+    <emu-note>
+      An ECMAScript implementation that includes the ECMA-402 Internationalization API extends this prototype with additional properties in order to represent calendar data.
+    </emu-note>
+
     <emu-clause id="sec-temporal.plaindatetime.prototype.constructor">
       <h1>Temporal.PlainDateTime.prototype.constructor</h1>
       <p>The initial value of `Temporal.PlainDateTime.prototype.constructor` is %Temporal.PlainDateTime%.</p>
     </emu-clause>
 
-    <emu-clause id="sec-temporal.plaindatetime.prototype-@@tostringtag">
-      <h1>Temporal.PlainDateTime.prototype[ @@toStringTag ]</h1>
-      <p>
-        The initial value of the @@toStringTag property is the string value *"Temporal.PlainDateTime"*.
-      </p>
-      <p>
-        This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-      </p>
+    <emu-clause id="sec-temporal.plaindatetime.prototype-%symbol.tostringtag%">
+      <h1>Temporal.PlainDateTime.prototype[ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String value *"Temporal.PlainDateTime"*.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
     </emu-clause>
 
-    <emu-clause id="sec-get-temporal.plaindatetime.prototype.calendar">
-      <h1>get Temporal.PlainDateTime.prototype.calendar</h1>
+    <emu-clause id="sec-get-temporal.plaindatetime.prototype.calendarid">
+      <h1>get Temporal.PlainDateTime.prototype.calendarId</h1>
       <p>
-        `Temporal.PlainDateTime.prototype.calendar` is an accessor property whose set accessor function is *undefined*.
+        `Temporal.PlainDateTime.prototype.calendarId` is an accessor property whose set accessor function is *undefined*.
         Its get accessor function performs the following steps:
       </p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
         1. Return _dateTime_.[[Calendar]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.plaindatetime.prototype.era">
+      <h1>get Temporal.PlainDateTime.prototype.era</h1>
+      <p>
+        `Temporal.PlainDate.prototype.era` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainDateTime_, [[InitializedTemporalDateTime]]).
+        1. Return CalendarISOToDate(_plainDateTime_.[[Calendar]], _plainDateTime_.[[ISODateTime]].[[ISODate]]).[[Era]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.plaindatetime.prototype.erayear">
+      <h1>get Temporal.PlainDateTime.prototype.eraYear</h1>
+      <p>
+        `Temporal.PlainDateTime.prototype.eraYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _plainDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_plainDateTime_, [[InitializedTemporalDateTime]]).
+        1. Let _result_ be CalendarISOToDate(_plainDateTime_.[[Calendar]], _plainDateTime_.[[ISODateTime]].[[ISODate]]).[[EraYear]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
       </emu-alg>
     </emu-clause>
 
@@ -135,8 +157,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarYear(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[Year]]).
       </emu-alg>
     </emu-clause>
 
@@ -149,8 +170,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarMonth(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[Month]]).
       </emu-alg>
     </emu-clause>
 
@@ -163,8 +183,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarMonthCode(_calendar_, _dateTime_).
+        1. Return CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[MonthCode]].
       </emu-alg>
     </emu-clause>
 
@@ -177,8 +196,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDay(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[Day]]).
       </emu-alg>
     </emu-clause>
 
@@ -191,7 +209,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISOHour]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Hour]]).
       </emu-alg>
     </emu-clause>
 
@@ -204,7 +222,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISOMinute]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Minute]]).
       </emu-alg>
     </emu-clause>
 
@@ -217,7 +235,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISOSecond]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Second]]).
       </emu-alg>
     </emu-clause>
 
@@ -230,7 +248,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISOMillisecond]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Millisecond]]).
       </emu-alg>
     </emu-clause>
 
@@ -243,7 +261,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISOMicrosecond]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Microsecond]]).
       </emu-alg>
     </emu-clause>
 
@@ -256,7 +274,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return 𝔽(_dateTime_.[[ISONanosecond]]).
+        1. Return 𝔽(_dateTime_.[[ISODateTime]].[[Time]].[[Nanosecond]]).
       </emu-alg>
     </emu-clause>
 
@@ -269,8 +287,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDayOfWeek(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[DayOfWeek]]).
       </emu-alg>
     </emu-clause>
 
@@ -283,8 +300,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDayOfYear(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[DayOfYear]]).
       </emu-alg>
     </emu-clause>
 
@@ -297,8 +313,24 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarWeekOfYear(_calendar_, _dateTime_).
+        1. Let _result_ be CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[WeekOfYear]].[[Week]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.plaindatetime.prototype.yearofweek">
+      <h1>get Temporal.PlainDateTime.prototype.yearOfWeek</h1>
+      <p>
+        `Temporal.PlainDateTime.prototype.yearOfWeek` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _dateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
+        1. Let _result_ be CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[WeekOfYear]].[[Year]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
       </emu-alg>
     </emu-clause>
 
@@ -311,8 +343,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDaysInWeek(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[DaysInWeek]]).
       </emu-alg>
     </emu-clause>
 
@@ -325,8 +356,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDaysInMonth(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[DaysInMonth]]).
       </emu-alg>
     </emu-clause>
 
@@ -339,8 +369,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarDaysInYear(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[DaysInYear]]).
       </emu-alg>
     </emu-clause>
 
@@ -353,8 +382,7 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarMonthsInYear(_calendar_, _dateTime_).
+        1. Return 𝔽(CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[MonthsInYear]]).
       </emu-alg>
     </emu-clause>
 
@@ -367,361 +395,233 @@
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Return ? CalendarInLeapYear(_calendar_, _dateTime_).
+        1. Return CalendarISOToDate(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]]).[[InLeapYear]].
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.with">
       <h1>Temporal.PlainDateTime.prototype.with ( _temporalDateTimeLike_ [ , _options_ ] )</h1>
-      <p>
-        The `with` method takes two arguments, _temporalDateTimeLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. If Type(_temporalDateTimeLike_) is not Object, then
-          1. Throw a *TypeError* exception.
-        1. Perform ? RejectTemporalCalendarType(_temporalDateTimeLike_).
-        1. Let _calendarProperty_ be ? Get(_temporalDateTimeLike_, *"calendar"*).
-        1. If _calendarProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
-        1. Let _timeZoneProperty_ be ? Get(_temporalDateTimeLike_, *"timeZone"*).
-        1. If _timeZoneProperty_ is not *undefined*, then
-          1. Throw a *TypeError* exception.
+        1. If ? IsPartialTemporalObject(_temporalDateTimeLike_) is *false*, throw a *TypeError* exception.
         1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"day"*, *"hour"*, *"microsecond"*, *"millisecond"*, *"minute"*, *"month"*, *"monthCode"*, *"nanosecond"*, *"second"*, *"year"* »).
-        1. Let _partialDateTime_ be ? PreparePartialTemporalFields(_temporalDateTimeLike_, _fieldNames_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _fields_ be ? PrepareTemporalFields(_dateTime_, _fieldNames_, «»).
-        1. Set _fields_ to ? CalendarMergeFields(_calendar_, _fields_, _partialDateTime_).
-        1. Set _fields_ to ? PrepareTemporalFields(_fields_, _fieldNames_, «»).
-        1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _options_).
-        1. Assert: ! IsValidISODate(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]) is *true*.
-        1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-        1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _calendar_).
+        1. Let _fields_ be ISODateToFields(_calendar_, _dateTime_.[[ISODateTime]].[[ISODate]], ~date~).
+        1. Set _fields_.[[Hour]] to _dateTime_.[[ISODateTime]].[[Time]].[[Hour]].
+        1. Set _fields_.[[Minute]] to _dateTime_.[[ISODateTime]].[[Time]].[[Minute]].
+        1. Set _fields_.[[Second]] to _dateTime_.[[ISODateTime]].[[Time]].[[Second]].
+        1. Set _fields_.[[Millisecond]] to _dateTime_.[[ISODateTime]].[[Time]].[[Millisecond]].
+        1. Set _fields_.[[Microsecond]] to _dateTime_.[[ISODateTime]].[[Time]].[[Microsecond]].
+        1. Set _fields_.[[Nanosecond]] to _dateTime_.[[ISODateTime]].[[Time]].[[Nanosecond]].
+        1. Let _partialDateTime_ be ? PrepareCalendarFields(_calendar_, _temporalDateTimeLike_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~ », ~partial~).
+        1. Set _fields_ to CalendarMergeFields(_calendar_, _fields_, _partialDateTime_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _overflow_).
+        1. Return ? CreateTemporalDateTime(_result_, _calendar_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.withplaintime">
       <h1>Temporal.PlainDateTime.prototype.withPlainTime ( [ _plainTimeLike_ ] )</h1>
-      <p>
-        The `withPlainTime` method takes one argument _plainTimeLike_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. If _plainTimeLike_ is *undefined*, then
-          1. Return ? CreateTemporalDateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], 0, 0, 0, 0, 0, 0, _dateTime_.[[Calendar]]).
-        1. Let _plainTime_ be ? ToTemporalTime(_plainTimeLike_).
-        1. Return ? CreateTemporalDateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _plainTime_.[[ISOHour]], _plainTime_.[[ISOMinute]], _plainTime_.[[ISOSecond]], _plainTime_.[[ISOMillisecond]], _plainTime_.[[ISOMicrosecond]], _plainTime_.[[ISONanosecond]], _dateTime_.[[Calendar]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaindatetime.prototype.withplaindate">
-      <h1>Temporal.PlainDateTime.prototype.withPlainDate ( _plainDateLike_ )</h1>
-      <p>
-        The `withPlainDate` method takes one argument _plainDateLike_.
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _dateTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _plainDate_ be ? ToTemporalDate(_plainDateLike_).
-        1. Let _calendar_ be ? ConsolidateCalendars(_dateTime_.[[Calendar]], _plainDate_.[[Calendar]]).
-        1. Return ? CreateTemporalDateTime(_plainDate_.[[ISOYear]], _plainDate_.[[ISOMonth]], _plainDate_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _calendar_).
+        1. Let _time_ be ? ToTimeRecordOrMidnight(_plainTimeLike_).
+        1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_dateTime_.[[ISODateTime]].[[ISODate]], _time_).
+        1. Return ? CreateTemporalDateTime(_isoDateTime_, _dateTime_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.withcalendar">
-      <h1>Temporal.PlainDateTime.prototype.withCalendar ( _calendar_ )</h1>
-      <p>
-        The `withCalendar` method takes one argument _calendar_.
-        The following steps are taken:
-      </p>
+      <h1>Temporal.PlainDateTime.prototype.withCalendar ( _calendarLike_ )</h1>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be ? ToTemporalCalendar(_calendar_).
-        1. Return ? CreateTemporalDateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _calendar_).
+        1. Let _calendar_ be ? ToTemporalCalendarIdentifier(_calendarLike_).
+        1. Return ! CreateTemporalDateTime(_dateTime_.[[ISODateTime]], _calendar_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.add">
       <h1>Temporal.PlainDateTime.prototype.add ( _temporalDurationLike_ [ , _options_ ] )</h1>
-      <p>
-        The `add` method takes two arguments, _temporalDurationLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _result_ be ? AddDateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _dateTime_.[[Calendar]], _duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _duration_.[[Days]], _duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]], _options_).
-        1. Assert: ! IsValidISODate(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]) is *true*.
-        1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-        1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _dateTime_.[[Calendar]]).
+        1. Return ? AddDurationToDateTime(~add~, _dateTime_, _temporalDurationLike_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.subtract">
       <h1>Temporal.PlainDateTime.prototype.subtract ( _temporalDurationLike_ [ , _options_ ] )</h1>
-      <p>
-        The `subtract` method takes two arguments, _temporalDurationLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _duration_ be ? ToLimitedTemporalDuration(_temporalDurationLike_, « »).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _result_ be ? AddDateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _dateTime_.[[Calendar]], −_duration_.[[Years]], −_duration_.[[Months]], −_duration_.[[Weeks]], −_duration_.[[Days]], −_duration_.[[Hours]], −_duration_.[[Minutes]], −_duration_.[[Seconds]], −_duration_.[[Milliseconds]], −_duration_.[[Microseconds]], −_duration_.[[Nanoseconds]], _options_).
-        1. Assert: ! IsValidISODate(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]) is *true*.
-        1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-        1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _dateTime_.[[Calendar]]).
+        1. Return ? AddDurationToDateTime(~subtract~, _dateTime_, _temporalDurationLike_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.until">
       <h1>Temporal.PlainDateTime.prototype.until ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `until` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Set _other_ to ? ToTemporalDateTime(_other_).
-        1. If ? CalendarEquals(_dateTime_.[[Calendar]], _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « », *"nanosecond"*).
-        1. Let _defaultLargestUnit_ be ! LargerOfTwoTemporalUnits(*"day"*, _smallestUnit_).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, « », *"auto"*, _defaultLargestUnit_).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Let _maximum_ be ! MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, _maximum_, *false*).
-        1. Let _diff_ be ? DifferenceISODateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _other_.[[ISOYear]], _other_.[[ISOMonth]], _other_.[[ISODay]], _other_.[[ISOHour]], _other_.[[ISOMinute]], _other_.[[ISOSecond]], _other_.[[ISOMillisecond]], _other_.[[ISOMicrosecond]], _other_.[[ISONanosecond]], _dateTime_.[[Calendar]], _largestUnit_, _options_).
-        1. Let _roundResult_ be ? RoundDuration(_diff_.[[Years]], _diff_.[[Months]], _diff_.[[Weeks]], _diff_.[[Days]], _diff_.[[Hours]], _diff_.[[Minutes]], _diff_.[[Seconds]], _diff_.[[Milliseconds]], _diff_.[[Microseconds]], _diff_.[[Nanoseconds]], _roundingIncrement_, _smallestUnit_, _roundingMode_, _dateTime_).
-        1. Let _result_ be ! BalanceDuration(_roundResult_.[[Days]], _roundResult_.[[Hours]], _roundResult_.[[Minutes]], _roundResult_.[[Seconds]], _roundResult_.[[Milliseconds]], _roundResult_.[[Microseconds]], _roundResult_.[[Nanoseconds]], _largestUnit_).
-        1. Return ? CreateTemporalDuration(_roundResult_.[[Years]], _roundResult_.[[Months]], _roundResult_.[[Weeks]], _result_.[[Days]], _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]]).
+        1. Return ? DifferenceTemporalPlainDateTime(~until~, _dateTime_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.since">
       <h1>Temporal.PlainDateTime.prototype.since ( _other_ [ , _options_ ] )</h1>
-      <p>
-        The `since` method takes two arguments, _other_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Set _other_ to ? ToTemporalDateTime(_other_).
-        1. If ? CalendarEquals(_dateTime_.[[Calendar]], _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « », *"nanosecond"*).
-        1. Let _defaultLargestUnit_ be ! LargerOfTwoTemporalUnits(*"day"*, _smallestUnit_).
-        1. Let _largestUnit_ be ? ToLargestTemporalUnit(_options_, « », *"auto"*, _defaultLargestUnit_).
-        1. Perform ? ValidateTemporalUnitRange(_largestUnit_, _smallestUnit_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Set _roundingMode_ to ! NegateTemporalRoundingMode(_roundingMode_).
-        1. Let _maximum_ be ! MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
-        1. Let _roundingIncrement_ be ? ToTemporalRoundingIncrement(_options_, _maximum_, *false*).
-        1. Let _diff_ be ? DifferenceISODateTime(_other_.[[ISOYear]], _other_.[[ISOMonth]], _other_.[[ISODay]], _other_.[[ISOHour]], _other_.[[ISOMinute]], _other_.[[ISOSecond]], _other_.[[ISOMillisecond]], _other_.[[ISOMicrosecond]], _other_.[[ISONanosecond]], _dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _dateTime_.[[Calendar]], _largestUnit_, _options_).
-        1. Let _roundResult_ be ? RoundDuration(−_diff_.[[Years]], −_diff_.[[Months]], −_diff_.[[Weeks]], −_diff_.[[Days]], −_diff_.[[Hours]], −_diff_.[[Minutes]], −_diff_.[[Seconds]], −_diff_.[[Milliseconds]], −_diff_.[[Microseconds]], −_diff_.[[Nanoseconds]], _roundingIncrement_, _smallestUnit_, _roundingMode_, _dateTime_).
-        1. Let _result_ be ! BalanceDuration(−_roundResult_.[[Days]], −_roundResult_.[[Hours]], −_roundResult_.[[Minutes]], −_roundResult_.[[Seconds]], −_roundResult_.[[Milliseconds]], −_roundResult_.[[Microseconds]], −_roundResult_.[[Nanoseconds]], _largestUnit_).
-        1. Return ? CreateTemporalDuration(−_roundResult_.[[Years]], −_roundResult_.[[Months]], −_roundResult_.[[Weeks]], _result_.[[Days]], _result_.[[Hours]], _result_.[[Minutes]], _result_.[[Seconds]], _result_.[[Milliseconds]], _result_.[[Microseconds]], _result_.[[Nanoseconds]]).
+        1. Return ? DifferenceTemporalPlainDateTime(~since~, _dateTime_, _other_, _options_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.round">
-      <h1>Temporal.PlainDateTime.prototype.round ( _options_ )</h1>
-      <p>
-        The `round` method takes one argument _options_.
-        The following steps are taken:
-      </p>
+      <h1>Temporal.PlainDateTime.prototype.round ( _roundTo_ )</h1>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. If _options_ is *undefined*, then
+        1. If _roundTo_ is *undefined*, then
           1. Throw a *TypeError* exception.
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_options_, « *"year"*, *"month"*, *"week"* », *undefined*).
-        1. If _smallestUnit_ is *undefined*, throw a *RangeError* exception.
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"halfExpand"*).
-        1. Let _roundingIncrement_ be ? ToTemporalDateTimeRoundingIncrement(_options_, _smallestUnit_).
-        1. Let _result_ be ! RoundISODateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
-        1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _dateTime_.[[Calendar]]).
+        1. If _roundTo_ is a String, then
+          1. Let _paramString_ be _roundTo_.
+          1. Set _roundTo_ to OrdinaryObjectCreate(*null*).
+          1. Perform ! CreateDataPropertyOrThrow(_roundTo_, *"smallestUnit"*, _paramString_).
+        1. Else,
+          1. Set _roundTo_ to ? GetOptionsObject(_roundTo_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetRoundingIncrementOption reads *"roundingIncrement"* and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _roundingIncrement_ be ? GetRoundingIncrementOption(_roundTo_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_roundTo_, ~half-expand~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_roundTo_, *"smallestUnit"*, ~time~, ~required~, « ~day~ »).
+        1. If _smallestUnit_ is ~day~, then
+          1. Let _maximum_ be 1.
+          1. Let _inclusive_ be *true*.
+        1. Else,
+          1. Let _maximum_ be MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
+          1. Assert: _maximum_ is not ~unset~.
+          1. Let _inclusive_ be *false*.
+        1. Perform ? ValidateTemporalRoundingIncrement(_roundingIncrement_, _maximum_, _inclusive_).
+        1. If _smallestUnit_ is ~nanosecond~ and _roundingIncrement_ = 1, then
+          1. Return ! CreateTemporalDateTime(_dateTime_.[[ISODateTime]], _dateTime_.[[Calendar]]).
+        1. Let _result_ be RoundISODateTime(_dateTime_.[[ISODateTime]], _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Return ? CreateTemporalDateTime(_result_, _dateTime_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.equals">
       <h1>Temporal.PlainDateTime.prototype.equals ( _other_ )</h1>
-      <p>
-        The `equals` method takes one argument _other_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
         1. Set _other_ to ? ToTemporalDateTime(_other_).
-        1. Let _result_ be ! CompareISODateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _other_.[[ISOYear]], _other_.[[ISOMonth]], _other_.[[ISODay]], _other_.[[ISOHour]], _other_.[[ISOMinute]], _other_.[[ISOSecond]], _other_.[[ISOMillisecond]], _other_.[[ISOMicrosecond]], _other_.[[ISONanosecond]]).
-        1. If _result_ is not 0, return *false*.
-        1. Return ? CalendarEquals(_dateTime_.[[Calendar]], _other_.[[Calendar]]).
+        1. If CompareISODateTime(_dateTime_.[[ISODateTime]], _other_.[[ISODateTime]]) ≠ 0, return *false*.
+        1. Return CalendarEquals(_dateTime_.[[Calendar]], _other_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.tostring">
       <h1>Temporal.PlainDateTime.prototype.toString ( [ _options_ ] )</h1>
-      <p>
-        The `toString` method takes one argument _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _precision_ be ? ToSecondsStringPrecision(_options_).
-        1. Let _roundingMode_ be ? ToTemporalRoundingMode(_options_, *"trunc"*).
-        1. Let _showCalendar_ be ? ToShowCalendarOption(_options_).
-        1. Let _result_ be ! RoundISODateTime(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _precision_.[[Increment]], _precision_.[[Unit]], _roundingMode_).
-        1. Return ? TemporalDateTimeToString(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _dateTime_.[[Calendar]], _precision_.[[Precision]], _showCalendar_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetTemporalShowCalendarNameOption reads *"calendarName"*, GetTemporalFractionalSecondDigitsOption reads *"fractionalSecondDigits"*, and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _showCalendar_ be ? GetTemporalShowCalendarNameOption(_resolvedOptions_).
+        1. Let _digits_ be ? GetTemporalFractionalSecondDigitsOption(_resolvedOptions_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_resolvedOptions_, ~trunc~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_resolvedOptions_, *"smallestUnit"*, ~time~, ~unset~).
+        1. If _smallestUnit_ is ~hour~, throw a *RangeError* exception.
+        1. Let _precision_ be ToSecondsStringPrecisionRecord(_smallestUnit_, _digits_).
+        1. Let _result_ be RoundISODateTime(_dateTime_.[[ISODateTime]], _precision_.[[Increment]], _precision_.[[Unit]], _roundingMode_).
+        1. If ISODateTimeWithinLimits(_result_) is *false*, throw a *RangeError* exception.
+        1. Return ISODateTimeToString(_result_, _dateTime_.[[Calendar]], _precision_.[[Precision]], _showCalendar_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.tolocalestring">
       <h1>Temporal.PlainDateTime.prototype.toLocaleString ( [ _locales_ [ , _options_ ] ] )</h1>
       <p>
-        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement the `Temporal.PlainDateTime.prototype.toLocaleString` method as specified in the ECMA-402 specification. If an ECMAScript implementation does not include the ECMA-402 API the following specification of the `toLocaleString` method is used.
+        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement this method as specified in the ECMA-402 specification.
+        If an ECMAScript implementation does not include the ECMA-402 API the following specification of this method is used.
       </p>
-      <p>
-        The `toLocaleString` method takes two arguments, _locales_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>The meanings of the optional parameters to this method are defined in the ECMA-402 specification; implementations that do not include ECMA-402 support must not use those parameter positions for anything else.</p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return ? TemporalDateTimeToString(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _dateTime_.[[Calendar]], *"auto"*, *"auto"*).
+        1. Return ISODateTimeToString(_dateTime_.[[ISODateTime]], _dateTime_.[[Calendar]], ~auto~, ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.tojson">
       <h1>Temporal.PlainDateTime.prototype.toJSON ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return ? TemporalDateTimeToString(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]], _dateTime_.[[Calendar]], *"auto"*, *"auto"*).
+        1. Return ISODateTimeToString(_dateTime_.[[ISODateTime]], _dateTime_.[[Calendar]], ~auto~, ~auto~).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.valueof">
       <h1>Temporal.PlainDateTime.prototype.valueOf ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Throw a *TypeError* exception.
       </emu-alg>
+      <emu-note>
+        <p>
+          This method always throws, because in the absence of `valueOf()`, expressions with arithmetic operators such as `plainDateTime1 > plainDateTime2` would fall back to being equivalent to `plainDateTime1.toString() > plainDateTime2.toString()`.
+          Lexicographical comparison of serialized strings might not seem obviously wrong, because the result would sometimes be correct.
+          Implementations are encouraged to phrase the error message to point users to `Temporal.PlainDateTime.compare()`, `Temporal.PlainDateTime.prototype.equals()`, and/or `Temporal.PlainDateTime.prototype.toString()`.
+        </p>
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.tozoneddatetime">
       <h1>Temporal.PlainDateTime.prototype.toZonedDateTime ( _temporalTimeZoneLike_ [ , _options_ ] )</h1>
-      <p>
-        The `toZonedDateTime` method takes two arguments, _temporalTimeZoneLike_ and _options_.
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _timeZone_ be ? ToTemporalTimeZone(_temporalTimeZoneLike_).
-        1. Set _options_ to ? GetOptionsObject(_options_).
-        1. Let _disambiguation_ be ? ToTemporalDisambiguation(_options_).
-        1. Let _instant_ be ? BuiltinTimeZoneGetInstantFor(_timeZone_, _dateTime_, _disambiguation_).
-        1. Return ! CreateTemporalZonedDateTime(_instant_.[[Nanoseconds]], _timeZone_, _dateTime_.[[Calendar]]).
+        1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_temporalTimeZoneLike_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _disambiguation_ be ? GetTemporalDisambiguationOption(_resolvedOptions_).
+        1. Let _epochNs_ be ? GetEpochNanosecondsFor(_timeZone_, _dateTime_.[[ISODateTime]], _disambiguation_).
+        1. Return ! CreateTemporalZonedDateTime(_epochNs_, _timeZone_, _dateTime_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.toplaindate">
       <h1>Temporal.PlainDateTime.prototype.toPlainDate ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return ? CreateTemporalDate(_dateTime_.[[ISOYear]], _dateTime_.[[ISOMonth]], _dateTime_.[[ISODay]], _dateTime_.[[Calendar]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaindatetime.prototype.toplainyearmonth">
-      <h1>Temporal.PlainDateTime.prototype.toPlainYearMonth ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _dateTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"monthCode"*, *"year"* »).
-        1. Let _fields_ be ? PrepareTemporalFields(_dateTime_, _fieldNames_, «»).
-        1. Return ? YearMonthFromFields(_calendar_, _fields_).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaindatetime.prototype.toplainmonthday">
-      <h1>Temporal.PlainDateTime.prototype.toPlainMonthDay ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _dateTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _calendar_ be _dateTime_.[[Calendar]].
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"day"*, *"monthCode"* »).
-        1. Let _fields_ be ? PrepareTemporalFields(_dateTime_, _fieldNames_, «»).
-        1. Return ? MonthDayFromFields(_calendar_, _fields_).
+        1. Return ! CreateTemporalDate(_dateTime_.[[ISODateTime]].[[ISODate]], _dateTime_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-temporal.plaindatetime.prototype.toplaintime">
       <h1>Temporal.PlainDateTime.prototype.toPlainTime ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
+      <p>This method performs the following steps when called:</p>
       <emu-alg>
         1. Let _dateTime_ be the *this* value.
         1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Return ? CreateTemporalTime(_dateTime_.[[ISOHour]], _dateTime_.[[ISOMinute]], _dateTime_.[[ISOSecond]], _dateTime_.[[ISOMillisecond]], _dateTime_.[[ISOMicrosecond]], _dateTime_.[[ISONanosecond]]).
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-temporal.plaindatetime.prototype.getisofields">
-      <h1>Temporal.PlainDateTime.prototype.getISOFields ( )</h1>
-      <p>
-        The following steps are taken:
-      </p>
-      <emu-alg>
-        1. Let _dateTime_ be the *this* value.
-        1. Perform ? RequireInternalSlot(_dateTime_, [[InitializedTemporalDateTime]]).
-        1. Let _fields_ be ! OrdinaryObjectCreate(%Object.prototype%).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"calendar"*, _dateTime_.[[Calendar]]).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoDay"*, 𝔽(_dateTime_.[[ISODay]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoHour"*, 𝔽(_dateTime_.[[ISOHour]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMicrosecond"*, 𝔽(_dateTime_.[[ISOMicrosecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMillisecond"*, 𝔽(_dateTime_.[[ISOMillisecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMinute"*, 𝔽(_dateTime_.[[ISOMinute]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoMonth"*, 𝔽(_dateTime_.[[ISOMonth]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoNanosecond"*, 𝔽(_dateTime_.[[ISONanosecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoSecond"*, 𝔽(_dateTime_.[[ISOSecond]])).
-        1. Perform ! CreateDataPropertyOrThrow(_fields_, *"isoYear"*, 𝔽(_dateTime_.[[ISOYear]])).
-        1. Return _fields_.
+        1. Return ! CreateTemporalTime(_dateTime_.[[ISODateTime]].[[Time]]).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -734,127 +634,124 @@
     </p>
     <emu-table id="table-internal-slots-of-temporaldatetime-instances" caption="Internal Slots of Temporal.PlainDateTime Instances">
       <table>
-        <tbody>
-          <tr>
-            <th>
-              Internal Slot
-            </th>
-            <th>
-              Description
-            </th>
-          </tr>
-          <tr>
-            <td>
-              [[InitializedTemporalDateTime]]
-            </td>
-            <td>
-              The only specified use of this slot is for distinguishing Temporal.PlainDateTime instances from other objects.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOYear]]
-            </td>
-            <td>
-              An integer representing the year in the ISO 8601 calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMonth]]
-            </td>
-            <td>
-              An integer between 1 and 12, inclusive, representing the month of the year in the ISO 8601 calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISODay]]
-            </td>
-            <td>
-              An integer between 1 and ISODaysInMonth([[ISOYear]], [[ISOMonth]]), inclusive, representing the day of the month in the ISO 8601 calendar.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOHour]]
-            </td>
-            <td>
-              An integer between 0 and 23, inclusive, representing the hour of the day.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMinute]]
-            </td>
-            <td>
-              An integer between 0 and 59, inclusive, representing the minute of the hour.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOSecond]]
-            </td>
-            <td>
-              An integer between 0 and 59, inclusive, representing the second within the minute.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMillisecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the millisecond within the second.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISOMicrosecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the microsecond within the millisecond.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[ISONanosecond]]
-            </td>
-            <td>
-              An integer between 0 and 999, inclusive, representing the nanosecond within the microsecond.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[Calendar]]
-            </td>
-            <td>
-              An Object representing the calendar.
-            </td>
-          </tr>
-        </tbody>
+        <tr>
+          <th>
+            Internal Slot
+          </th>
+          <th>
+            Description
+          </th>
+        </tr>
+        <tr>
+          <td>
+            [[InitializedTemporalDateTime]]
+          </td>
+          <td>
+            The only specified use of this slot is for distinguishing Temporal.PlainDateTime instances from other objects.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[ISODateTime]]
+          </td>
+          <td>
+            An ISO Date-Time Record.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Calendar]]
+          </td>
+          <td>
+            A calendar type.
+          </td>
+        </tr>
       </table>
     </emu-table>
   </emu-clause>
 
   <emu-clause id="sec-temporal-plaindatetime-abstract-ops">
-    <h1>Abstract operations</h1>
+    <h1>Abstract Operations</h1>
 
-    <emu-clause id="sec-temporal-getepochfromisoparts" aoid="GetEpochFromISOParts">
-      <h1>GetEpochFromISOParts ( _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
+    <emu-clause id="sec-temporal-iso-date-time-records">
+      <h1>ISO Date-Time Records</h1>
+      <p>
+        An <dfn variants="ISO Date-Time Records">ISO Date-Time Record</dfn> is a Record value used to represent a valid calendar date in the ISO 8601 calendar together with a clock time.
+        For any ISO Date-Time Record _r_, IsValidISODate(_r_.[[ISODate]].[[Year]], _r_.[[ISODate]][[Month]], _r_.[[ISODate]].[[Day]]) must return *true*, and IsValidTime(_r_.[[Time]].[[Hour]], _r_.[[Time]].[[Minute]], _r_.[[Time]].[[Second]], _r_.[[Time]].[[Millisecond]], _r_.[[Time]].[[Microsecond]], _r_.[[Time]].[[Nanosecond]]) must return *true*.
+        It is not necessary for ISODateTimeWithinLimits(_r_) to return *true*.
+      </p>
+      <p>ISO Date-Time Records have the fields listed in <emu-xref href="#table-temporal-iso-date-time-record-fields"></emu-xref>.</p>
+      <emu-table id="table-temporal-iso-date-time-record-fields" caption="ISO Date-Time Record Fields">
+        <table class="real-table">
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[ISODate]]</td>
+            <td>an ISO Date Record</td>
+            <td>
+              The date in the ISO 8601 calendar.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Time]]</td>
+            <td>a Time Record</td>
+            <td>The time. The [[Days]] field is ignored.</td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-timevaluetoisodatetimerecord" type="abstract operation">
+      <h1>
+        TimeValueToISODateTimeRecord (
+          _t_: a finite time value,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It converts a time value into an ISO Date-Time Record.
+        </dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Assert: ! IsValidISODate(_year_, _month_, _day_) is *true*.
-        1. Assert: ! IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *true*.
-        1. Let _date_ be ! MakeDay(𝔽(_year_), 𝔽(_month_ − 1), 𝔽(_day_)).
-        1. Let _time_ be ! MakeTime(𝔽(_hour_), 𝔽(_minute_), 𝔽(_second_), 𝔽(_millisecond_)).
-        1. Let _ms_ be ! MakeDate(_date_, _time_).
-        1. Assert: _ms_ is finite.
-        1. Return ℝ(_ms_) × 10<sup>6</sup> + _microsecond_ × 10<sup>3</sup> + _nanosecond_.
+        1. Let _isoDate_ be CreateISODateRecord(ℝ(YearFromTime(_t_)), ℝ(MonthFromTime(_t_)) + 1, ℝ(DateFromTime(_t_))).
+        1. Let _time_ be CreateTimeRecord(ℝ(HourFromTime(_t_)), ℝ(MinFromTime(_t_)), ℝ(SecFromTime(_t_)), ℝ(msFromTime(_t_)), 0, 0).
+        1. Return ISO Date-Time Record { [[ISODate]]: _isoDate_, [[Time]]: _time_ }.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-isodatetimewithinlimits" aoid="ISODateTimeWithinLimits">
-      <h1>ISODateTimeWithinLimits ( _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
+    <emu-clause id="sec-temporal-combineisodateandtimerecord" type="abstract operation">
+      <h1>
+        CombineISODateAndTimeRecord (
+          _isoDate_: an ISO Date Record,
+          _time_: a Time Record,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It combines a date and a time into one ISO Date-Time Record.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. NOTE: _time_.[[Days]] is ignored.
+        1. Return ISO Date-Time Record { [[ISODate]]: _isoDate_, [[Time]]: _time_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-isodatetimewithinlimits" type="abstract operation">
+      <h1>
+        ISODateTimeWithinLimits (
+          _isoDateTime_: an ISO Date-Time Record,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The return value is *true* if the combination of a date in the ISO 8601 calendar with a wall-clock time, given by the arguments, is within the representable range of `Temporal.PlainDateTime`, and *false* otherwise.</dd>
+      </dl>
       <emu-note>
         <p>
           Temporal.PlainDateTime objects can represent points in time within 24 hours (8.64 × 10<sup>13</sup> nanoseconds) of the Temporal.Instant boundaries.
@@ -862,226 +759,329 @@
         </p>
       </emu-note>
       <emu-alg>
-        1. Assert: _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Let _ns_ be ! GetEpochFromISOParts(_year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
-        1. If _ns_ ≤ -8.64 × 10<sup>21</sup> - 8.64 × 10<sup>13</sup>, then
+        1. If abs(ISODateToEpochDays(_isoDateTime_.[[ISODate]].[[Year]], _isoDateTime_.[[ISODate]].[[Month]] - 1, _isoDateTime_.[[ISODate]].[[Day]])) > 10<sup>8</sup> + 1, return *false*.
+        1. Let _ns_ be ℝ(GetUTCEpochNanoseconds(_isoDateTime_)).
+        1. If _ns_ ≤ nsMinInstant - nsPerDay, then
           1. Return *false*.
-        1. If _ns_ ≥ 8.64 × 10<sup>21</sup> + 8.64 × 10<sup>13</sup>, then
+        1. If _ns_ ≥ nsMaxInstant + nsPerDay, then
           1. Return *false*.
         1. Return *true*.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-interprettemporaldatetimefields" aoid="InterpretTemporalDateTimeFields">
-      <h1>InterpretTemporalDateTimeFields ( _calendar_, _fields_, _options_ )</h1>
-      <p>
-        The abstract operation InterpretTemporalDateTimeFields interprets the date/time fields in the object _fields_ using the given _calendar_, and returns a Record with the fields according to the ISO calendar.
-      </p>
+    <emu-clause id="sec-temporal-interprettemporaldatetimefields" type="abstract operation">
+      <h1>
+        InterpretTemporalDateTimeFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date-Time Record, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It interprets the date/time fields in the object _fields_ using the given calendar.</dd>
+      </dl>
       <emu-alg>
-        1. Let _timeResult_ be ? ToTemporalTimeRecord(_fields_).
-        1. Let _overflow_ be ? ToTemporalOverflow(_options_).
-        1. Let _temporalDate_ be ? DateFromFields(_calendar_, _fields_, _options_).
-        1. Let _timeResult_ be ? RegulateTime(_timeResult_.[[Hour]], _timeResult_.[[Minute]], _timeResult_.[[Second]], _timeResult_.[[Millisecond]], _timeResult_.[[Microsecond]], _timeResult_.[[Nanosecond]], _overflow_).
-        1. Return the Record {
-          [[Year]]: _temporalDate_.[[ISOYear]],
-          [[Month]]: _temporalDate_.[[ISOMonth]],
-          [[Day]]: _temporalDate_.[[ISODay]],
-          [[Hour]]: _timeResult_.[[Hour]],
-          [[Minute]]: _timeResult_.[[Minute]],
-          [[Second]]: _timeResult_.[[Second]],
-          [[Millisecond]]: _timeResult_.[[Millisecond]],
-          [[Microsecond]]: _timeResult_.[[Microsecond]],
-          [[Nanosecond]]: _timeResult_.[[Nanosecond]]
-          }.
+        1. Let _isoDate_ be ? CalendarDateFromFields(_calendar_, _fields_, _overflow_).
+        1. Let _time_ be ? RegulateTime(_fields_.[[Hour]], _fields_.[[Minute]], _fields_.[[Second]], _fields_.[[Millisecond]], _fields_.[[Microsecond]], _fields_.[[Nanosecond]], _overflow_).
+        1. Return CombineISODateAndTimeRecord(_isoDate_, _time_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-totemporaldatetime" aoid="ToTemporalDateTime">
-      <h1>ToTemporalDateTime ( _item_ [ , _options_ ] )</h1>
-      <p>
-        The abstract operation ToTemporalDateTime returns its argument _item_ if it is already a Temporal.PlainDateTime instance, converts _item_ to a new Temporal.PlainDateTime instance if possible, and throws otherwise.
-      </p>
+    <emu-clause id="sec-temporal-totemporaldatetime" type="abstract operation">
+      <h1>
+        ToTemporalDateTime (
+          _item_: an ECMAScript language value,
+          optional _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainDateTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a new Temporal.PlainDateTime instance if possible, and throws otherwise.</dd>
+      </dl>
       <emu-alg>
-        1. If _options_ is not present, set _options_ to ! OrdinaryObjectCreate(*null*).
-        1. If Type(_item_) is Object, then
+        1. If _options_ is not present, set _options_ to *undefined*.
+        1. If _item_ is an Object, then
           1. If _item_ has an [[InitializedTemporalDateTime]] internal slot, then
-            1. Return _item_.
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalDateTime(_item_.[[ISODateTime]], _item_.[[Calendar]]).
           1. If _item_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
-            1. Let _instant_ be ! CreateTemporalInstant(_item_.[[Nanoseconds]]).
-            1. Return ? BuiltinTimeZoneGetPlainDateTimeFor(_item_.[[TimeZone]], _instant_, _item_.[[Calendar]]).
+            1. Let _isoDateTime_ be GetISODateTimeFor(_item_.[[TimeZone]], _item_.[[EpochNanoseconds]]).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalDateTime(_isoDateTime_, _item_.[[Calendar]]).
           1. If _item_ has an [[InitializedTemporalDate]] internal slot, then
-            1. Return ? CreateTemporalDateTime(_item_.[[ISOYear]], _item_.[[ISOMonth]], _item_.[[ISODay]], 0, 0, 0, 0, 0, 0, _item_.[[Calendar]]).
-          1. Let _calendar_ be ? GetTemporalCalendarWithISODefault(_item_).
-          1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"day"*, *"hour"*, *"microsecond"*, *"millisecond"*, *"minute"*, *"month"*, *"monthCode"*, *"nanosecond"*, *"second"*, *"year"* »).
-          1. Let _fields_ be ? PrepareTemporalFields(_item_, _fieldNames_, «»).
-          1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _options_).
-        1. Else,
-          1. Perform ? ToTemporalOverflow(_options_).
-          1. Let _string_ be ? ToString(_item_).
-          1. Let _result_ be ? ParseTemporalDateTimeString(_string_).
-          1. Assert: ! IsValidISODate(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]) is *true*.
-          1. Assert: ! IsValidTime(_result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]]) is *true*.
-          1. Let _calendar_ be ? ToTemporalCalendarWithISODefault(_result_.[[Calendar]]).
-        1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _calendar_).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_item_.[[ISODate]], MidnightTimeRecord()).
+            1. Return ? CreateTemporalDateTime(_isoDateTime_, _item_.[[Calendar]]).
+          1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_item_).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _item_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~ », «»).
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _overflow_).
+          1. Return ? CreateTemporalDateTime(_result_, _calendar_).
+        1. If _item_ is not a String, throw a *TypeError* exception.
+        1. Let _result_ be ? ParseISODateTime(_item_, « |TemporalDateTimeString[~Zoned]| »).
+        1. If _result_.[[Time]] is ~start-of-day~, let _time_ be MidnightTimeRecord(); else let _time_ be _result_.[[Time]].
+        1. Let _calendar_ be _result_.[[Calendar]].
+        1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _isoDate_ be CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+        1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_isoDate_, _time_).
+        1. Return ? CreateTemporalDateTime(_isoDateTime_, _calendar_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-balanceisodatetime" aoid="BalanceISODateTime">
-      <h1>BalanceISODateTime ( _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ )</h1>
+    <emu-clause id="sec-temporal-balanceisodatetime" type="abstract operation">
+      <h1>
+        BalanceISODateTime (
+          _year_: an integer,
+          _month_: an integer,
+          _day_: an integer,
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Let _balancedTime_ be ! BalanceTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
-        1. Let _balancedDate_ be ! BalanceISODate(_year_, _month_, _day_ + _balancedTime_.[[Days]]).
-        1. Return the Record {
-            [[Year]]: _balancedDate_.[[Year]],
-            [[Month]]: _balancedDate_.[[Month]],
-            [[Day]]: _balancedDate_.[[Day]],
-            [[Hour]]: _balancedTime_.[[Hour]],
-            [[Minute]]: _balancedTime_.[[Minute]],
-            [[Second]]: _balancedTime_.[[Second]],
-            [[Millisecond]]: _balancedTime_.[[Millisecond]],
-            [[Microsecond]]: _balancedTime_.[[Microsecond]],
-            [[Nanosecond]]: _balancedTime_.[[Nanosecond]]
-          }.
+        1. Let _balancedTime_ be BalanceTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Let _balancedDate_ be BalanceISODate(_year_, _month_, _day_ + _balancedTime_.[[Days]]).
+        1. Return CombineISODateAndTimeRecord(_balancedDate_, _balancedTime_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-createtemporaldatetime" aoid="CreateTemporalDateTime">
-      <h1>CreateTemporalDateTime ( _isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _calendar_ [ , _newTarget_ ] )</h1>
+    <emu-clause id="sec-temporal-createtemporaldatetime" type="abstract operation">
+      <h1>
+        CreateTemporalDateTime (
+          _isoDateTime_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          optional _newTarget_: a constructor,
+        ): either a normal completion containing a Temporal.PlainDateTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It creates a Temporal.PlainDateTime instance and fills the internal slots with valid values.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Assert: Type(_calendar_) is Object.
-        1. If ! IsValidISODate(_isoYear_, _isoMonth_, _isoDay_) is *false*, throw a *RangeError* exception.
-        1. If ! IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
-        1. If ! ISODateTimeWithinLimits(_isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, then
+        1. If ISODateTimeWithinLimits(_isoDateTime_) is *false*, then
           1. Throw a *RangeError* exception.
-        1. If _newTarget_ is not present, set it to %Temporal.PlainDateTime%.
-        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainDateTime.prototype%"*, « [[InitializedTemporalDateTime]], [[ISOYear]], [[ISOMonth]], [[ISODay]], [[ISOHour]], [[ISOMinute]], [[ISOSecond]], [[ISOMillisecond]], [[ISOMicrosecond]], [[ISONanosecond]], [[Calendar]] »).
-        1. Set _object_.[[ISOYear]] to _isoYear_.
-        1. Set _object_.[[ISOMonth]] to _isoMonth_.
-        1. Set _object_.[[ISODay]] to _isoDay_.
-        1. Set _object_.[[ISOHour]] to _hour_.
-        1. Set _object_.[[ISOMinute]] to _minute_.
-        1. Set _object_.[[ISOSecond]] to _second_.
-        1. Set _object_.[[ISOMillisecond]] to _millisecond_.
-        1. Set _object_.[[ISOMicrosecond]] to _microsecond_.
-        1. Set _object_.[[ISONanosecond]] to _nanosecond_.
+        1. If _newTarget_ is not present, set _newTarget_ to %Temporal.PlainDateTime%.
+        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.PlainDateTime.prototype%"*, « [[InitializedTemporalDateTime]], [[ISODateTime]], [[Calendar]] »).
+        1. Set _object_.[[ISODateTime]] to _isoDateTime_.
         1. Set _object_.[[Calendar]] to _calendar_.
         1. Return _object_.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-temporaldatetimetostring" aoid="TemporalDateTimeToString">
-      <h1>TemporalDateTimeToString ( _isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _calendar_, _precision_, _showCalendar_ )</h1>
+    <emu-clause id="sec-temporal-isodatetimetostring" type="abstract operation">
+      <h1>
+        ISODateTimeToString (
+          _isoDateTime_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          _precision_: an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+          _showCalendar_: ~auto~, ~always~, ~never~, or ~critical~,
+        ): a String
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It formats an ISO Date-Time Record into an ISO 8601 string, to the precision specified by _precision_.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _isoYear_, _isoMonth_, _isoDay_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Let _year_ be ! PadISOYear(_isoYear_).
-        1. Let _month_ be _isoMonth_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _day_ be _isoDay_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _hour_ be _hour_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _minute_ be _minute_ formatted as a two-digit decimal number, padded to the left with a zero if necessary.
-        1. Let _seconds_ be ! FormatSecondsStringPart(_second_, _millisecond_, _microsecond_, _nanosecond_, _precision_).
-        1. Let _calendarID_ be ? ToString(_calendar_).
-        1. Let _calendarString_ be ! FormatCalendarAnnotation(_calendarID_, _showCalendar_).
-        1. Return the string-concatenation of _year_, the code unit 0x002D (HYPHEN-MINUS), _month_, the code unit 0x002D (HYPHEN-MINUS), _day_, 0x0054 (LATIN CAPITAL LETTER T), _hour_, the code unit 0x003A (COLON), _minute_, _seconds_, and _calendarString_.
+        1. Let _yearString_ be PadISOYear(_isoDateTime_.[[ISODate]].[[Year]]).
+        1. Let _monthString_ be ToZeroPaddedDecimalString(_isoDateTime_.[[ISODate]].[[Month]], 2).
+        1. Let _dayString_ be ToZeroPaddedDecimalString(_isoDateTime_.[[ISODate]].[[Day]], 2).
+        1. Let _subSecondNanoseconds_ be _isoDateTime_.[[Time]].[[Millisecond]] × 10<sup>6</sup> + _isoDateTime_.[[Time]].[[Microsecond]] × 10<sup>3</sup> + _isoDateTime_.[[Time]].[[Nanosecond]].
+        1. Let _timeString_ be FormatTimeString(_isoDateTime_.[[Time]].[[Hour]], _isoDateTime_.[[Time]].[[Minute]], _isoDateTime_.[[Time]].[[Second]], _subSecondNanoseconds_, _precision_).
+        1. Let _calendarString_ be FormatCalendarAnnotation(_calendar_, _showCalendar_).
+        1. Return the string-concatenation of _yearString_, the code unit 0x002D (HYPHEN-MINUS), _monthString_, the code unit 0x002D (HYPHEN-MINUS), _dayString_, 0x0054 (LATIN CAPITAL LETTER T), _timeString_, and _calendarString_.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-compareisodatetime" aoid="CompareISODateTime">
-      <h1>CompareISODateTime ( _y1_, _mon1_, _d1_, _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _y2_, _mon2_, _d2_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_ )</h1>
+    <emu-clause id="sec-temporal-compareisodatetime" type="abstract operation">
+      <h1>
+        CompareISODateTime (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+        ): -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It performs a comparison of two date-times according to ISO 8601 calendar arithmetic.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _y1_, _mon1_, _d1_, _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _y2_, _mon2_, _d2_, _h2_, _min2_, _s2_, _ms2_, _mus2_, and _ns2_ are integers.
-        1. Let _dateResult_ be ! CompareISODate(_y1_, _mon1_, _d1_, _y2_, _mon2_, _d2_).
-        1. If _dateResult_ is not 0, then
-          1. Return _dateResult_.
-        1. Return ! CompareTemporalTime(_h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_).
+        1. Let _dateResult_ be CompareISODate(_isoDateTime1_.[[ISODate]], _isoDateTime2_.[[ISODate]]).
+        1. If _dateResult_ ≠ 0, return _dateResult_.
+        1. Return CompareTimeRecord(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-adddatetime" aoid="AddDateTime">
-      <h1>AddDateTime ( _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _calendar_, _years_, _months_, _weeks_, _days_, _hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_, _options_ )</h1>
-      <p>
-        The abstract operation AddDateTime adds a duration to a combined date and time, according to the reckoning of the given _calendar_.
-      </p>
+    <emu-clause id="sec-temporal-roundisodatetime" type="abstract operation">
+      <h1>
+        RoundISODateTime (
+          _isoDateTime_: an ISO Date-Time Record,
+          _increment_: a positive integer,
+          _unit_: a time unit or ~day~,
+          _roundingMode_: a rounding mode,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds the time part of a combined date and time, carrying over any excess into the date part.</dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. Let _timeResult_ be ! AddTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
-        1. Let _datePart_ be ? CreateTemporalDate(_year_, _month_, _day_, _calendar_).
-        1. Let _dateDuration_ be ? CreateTemporalDuration(_years_, _months_, _weeks_, _days_ + _timeResult_.[[Days]], 0, 0, 0, 0, 0, 0).
-        1. Let _addedDate_ be ? CalendarDateAdd(_calendar_, _datePart_, _dateDuration_, _options_).
-        1. Return the Record {
-            [[Year]]: _addedDate_.[[ISOYear]],
-            [[Month]]: _addedDate_.[[ISOMonth]],
-            [[Day]]: _addedDate_.[[ISODay]],
-            [[Hour]]: _timeResult_.[[Hour]],
-            [[Minute]]: _timeResult_.[[Minute]],
-            [[Second]]: _timeResult_.[[Second]],
-            [[Millisecond]]: _timeResult_.[[Millisecond]],
-            [[Microsecond]]: _timeResult_.[[Microsecond]],
-            [[Nanosecond]]: _timeResult_.[[Nanosecond]]
-          }.
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime_) is *true*.
+        1. Let _roundedTime_ be RoundTime(_isoDateTime_.[[Time]], _increment_, _unit_, _roundingMode_).
+        1. Let _balanceResult_ be BalanceISODate(_isoDateTime_.[[ISODate]].[[Year]], _isoDateTime_.[[ISODate]].[[Month]], _isoDateTime_.[[ISODate]].[[Day]] + _roundedTime_.[[Days]]).
+        1. Return CombineISODateAndTimeRecord(_balanceResult_, _roundedTime_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-roundisodatetime" aoid="RoundISODateTime">
-      <h1>RoundISODateTime ( _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _increment_, _unit_, _roundingMode_ [ , _dayLength_ ] )</h1>
-      <p>
-        The abstract operation RoundISODateTime rounds the time part of a combined date and time, carrying over any excess into the date part.
-      </p>
+    <emu-clause id="sec-temporal-differenceisodatetime" type="abstract operation">
+      <h1>
+        DifferenceISODateTime (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          _largestUnit_: a Temporal unit,
+        ): either a normal completion containing an Internal Duration Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The returned Internal Duration Record contains the elapsed duration from a first date and time, until a second date and time, according to the reckoning of the given calendar.
+          The given date and time units are all in the ISO 8601 calendar.
+        </dd>
+      </dl>
       <emu-alg>
-        1. Assert: _year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, and _nanosecond_ are integers.
-        1. If _dayLength_ is not present, set _dayLength_ to 8.64 × 10<sup>13</sup>.
-        1. Let _roundedTime_ be ! RoundTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _increment_, _unit_, _roundingMode_, _dayLength_).
-        1. Let _balanceResult_ be ! BalanceISODate(_year_, _month_, _day_ + _roundedTime_.[[Days]]).
-        1. Return the Record {
-            [[Year]]: _balanceResult_.[[Year]],
-            [[Month]]: _balanceResult_.[[Month]],
-            [[Day]]: _balanceResult_.[[Day]],
-            [[Hour]]: _roundedTime_.[[Hour]],
-            [[Minute]]: _roundedTime_.[[Minute]],
-            [[Second]]: _roundedTime_.[[Second]],
-            [[Millisecond]]: _roundedTime_.[[Millisecond]],
-            [[Microsecond]]: _roundedTime_.[[Microsecond]],
-            [[Nanosecond]]: _roundedTime_.[[Nanosecond]]
-          }.
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime1_) is *true*.
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime2_) is *true*.
+        1. Let _timeDuration_ be DifferenceTime(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
+        1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
+        1. Let _dateSign_ be CompareISODate(_isoDateTime2_.[[ISODate]], _isoDateTime1_.[[ISODate]]).
+        1. Let _adjustedDate_ be _isoDateTime2_.[[ISODate]].
+        1. If _timeSign_ = -_dateSign_, then
+          1. Set _adjustedDate_ to BalanceISODate(_adjustedDate_.[[Year]], _adjustedDate_.[[Month]], _adjustedDate_.[[Day]] + _timeSign_).
+          1. Set _timeDuration_ to ? Add24HourDaysToTimeDuration(_timeDuration_, -_timeSign_).
+        1. Let _dateLargestUnit_ be LargerOfTwoTemporalUnits(~day~, _largestUnit_).
+        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _isoDateTime1_.[[ISODate]], _adjustedDate_, _dateLargestUnit_).
+        1. If _largestUnit_ is not _dateLargestUnit_, then
+          1. Set _timeDuration_ to ? Add24HourDaysToTimeDuration(_timeDuration_, _dateDifference_.[[Days]]).
+          1. Set _dateDifference_.[[Days]] to 0.
+        1. Return ? CombineDateAndTimeDuration(_dateDifference_, _timeDuration_).
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-temporal-differenceisodatetime" aoid="DifferenceISODateTime">
-      <h1>DifferenceISODateTime ( _y1_, _mon1_, _d1_, _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _y2_, _mon2_, _d2_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_, _calendar_, _largestUnit_ [ , _options_ ] )</h1>
-      <p>
-        The abstract operation DifferenceISODateTime returns a Record with the elapsed duration from a first date and time, until a second date and time, according to the reckoning of the given _calendar_.
-        The given date and time units are all in the ISO 8601 calendar.
-        The _largestUnit_ and _options_ arguments are used in _calendar_'s `dateUntil` method.
-      </p>
+    <emu-clause id="sec-temporal-differenceplaindatetimewithrounding" type="abstract operation">
+      <h1>
+        DifferencePlainDateTimeWithRounding (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          _largestUnit_: a Temporal unit,
+          _roundingIncrement_: a positive integer,
+          _smallestUnit_: a Temporal unit,
+          _roundingMode_: a rounding mode,
+        ): either a normal completion containing an Internal Duration Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
       <emu-alg>
-        1. Assert: _y1_, _mon1_, _d1_, _h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _y2_, _mon2_, _d2_, _h2_, _min2_, _s2_, _ms2_, _mus2_, and _ns2_ are integers.
-        1. If _options_ is not present, set _options_ to ! OrdinaryObjectCreate(*null*).
-        1. Let _timeDifference_ be ! DifferenceTime(_h1_, _min1_, _s1_, _ms1_, _mus1_, _ns1_, _h2_, _min2_, _s2_, _ms2_, _mus2_, _ns2_).
-        1. Let _timeSign_ be ! DurationSign(0, 0, 0, _timeDifference_.[[Days]], _timeDifference_.[[Hours]], _timeDifference_.[[Minutes]], _timeDifference_.[[Seconds]], _timeDifference_.[[Milliseconds]], _timeDifference_.[[Microseconds]], _timeDifference_.[[Nanoseconds]]).
-        1. Let _dateSign_ be ! CompareISODate(_y2_, _mon2_, _d2_, _y1_, _mon1_, _d1_).
-        1. Let _balanceResult_ be ! BalanceISODate(_y1_, _mon1_, _d1_ + _timeDifference_.[[Days]]).
-        1. If _timeSign_ is -_dateSign_, then
-          1. Set _balanceResult_ to ! BalanceISODate(_balanceResult_.[[Year]], _balanceResult_.[[Month]], _balanceResult_.[[Day]] - _timeSign_).
-          1. Set _timeDifference_ to ? BalanceDuration(-_timeSign_, _timeDifference_.[[Hours]], _timeDifference_.[[Minutes]], _timeDifference_.[[Seconds]], _timeDifference_.[[Milliseconds]], _timeDifference_.[[Microseconds]], _timeDifference_.[[Nanoseconds]], _largestUnit_).
-        1. Let _date1_ be ? CreateTemporalDate(_balanceResult_.[[Year]], _balanceResult_.[[Month]], _balanceResult_.[[Day]], _calendar_).
-        1. Let _date2_ be ? CreateTemporalDate(_y2_, _mon2_, _d2_, _calendar_).
-        1. Let _dateLargestUnit_ be ! LargerOfTwoTemporalUnits(*"day"*, _largestUnit_).
-        1. Let _untilOptions_ be ? MergeLargestUnitOption(_options_, _dateLargestUnit_).
-        1. Let _dateDifference_ be ? CalendarDateUntil(_calendar_, _date1_, _date2_, _untilOptions_).
-        1. Let _balanceResult_ be ? BalanceDuration(_dateDifference_.[[Days]], _timeDifference_.[[Hours]], _timeDifference_.[[Minutes]], _timeDifference_.[[Seconds]], _timeDifference_.[[Milliseconds]], _timeDifference_.[[Microseconds]], _timeDifference_.[[Nanoseconds]], _largestUnit_).
-        1. Return the Record {
-            [[Years]]: _dateDifference_.[[Years]],
-            [[Months]]: _dateDifference_.[[Months]],
-            [[Weeks]]: _dateDifference_.[[Weeks]],
-            [[Days]]: _balanceResult_.[[Days]],
-            [[Hours]]: _balanceResult_.[[Hours]],
-            [[Minutes]]: _balanceResult_.[[Minutes]],
-            [[Seconds]]: _balanceResult_.[[Seconds]],
-            [[Milliseconds]]: _balanceResult_.[[Milliseconds]],
-            [[Microseconds]]: _balanceResult_.[[Microseconds]],
-            [[Nanoseconds]]: _balanceResult_.[[Nanoseconds]]
-          }.
+        1. If CompareISODateTime(_isoDateTime1_, _isoDateTime2_) = 0, then
+          1. Return ! CombineDateAndTimeDuration(ZeroDateDuration(), 0).
+        1. Let _diff_ be ? DifferenceISODateTime(_isoDateTime1_, _isoDateTime2_, _calendar_, _largestUnit_).
+        1. If _smallestUnit_ is ~nanosecond~ and _roundingIncrement_ = 1, return _diff_.
+        1. Let _destEpochNs_ be GetUTCEpochNanoseconds(_isoDateTime2_).
+        1. Return ? RoundRelativeDuration(_diff_, _destEpochNs_, _isoDateTime1_, ~unset~, _calendar_, _largestUnit_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-differenceplaindatetimewithtotal" type="abstract operation">
+      <h1>
+        DifferencePlainDateTimeWithTotal (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          _unit_: a Temporal unit,
+        ): either a normal completion containing a mathematical value or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. If CompareISODateTime(_isoDateTime1_, _isoDateTime2_) = 0, then
+          1. Return 0.
+        1. Let _diff_ be ? DifferenceISODateTime(_isoDateTime1_, _isoDateTime2_, _calendar_, _unit_).
+        1. If _unit_ is ~nanosecond~, return _diff_.[[Time]].
+        1. Let _destEpochNs_ be GetUTCEpochNanoseconds(_isoDateTime2_).
+        1. Return ? TotalRelativeDuration(_diff_, _destEpochNs_, _isoDateTime1_, ~unset~, _calendar_, _unit_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-differencetemporalplaindatetime" type="abstract operation">
+      <h1>
+        DifferenceTemporalPlainDateTime (
+          _operation_: ~since~ or ~until~,
+          _dateTime_: a Temporal.PlainDateTime,
+          _other_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.Duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It computes the difference between the two times represented by _dateTime_ and _other_, optionally rounds it, and returns it as a Temporal.Duration object.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _other_ to ? ToTemporalDateTime(_other_).
+        1. If CalendarEquals(_dateTime_.[[Calendar]], _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _settings_ be ? GetDifferenceSettings(_operation_, _resolvedOptions_, ~datetime~, « », ~nanosecond~, ~day~).
+        1. If CompareISODateTime(_dateTime_.[[ISODateTime]], _other_.[[ISODateTime]]) = 0, then
+          1. Return ! CreateTemporalDuration(0, 0, 0, 0, 0, 0, 0, 0, 0, 0).
+        1. Let _internalDuration_ be ? DifferencePlainDateTimeWithRounding(_dateTime_.[[ISODateTime]], _other_.[[ISODateTime]], _dateTime_.[[Calendar]], _settings_.[[LargestUnit]], _settings_.[[RoundingIncrement]], _settings_.[[SmallestUnit]], _settings_.[[RoundingMode]]).
+        1. Let _result_ be ? TemporalDurationFromInternal(_internalDuration_, _settings_.[[LargestUnit]]).
+        1. If _operation_ is ~since~, set _result_ to CreateNegatedTemporalDuration(_result_).
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-adddurationtodatetime" type="abstract operation">
+      <h1>
+        AddDurationToDateTime (
+          _operation_: ~add~ or ~subtract~,
+          _dateTime_: a Temporal.PlainDateTime,
+          _temporalDurationLike_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.PlainDateTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It adds/subtracts _temporalDurationLike_ to/from _dateTime_, returning a point in time that is in the future/past relative to _datetime_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _duration_ be ? ToTemporalDuration(_temporalDurationLike_).
+        1. If _operation_ is ~subtract~, set _duration_ to CreateNegatedTemporalDuration(_duration_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _internalDuration_ be ToInternalDurationRecordWith24HourDays(_duration_).
+        1. Let _timeResult_ be AddTime(_dateTime_.[[ISODateTime]].[[Time]], _internalDuration_.[[Time]]).
+        1. Let _dateDuration_ be ? AdjustDateDurationRecord(_internalDuration_.[[Date]], _timeResult_.[[Days]]).
+        1. Let _addedDate_ be ? CalendarDateAdd(_dateTime_.[[Calendar]], _dateTime_.[[ISODateTime]].[[ISODate]], _dateDuration_, _overflow_).
+        1. Let _result_ be CombineISODateAndTimeRecord(_addedDate_, _timeResult_).
+        1. Return ? CreateTemporalDateTime(_result_, _dateTime_.[[Calendar]]).
       </emu-alg>
     </emu-clause>
   </emu-clause>

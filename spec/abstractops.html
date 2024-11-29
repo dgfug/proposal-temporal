@@ -1,695 +1,1010 @@
-<!doctype html>
+<!DOCTYPE html>
 <meta charset="utf8">
 
 <emu-clause id="sec-temporal-abstract-ops">
-  <h1>Abstract operations</h1>
+  <h1>Abstract Operations</h1>
 
-  <!-- Based on ECMA-262 IterableToList -->
-  <emu-clause id="sec-iterabletolistoftype" aoid="IterableToListOfType">
-    <h1>IterableToListOfType ( _items_, _elementTypes_ )</h1>
-    <p>
-      The abstract operation IterableToListOfType takes arguments _items_ and _elementTypes_ (a List of names of ECMAScript Language Types).
-      It is used to create a List value whose elements are provided by the values of the iterable _items_.
-      _elementTypes_ contains the names of ECMAScript Language Types that are allowed for element values of the List that is created.
-      It performs the following steps when called:
-    </p>
+  <emu-clause id="sec-isodatetoepochdays" type="abstract operation">
+    <h1>
+      ISODateToEpochDays (
+        _year_: an integer,
+        _month_: an integer,
+        _date_: an integer,
+      ): an integer
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It calculates a number of days.</dd>
+    </dl>
     <emu-alg>
-      1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~).
-      1. Let _values_ be a new empty List.
-      1. Let _next_ be *true*.
-      1. Repeat, while _next_ is not *false*,
-        1. Set _next_ to ? IteratorStep(_iteratorRecord_).
-        1. If _next_ is not *false*, then
-          1. Let _nextValue_ be ? IteratorValue(_next_).
-          1. If Type(_nextValue_) is not an element of _elementTypes_, then
-            1. Let _completion_ be ThrowCompletion(a newly created *TypeError* object).
-            1. Return ? IteratorClose(_iteratorRecord_, _completion_).
-          1. Append _nextValue_ to the end of the List _values_.
-      1. Return _values_.
+      1. Let _resolvedYear_ be _year_ + floor(_month_ / 12).
+      1. Let _resolvedMonth_ be _month_ modulo 12.
+      1. Find a time _t_ such that EpochTimeToEpochYear(_t_) = _resolvedYear_, EpochTimeToMonthInYear(_t_) = _resolvedMonth_, and EpochTimeToDate(_t_) = 1.
+      1. Return EpochTimeToDayNumber(_t_) + _date_ - 1.
     </emu-alg>
+    <emu-note type="editor"> This operation corresponds to ECMA-262 operation MakeDay(_year_, _month_, _date_). It calculates the result in mathematical values instead of Number values. These two operations would be unified when https://github.com/tc39/ecma262/issues/1087 is fixed.</emu-note>
   </emu-clause>
 
-  <!-- Copied from ECMA-402 GetOptionsObject -->
-  <emu-clause id="sec-getoptionsobject" aoid="GetOptionsObject">
-    <h1>GetOptionsObject ( _options_ )</h1>
-    <p>
-      The abstract operation GetOptionsObject returns an Object suitable for use with GetOption, either _options_ itself or a default empty Object.
-      It throws a TypeError if _options_ is not undefined and not an Object.
-    </p>
+  <emu-clause id="sec-epochdaystoepochms" type="abstract operation">
+    <h1>
+      EpochDaysToEpochMs (
+        _day_: an integer,
+        _time_: an integer,
+      ): an integer
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It calculates a number of milliseconds.</dd>
+    </dl>
     <emu-alg>
-      1. If _options_ is *undefined*, then
-        1. Return ! OrdinaryObjectCreate(*null*).
-      1. If Type(_options_) is Object, then
-        1. Return _options_.
-      1. Throw a *TypeError* exception.
+      1. Return _day_ × ℝ(msPerDay) + _time_.
     </emu-alg>
+    <emu-note type="editor"> This operation corresponds to ECMA-262 operation MakeDate(_date_, _time_). It calculates the result in mathematical values instead of Number values. These two operations would be unified when https://github.com/tc39/ecma262/issues/1087 is fixed.</emu-note>
   </emu-clause>
 
-  <!-- Based on ECMA-402 GetOption -->
-  <emu-clause id="sec-getoption" aoid="GetOption">
-    <h1>GetOption ( _options_, _property_, _types_, _values_, _fallback_ )</h1>
-
-    <p>
-      The abstract operation GetOption extracts the value of the property named _property_ from the provided _options_ object, checks whether its type is one of a List of allowed _types_ and converts it to the last one if not, checks whether it is one of a List of allowed _values_, and fills in a _fallback_ value if necessary. If _values_ is ~empty~, there is no fixed set of values and any is permitted.
-    </p>
-
-    <emu-alg>
-      1. Assert: Type(_options_) is Object.
-      1. Assert: Each element of _types_ is Boolean, String, or Number.
-      1. Let _value_ be ? Get(_options_, _property_).
-      1. If _value_ is *undefined*, return _fallback_.
-      1. If _types_ contains Type(_value_), then
-        1. Let _type_ be Type(_value_).
-      1. Else,
-        1. Let _type_ be the last element of _types_.
-      1. If _type_ is Boolean, then
-        1. Set _value_ to ! ToBoolean(_value_).
-      1. Else if _type_ is Number, then
-        1. Set _value_ to ? ToNumber(_value_).
-        1. If _value_ is *NaN*, throw a *RangeError* exception.
-      1. Else,
-        1. Set _value_ to ? ToString(_value_).
-      1. If _values_ is not ~empty~, then
-        1. If _values_ does not contain _value_, throw a *RangeError* exception.
-      1. Return _value_.
-    </emu-alg>
+  <emu-clause id="sec-date-equations">
+    <h1>Date Equations</h1>
+    <p>A given time _t_ belongs to day number</p>
+    <emu-eqn id="eqn-EpochTimeToDayNumber" aoid="EpochTimeToDayNumber">EpochTimeToDayNumber(_t_) = floor(_t_ / ℝ(msPerDay))</emu-eqn>
+    <p>Number of days in year are given by:</p>
+    <emu-eqn id="eqn-mathematicaldaysinyear" aoid="MathematicalDaysInYear">
+      MathematicalDaysInYear(_y_)
+        = 365 if ((_y_) modulo 4) ≠ 0
+        = 366 if ((_y_) modulo 4) = 0 and ((_y_) modulo 100) ≠ 0
+        = 365 if ((_y_) modulo 100) = 0 and ((_y_) modulo 400) ≠ 0
+        = 366 if ((_y_) modulo 400) = 0
+    </emu-eqn>
+    <p>The day number of the first day of year _y_ is given by:</p>
+    <emu-eqn id="eqn-epochdaynumberforyear" aoid="EpochDayNumberForYear">EpochDayNumberForYear(_y_) = 365 × (_y_ - 1970) + floor((_y_ - 1969) / 4) - floor((_y_ - 1901) / 100) + floor((_y_ - 1601) / 400)</emu-eqn>
+    <p>The time of the start of a year is:</p>
+    <emu-eqn id="eqn-epochtimeforyear" aoid="EpochTimeForYear">EpochTimeForYear(_y_) = ℝ(msPerDay) × EpochDayNumberForYear(_y_)</emu-eqn>
+    <p>Epoch year from time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetoepochyear" aoid="EpochTimeToEpochYear">EpochTimeToEpochYear(_t_) = the largest integral Number _y_ (closest to +∞) such that EpochTimeForYear(_y_) ≤ _t_</emu-eqn>
+    <p>The following function returns 1 for a time within leap year otherwise it returns 0:</p>
+    <emu-eqn id="eqn-mathematicalinleapyear" aoid="MathematicalInLeapYear">
+      MathematicalInLeapYear(_t_)
+        = 0 if MathematicalDaysInYear(EpochTimeToEpochYear(_t_)) = 365
+        = 1 if MathematicalDaysInYear(EpochTimeToEpochYear(_t_)) = 366
+    </emu-eqn>
+    <p>The month number for a time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetomonthinyear" aoid="EpochTimeToMonthInYear">
+      EpochTimeToMonthInYear(_t_)
+        = 0 if 0 ≤ EpochTimeToDayInYear(_t_) &lt; 31
+        = 1 if 31 ≤ EpochTimeToDayInYear(_t_) &lt; 59 + MathematicalInLeapYear(_t_)
+        = 2 if 59 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 90 + MathematicalInLeapYear(_t_)
+        = 3 if 90 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 120 + MathematicalInLeapYear(_t_)
+        = 4 if 120 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 151 + MathematicalInLeapYear(_t_)
+        = 5 if 151 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 181 + MathematicalInLeapYear(_t_)
+        = 6 if 181 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 212 + MathematicalInLeapYear(_t_)
+        = 7 if 212 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 243 + MathematicalInLeapYear(_t_)
+        = 8 if 243 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 273 + MathematicalInLeapYear(_t_)
+        = 9 if 273 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 304 + MathematicalInLeapYear(_t_)
+        = 10 if 304 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 334 + MathematicalInLeapYear(_t_)
+        = 11 if 334 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 365 + MathematicalInLeapYear(_t_)
+    </emu-eqn>
+    <p>where</p>
+    <emu-eqn id="eqn-epochtimetodayinyear" aoid="EpochTimeToDayInYear">EpochTimeToDayInYear(_t_) = EpochTimeToDayNumber(_t_) - EpochDayNumberForYear(EpochTimeToEpochYear(_t_))</emu-eqn>
+    <p>A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December. Note that <emu-eqn>EpochTimeToMonthInYear(0) = 0</emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+    <p>The date number for a time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetodate" aoid="EpochTimeToDate">
+      EpochTimeToDate(_t_)
+        = EpochTimeToDayInYear(_t_) + 1 if EpochTimeToMonthInYear(_t_) = 0
+        = EpochTimeToDayInYear(_t_) - 30 if EpochTimeToMonthInYear(_t_) = 1
+        = EpochTimeToDayInYear(_t_) - 58 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 2
+        = EpochTimeToDayInYear(_t_) - 89 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 3
+        = EpochTimeToDayInYear(_t_) - 119 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 4
+        = EpochTimeToDayInYear(_t_) - 150 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 5
+        = EpochTimeToDayInYear(_t_) - 180 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 6
+        = EpochTimeToDayInYear(_t_) - 211 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 7
+        = EpochTimeToDayInYear(_t_) - 242 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 8
+        = EpochTimeToDayInYear(_t_) - 272 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 9
+        = EpochTimeToDayInYear(_t_) - 303 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 10
+        = EpochTimeToDayInYear(_t_) - 333 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 11
+    </emu-eqn>
+    <p>The weekday for a particular time _t_ is defined as:</p>
+    <emu-eqn id="eqn-epochtimetoweekday" aoid="EpochTimeToWeekDay">EpochTimeToWeekDay(_t_) =(EpochTimeToDayNumber(_t_) + 4) modulo 7</emu-eqn>
+    <p>A weekday value of 0 specifies Sunday; 1 specifies Monday; 2 specifies Tuesday; 3 specifies Wednesday; 4 specifies Thursday; 5 specifies Friday; and 6 specifies Saturday. Note that <emu-eqn>EpochTimeToWeekDay(0) = 4</emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+    <emu-note type="editor"> These equations correspond to ECMA-262 equations defined in <emu-xref href="#sec-daysinyear">Days in Year</emu-xref>, <emu-xref href="#sec-monthfromtime">Month from Time</emu-xref>, <emu-xref href="#sec-datefromtime">Date from Time</emu-xref>, <emu-xref href="#sec-weekday">Week Day</emu-xref> respectively. These calculate the result in mathematical values instead of Number values. These equations would be unified when https://github.com/tc39/ecma262/issues/1087 is fixed.</emu-note>
+    <emu-note type="editor"> Note that the operation EpochTimeToMonthInYear(_t_) uses 0-based months unlike rest of Temporal since it's intended to be unified with MonthFromTime(_t_) when the above mentioned issue is fixed.</emu-note>
   </emu-clause>
 
-  <emu-clause id="sec-getstringornumberoption" aoid="GetStringOrNumberOption">
-    <h1>GetStringOrNumberOption ( _options_, _property_, _stringValues_, _minimum_, _maximum_, _fallback_ )</h1>
-    <p>
-      The abstract operation GetStringOrNumberOption extracts the value of the property named _property_ from the provided _options_ object.
-      If the value is a Number value, the operation checks whether it is in the allowed range.
-      Otherwise, the operation converts it to a string and checks whether it is one of a List of allowed _stringValues_, and fills in a _fallback_ value if necessary.
-    </p>
+  <emu-clause id="sec-checkisodaysrange" type="abstract operation">
+    <h1>
+      CheckISODaysRange (
+        _isoDate_: an ISO Date Record,
+      ): either a normal completion containing ~unused~ or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It checks that the given date is within the range of 10<sup>8</sup> days from the epoch.</dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_options_) is Object.
-      1. Let _value_ be ? GetOption(_options_, _property_, « Number, String », ~empty~, _fallback_).
-      1. If Type(_value_) is Number, then
-        1. If _value_ &lt; _minimum_ or _value_ &gt; _maximum_, throw a *RangeError* exception.
-        1. Return floor(ℝ(_value_)).
-      1. Assert: Type(_value_) is String.
-      1. If _stringValues_ does not contain _value_, throw a *RangeError* exception.
-      1. Return _value_.
+      1. If abs(ISODateToEpochDays(_isoDate_.[[Year]], _isoDate_.[[Month]] - 1, _isoDate_.[[Day]])) > 10<sup>8</sup>, then
+        1. Throw a *RangeError* exception.
+      1. Return ~unused~.
     </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-durationhandlefractions" aoid="DurationHandleFractions">
-    <h1>DurationHandleFractions ( _fHours_, _minutes_, _fMinutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_ )</h1>
-    <emu-alg>
-      1. If _fHours_ is not equal to 0, then
-        1. If any of _minutes_, _fMinutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_ is not 0, throw a *RangeError* exception.
-        1. Let _mins_ be _fHours_ × 60.
-        1. Set _minutes_ to floor(_mins_).
-        1. Set _fMinutes_ to remainder(_mins_, 1).
-      1. If _fMinutes_ is not equal to 0, then
-        1. If any of _seconds_, _milliseconds_, _microseconds_, _nanoseconds_ is not 0, throw a *RangeError* exception.
-        1. Let _secs_ be _fMinutes_ × 60.
-        1. Set _seconds_ to floor(_secs_).
-        1. Let _fSeconds_ be remainder(_secs_, 1).
-        1. If _fSeconds_ is not equal to 0, then
-          1. Let _mils_ be _fSeconds_ × 1000.
-          1. Set _milliseconds_ to floor(_mils_).
-          1. Let _fMilliseconds_ be remainder(_mils_, 1).
-          1. If _fMilliseconds_ is not equal to 0, then
-            1. Let _mics_ be _fMilliseconds_ × 1000.
-            1. Set _microseconds_ to floor(_mics_).
-            1. Let _fMicroseconds_ be remainder(_mics_, 1).
-            1. If _fMicroseconds_ is not equal to 0, then
-              1. Let _nans_ be _fMicroseconds_ × 1000.
-              1. Set _nanoseconds_ to floor(_nans_).
-      1. Return {
-        [[Minutes]]: _minutes_,
-        [[Seconds]]: _seconds_,
-        [[Milliseconds]]: _milliseconds_,
-        [[Microseconds]]: _microseconds_,
-        [[Nanoseconds]]: _nanoseconds_
-      }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-totemporaloverflow" aoid="ToTemporalOverflow">
-    <h1>ToTemporalOverflow ( _normalizedOptions_ )</h1>
-    <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"overflow"*, « String », « *"constrain"*, *"reject"* », *"constrain"*).
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-totemporaldisambiguation" aoid="ToTemporalDisambiguation">
-    <h1>ToTemporalDisambiguation ( _normalizedOptions_ )</h1>
-    <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"disambiguation"*, « String », « *"compatible"*, *"earlier"*, *"later"*, *"reject"* », *"compatible"*).
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-totemporalroundingmode" aoid="ToTemporalRoundingMode">
-    <h1>ToTemporalRoundingMode ( _normalizedOptions_, _fallback_ )</h1>
-    <p>
-      The abstract operation ToTemporalRoundingMode extracts the value of the property named *"roundingMode"* from _normalizedOptions_ and makes sure it is a valid value for the option.
-      The value _fallback_ is returned if the property is not present.
-    </p>
     <emu-note type="editor">
-      <p>
-        The rounding modes accepted by this abstract operation (and therefore in the Temporal API) are intended to be the same as whatever is eventually standardized in the <a href="https://github.com/tc39/proposal-intl-numberformat-v3">Intl.NumberFormat V3</a> proposal.
-      </p>
+      This operation is solely present to ensure that GetUTCEpochNanoseconds is not called with numbers that are too large.
+      It is distinct from ISODateWithinLimits, which uses GetUTCEpochNanoseconds.
+      This operation can be removed with no observable effect when https://github.com/tc39/ecma262/issues/1087 is fixed.
     </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-units">
+    <h1>Units</h1>
+    <p>
+      Time is reckoned using multiple units.
+      These units are listed in <emu-xref href="#table-temporal-units"></emu-xref>.
+    </p>
+    <p>
+      A <dfn>Temporal unit</dfn> is a value listed in the "Value" column of <emu-xref href="#table-temporal-units"></emu-xref>.
+      A <dfn>calendar unit</dfn> is a Temporal unit for which IsCalendarUnit returns *true*.
+      A <dfn>date unit</dfn> is a Temporal unit for which the corresponding "Category" value in <emu-xref href="#table-temporal-units"></emu-xref> is ~date~, and a <dfn>time unit</dfn> is a Temporal unit for which the corresponding "Category" value is ~time~.
+    </p>
+    <emu-table id="table-temporal-units">
+      <emu-caption>Temporal units by descending magnitude</emu-caption>
+      <table class="real-table">
+        <thead>
+          <tr>
+            <th>Value</th>
+            <th>Singular property name</th>
+            <th>Plural property name</th>
+            <th>Category</th>
+            <th>Length in nanoseconds</th>
+            <th>Maximum duration rounding increment</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>~year~</td>
+          <td>*"year"*</td>
+          <td>*"years"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~month~</td>
+          <td>*"month"*</td>
+          <td>*"months"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~week~</td>
+          <td>*"week"*</td>
+          <td>*"weeks"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~day~</td>
+          <td>*"day"*</td>
+          <td>*"days"*</td>
+          <td>~date~</td>
+          <td>nsPerDay</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~hour~</td>
+          <td>*"hour"*</td>
+          <td>*"hours"*</td>
+          <td>~time~</td>
+          <td>3.6 × 10<sup>12</sup></td>
+          <td>24</td>
+        </tr>
+
+        <tr>
+          <td>~minute~</td>
+          <td>*"minute"*</td>
+          <td>*"minutes"*</td>
+          <td>~time~</td>
+          <td>6 × 10<sup>10</sup></td>
+          <td>60</td>
+        </tr>
+
+        <tr>
+          <td>~second~</td>
+          <td>*"second"*</td>
+          <td>*"seconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>9</sup></td>
+          <td>60</td>
+        </tr>
+
+        <tr>
+          <td>~millisecond~</td>
+          <td>*"millisecond"*</td>
+          <td>*"milliseconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>6</sup></td>
+          <td>1000</td>
+        </tr>
+
+        <tr>
+          <td>~microsecond~</td>
+          <td>*"microsecond"*</td>
+          <td>*"microseconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>3</sup></td>
+          <td>1000</td>
+        </tr>
+
+        <tr>
+          <td>~nanosecond~</td>
+          <td>*"nanosecond"*</td>
+          <td>*"nanoseconds"*</td>
+          <td>~time~</td>
+          <td>1</td>
+          <td>1000</td>
+        </tr>
+      </table>
+    </emu-table>
+    <emu-note>
+      The length of a day is given as nsPerDay in the table.
+      Note that changes in the UTC offset of a time zone may result in longer or shorter days, so care should be taken when using this value in the context of `Temporal.ZonedDateTime`.
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-gettemporaloverflowoption" type="abstract operation">
+    <h1>
+      GetTemporalOverflowOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~constrain~ or ~reject~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"overflow"* property of _options_, returning a default if absent.</dd>
+    </dl>
     <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"roundingMode"*, « String », « *"ceil"*, *"floor"*, *"trunc"*, *"halfExpand"* », _fallback_).
+      1. Let _stringValue_ be ? GetOption(_options_, *"overflow"*, ~string~, « *"constrain"*, *"reject"* », *"constrain"*).
+      1. If _stringValue_ is *"constrain"*, return ~constrain~.
+      1. Return ~reject~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-negatetemporalroundingmode" aoid="NegateTemporalRoundingMode">
-    <h1>NegateTemporalRoundingMode ( _roundingMode_ )</h1>
-    <p>
-      The abstract operation NegateTemporalRoundingMode returns the correct rounding mode to use when rounding the negative of a value that was originally given with _roundingMode_.
-    </p>
-    <emu-note type="editor">
-      <p>
-        The rounding modes accepted by this abstract operation (and therefore in the Temporal API) are intended to be the same as whatever is eventually standardized in the <a href="https://github.com/tc39/proposal-intl-numberformat-v3">Intl.NumberFormat V3</a> proposal.
-      </p>
-    </emu-note>
+  <emu-clause id="sec-temporal-gettemporaldisambiguationoption" type="abstract operation">
+    <h1>
+      GetTemporalDisambiguationOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~compatible~, ~earlier~, ~later~, or ~reject~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"disambiguation"* property of _options_, returning a default if absent.</dd>
+    </dl>
     <emu-alg>
-      1. If _roundingMode_ is *"ceil"*, return *"floor"*.
-      1. If _roundingMode_ is *"floor"*, return *"ceil"*.
+      1. Let _stringValue_ be ? GetOption(_options_, *"disambiguation"*, ~string~, « *"compatible"*, *"earlier"*, *"later"*, *"reject"* », *"compatible"*).
+      1. If _stringValue_ is *"compatible"*, return ~compatible~.
+      1. If _stringValue_ is *"earlier"*, return ~earlier~.
+      1. If _stringValue_ is *"later"*, return ~later~.
+      1. Return ~reject~.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-negateroundingmode" type="abstract operation">
+    <h1>
+      NegateRoundingMode (
+        _roundingMode_: a rounding mode,
+      ): a rounding mode
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns the correct rounding mode to use when rounding the negative of a value that was originally given with _roundingMode_.</dd>
+    </dl>
+    <emu-alg>
+      1. If _roundingMode_ is ~ceil~, return ~floor~.
+      1. If _roundingMode_ is ~floor~, return ~ceil~.
+      1. If _roundingMode_ is ~half-ceil~, return ~half-floor~.
+      1. If _roundingMode_ is ~half-floor~, return ~half-ceil~.
       1. Return _roundingMode_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-totemporaloffset" aoid="ToTemporalOffset">
-    <h1>ToTemporalOffset ( _normalizedOptions_, _fallback_ )</h1>
-    <p>
-      The abstract operation ToTemporalOffset extracts the value of the property named *"offset"* from _normalizedOptions_ and makes sure it is a valid value for the option.
-      The value _fallback_ is returned if the property is not present.
-    </p>
+  <emu-clause id="sec-temporal-gettemporaloffsetoption" type="abstract operation">
+    <h1>
+      GetTemporalOffsetOption (
+        _options_: an Object,
+        _fallback_: ~prefer~, ~use~, ~ignore~, or ~reject~,
+      ): either a normal completion containing either ~prefer~, ~use~, ~ignore~, or ~reject~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"offset"* property of _options_, returning _fallback_ as a default if absent.</dd>
+    </dl>
     <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"offset"*, « String », « *"prefer"*, *"use"*, *"ignore"*, *"reject"* », _fallback_).
+      1. If _fallback_ is ~prefer~, let _stringFallback_ be *"prefer"*.
+      1. Else if _fallback_ is ~use~, let _stringFallback_ be *"use"*.
+      1. Else if _fallback_ is ~ignore~, let _stringFallback_ be *"ignore"*.
+      1. Else, let _stringFallback_ be *"reject"*.
+      1. Let _stringValue_ be ? GetOption(_options_, *"offset"*, ~string~, « *"prefer"*, *"use"*, *"ignore"*, *"reject"* », _stringFallback_).
+      1. If _stringValue_ is *"prefer"*, return ~prefer~.
+      1. If _stringValue_ is *"use"*, return ~use~.
+      1. If _stringValue_ is *"ignore"*, return ~ignore~.
+      1. Return ~reject~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-toshowcalendaroption" aoid="ToShowCalendarOption">
-    <h1>ToShowCalendarOption ( _normalizedOptions_ )</h1>
-    <p>
-      The abstract operation ToShowCalendarOption extracts the value of the property named *"calendarName"* from _normalizedOptions_ and makes sure it is a valid value for the option.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalshowcalendarnameoption" type="abstract operation">
+    <h1>
+      GetTemporalShowCalendarNameOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~auto~, ~always~, ~never~, or ~critical~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"calendarName"* property from _options_, returning a default if absent.</dd>
+    </dl>
     <emu-note>
       This property is used in `toString` methods in Temporal to control whether a calendar annotation should be output.
     </emu-note>
     <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"calendarName"*, « String », « *"auto"*, *"always"*, *"never"* », *"auto"*).
+      1. Let _stringValue_ be ? GetOption(_options_, *"calendarName"*, ~string~, « *"auto"*, *"always"*, *"never"*, *"critical"* », *"auto"*).
+      1. If _stringValue_ is *"always"*, return ~always~.
+      1. If _stringValue_ is *"never"*, return ~never~.
+      1. If _stringValue_ is *"critical"*, return ~critical~.
+      1. Return ~auto~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-toshowtimezonenameoption" aoid="ToShowTimeZoneNameOption">
-    <h1>ToShowTimeZoneNameOption ( _normalizedOptions_ )</h1>
-    <p>
-      The abstract operation ToShowTimeZoneNameOption extracts the value of the property named *"timeZoneName"* from _normalizedOptions_ and makes sure it is a valid value for the option.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalshowtimezonenameoption" type="abstract operation">
+    <h1>
+      GetTemporalShowTimeZoneNameOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~auto~, ~never~, or ~critical~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"timeZoneName"* property from _options_, returning a default if absent.</dd>
+    </dl>
     <emu-note>
       This property is used in `Temporal.ZonedDateTime.prototype.toString()`.
       It is different from the `timeZone` property passed to `Temporal.ZonedDateTime.from()` and from the `timeZone` property in the options passed to `Temporal.Instant.prototype.toString()`.
     </emu-note>
     <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"timeZoneName"*, « String », « *"auto"*, *"never"* », *"auto"*).
+      1. Let _stringValue_ be ? GetOption(_options_, *"timeZoneName"*, ~string~, « *"auto"*, *"never"*, *"critical"* », *"auto"*).
+      1. If _stringValue_ is *"never"*, return ~never~.
+      1. If _stringValue_ is *"critical"*, return ~critical~.
+      1. Return ~auto~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-toshowoffsetoption" aoid="ToShowOffsetOption">
-    <h1>ToShowOffsetOption ( _normalizedOptions_ )</h1>
-    <p>
-      The abstract operation ToShowOffsetOption extracts the value of the property named *"offset"* from _normalizedOptions_ and makes sure it is a valid value for the option.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalshowoffsetoption" type="abstract operation">
+    <h1>
+      GetTemporalShowOffsetOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~auto~ or ~never~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"offset"* property from _options_, returning a default if absent.</dd>
+    </dl>
     <emu-note>
       This property is used in `Temporal.ZonedDateTime.prototype.toString()`.
       It is different from the `offset` property passed to `Temporal.ZonedDateTime.from()`.
     </emu-note>
     <emu-alg>
-      1. Return ? GetOption(_normalizedOptions_, *"offset"*, « String », « *"auto"*, *"never"* », *"auto"*).
+      1. Let _stringValue_ be ? GetOption(_options_, *"offset"*, ~string~, « *"auto"*, *"never"* », *"auto"*).
+      1. If _stringValue_ is *"never"*, return ~never~.
+      1. Return ~auto~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-totemporalroundingincrement" aoid="ToTemporalRoundingIncrement">
-    <h1>ToTemporalRoundingIncrement ( _normalizedOptions_, _dividend_, _inclusive_ )</h1>
+  <emu-clause id="sec-temporal-getdirectionoption" type="abstract operation">
+    <h1>
+      GetDirectionOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~next~ or ~previous~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"direction"* property from _options_, throwing if absent.</dd>
+    </dl>
     <emu-alg>
-      1. If _dividend_ is *undefined*, then
-        1. Let _maximum_ be *+∞*.
-      1. Else if _inclusive_ is *true*, then
+      1. Let _stringValue_ be ? GetOption(_options_, *"direction"*, ~string~, « *"next"*, *"previous"* », ~required~).
+      1. If _stringValue_ is *"next"*, return ~next~.
+      1. Return ~previous~.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-validatetemporalroundingincrement" type="abstract operation">
+    <h1>
+      ValidateTemporalRoundingIncrement (
+        _increment_: a positive integer,
+        _dividend_: a positive integer,
+        _inclusive_: a Boolean,
+      ): either a normal completion containing ~unused~ or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It verifies that _increment_ evenly divides _dividend_, otherwise throwing a *RangeError*.
+        _dividend_ must be divided into more than one part unless _inclusive_ is *true*.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _inclusive_ is *true*, then
         1. Let _maximum_ be _dividend_.
-      1. Else if _dividend_ is more than 1, then
-        1. Let _maximum_ be _dividend_ − 1.
       1. Else,
-        1. Let _maximum_ be 1.
-      1. Let _increment_ be ? GetOption(_normalizedOptions_, *"roundingIncrement"*, « Number », ~empty~, 1).
-      1. If _increment_ &lt; 1 or _increment_ &gt; _maximum_, throw a *RangeError* exception.
-      1. Set _increment_ to floor(ℝ(_increment_)).
-      1. If _dividend_ is not *undefined* and _dividend_ modulo _increment_ is not zero, then
+        1. Assert: _dividend_ > 1.
+        1. Let _maximum_ be _dividend_ - 1.
+      1. If _increment_ > _maximum_, throw a *RangeError* exception.
+      1. If _dividend_ modulo _increment_ ≠ 0, then
         1. Throw a *RangeError* exception.
-      1. Return _increment_.
+      1. Return ~unused~.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-totemporaldatetimeroundingincrement" aoid="ToTemporalDateTimeRoundingIncrement">
-    <h1>ToTemporalDateTimeRoundingIncrement ( _normalizedOptions_, _smallestUnit_ )</h1>
-    <p>
-      The abstract operation ToTemporalDateTimeRoundingIncrement extracts the value of the property named *"roundingIncrement"* from _normalizedOptions_ and makes sure it is a valid value for the option, setting the correct maximum for rounding Temporal.ZonedDateTime and Temporal.PlainDateTime.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalfractionalseconddigitsoption" type="abstract operation">
+    <h1>
+      GetTemporalFractionalSecondDigitsOption (
+        _options_: an Object,
+      ): either a normal completion containing either ~auto~ or an integer in the inclusive interval from 0 to 9, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It fetches and validates the *"fractionalSecondDigits"* property from _options_, returning a default if absent.</dd>
+    </dl>
     <emu-alg>
-      1. If _smallestUnit_ is *"day"*, then
-        1. Let _maximum_ be 1.
-      1. Else if _smallestUnit_ is *"hour"*, then
-        1. Let _maximum_ be 24.
-      1. Else if _smallestUnit_ is *"minute"* or *"second"*, then
-        1. Let _maximum_ be 60.
-      1. Else,
-        1. Assert: _smallestUnit_ is *"millisecond"*, *"microsecond"*, or *"nanosecond"*.
-        1. Let _maximum_ be 1000.
-      1. Return ? ToTemporalRoundingIncrement(_normalizedOptions_, _maximum_, *false*).
+      1. Let _digitsValue_ be ? Get(_options_, *"fractionalSecondDigits"*).
+      1. If _digitsValue_ is *undefined*, return ~auto~.
+      1. If _digitsValue_ is not a Number, then
+        1. If ? ToString(_digitsValue_) is not *"auto"*, throw a *RangeError* exception.
+        1. Return ~auto~.
+      1. If _digitsValue_ is *NaN*, *+∞*<sub>𝔽</sub>, or *-∞*<sub>𝔽</sub>, throw a *RangeError* exception.
+      1. Let _digitCount_ be floor(ℝ(_digitsValue_)).
+      1. If _digitCount_ &lt; 0 or _digitCount_ > 9, throw a *RangeError* exception.
+      1. Return _digitCount_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-tosecondsstringprecision" aoid="ToSecondsStringPrecision">
-    <h1>ToSecondsStringPrecision ( _normalizedOptions_ )</h1>
-    <p>
-      The abstract operation ToSecondsStringPrecision combines the values of the options `smallestUnit` and `fractionalSecondDigits` to yield a precision for printing minutes and seconds to a string, and a rounding unit and increment.
-      The precision may be an integer 0 through 9 signifying a number of digits after the decimal point in the seconds, the string *"minute"* signifying not to print seconds at all, or the string *"auto"* signifying to drop trailing zeroes after the decimal point.
-    </p>
+  <emu-clause id="sec-temporal-tosecondsstringprecisionrecord" type="abstract operation">
+    <h1>
+      ToSecondsStringPrecisionRecord (
+        _smallestUnit_: ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, or ~unset~,
+        _fractionalDigitCount_: ~auto~ or an integer in the inclusive interval from 0 to 9,
+      ): a Record with fields [[Precision]] (~minute~, ~auto~, or an integer in the inclusive interval from 0 to 9), [[Unit]] (~minute~, ~second~, ~millisecond~, ~microsecond~, or ~nanosecond~), and [[Increment]] (1, 10, or 100)
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        The returned Record represents details for serializing minutes and seconds to a string subject to the specified _smallestUnit_ or (when _smallestUnit_ is ~unset~) _fractionalDigitCount_ digits after the decimal point in the seconds.
+        Its [[Precision]] field is either that count of digits, the value ~auto~ signifying that there should be no insignificant trailing zeroes, or the value ~minute~ signifying that seconds should not be included at all.
+        Its [[Unit]] field is the most precise unit that can contribute to the string, and its [[Increment]] field indicates the rounding increment that should be applied to that unit.
+      </dd>
+    </dl>
     <emu-alg>
-      1. Let _smallestUnit_ be ? ToSmallestTemporalUnit(_normalizedOptions_, « *"year"*, *"month"*, *"week"*, *"day"*, *"hour"* », *undefined*).
-      1. If _smallestUnit_ is *"minute"*, then
+      1. If _smallestUnit_ is ~minute~, then
         1. Return the Record {
-            [[Precision]]: *"minute"*,
-            [[Unit]]: *"minute"*,
-            [[Increment]]: 1
+          [[Precision]]: ~minute~,
+          [[Unit]]: ~minute~,
+          [[Increment]]: 1
           }.
-      1. If _smallestUnit_ is *"second"*, then
+      1. If _smallestUnit_ is ~second~, then
         1. Return the Record {
-            [[Precision]]: 0,
-            [[Unit]]: *"second"*,
-            [[Increment]]: 1
+          [[Precision]]: 0,
+          [[Unit]]: ~second~,
+          [[Increment]]: 1
           }.
-      1. If _smallestUnit_ is *"millisecond"*, then
+      1. If _smallestUnit_ is ~millisecond~, then
         1. Return the Record {
-            [[Precision]]: 3,
-            [[Unit]]: *"millisecond"*,
-            [[Increment]]: 1
+          [[Precision]]: 3,
+          [[Unit]]: ~millisecond~,
+          [[Increment]]: 1
           }.
-      1. If _smallestUnit_ is *"microsecond"*, then
+      1. If _smallestUnit_ is ~microsecond~, then
         1. Return the Record {
-            [[Precision]]: 6,
-            [[Unit]]: *"microsecond"*,
-            [[Increment]]: 1
+          [[Precision]]: 6,
+          [[Unit]]: ~microsecond~,
+          [[Increment]]: 1
           }.
-      1. If _smallestUnit_ is *"nanosecond"*, then
+      1. If _smallestUnit_ is ~nanosecond~, then
         1. Return the Record {
-            [[Precision]]: 9,
-            [[Unit]]: *"nanosecond"*,
-            [[Increment]]: 1
+          [[Precision]]: 9,
+          [[Unit]]: ~nanosecond~,
+          [[Increment]]: 1
           }.
-      1. Assert: _smallestUnit_ is *undefined*.
-      1. Let _digits_ be ? GetStringOrNumberOption(_normalizedOptions_, *"fractionalSecondDigits"*, « *"auto"* », 0, 9, *"auto"*).
-      1. If _digits_ is *"auto"*, then
+      1. Assert: _smallestUnit_ is ~unset~.
+      1. If _fractionalDigitCount_ is ~auto~, then
         1. Return the Record {
-            [[Precision]]: *"auto"*,
-            [[Unit]]: *"nanosecond"*,
-            [[Increment]]: 1
+          [[Precision]]: ~auto~,
+          [[Unit]]: ~nanosecond~,
+          [[Increment]]: 1
           }.
-      1. If _digits_ is 0, then
+      1. If _fractionalDigitCount_ = 0, then
         1. Return the Record {
-            [[Precision]]: 0,
-            [[Unit]]: *"second"*,
-            [[Increment]]: 1
+          [[Precision]]: 0,
+          [[Unit]]: ~second~,
+          [[Increment]]: 1
           }.
-      1. If _digits_ is 1, 2, or 3, then
+      1. If _fractionalDigitCount_ is in the inclusive interval from 1 to 3, then
         1. Return the Record {
-            [[Precision]]: _digits_,
-            [[Unit]]: *"millisecond"*,
-            [[Increment]]: 10<sup>3 − _digits_</sup>
+          [[Precision]]: _fractionalDigitCount_,
+          [[Unit]]: ~millisecond~,
+          [[Increment]]: 10<sup>3 - _fractionalDigitCount_</sup>
           }.
-      1. If _digits_ is 4, 5, or 6, then
+      1. If _fractionalDigitCount_ is in the inclusive interval from 4 to 6, then
         1. Return the Record {
-            [[Precision]]: _digits_,
-            [[Unit]]: *"microsecond"*,
-            [[Increment]]: 10<sup>6 − _digits_</sup>
+          [[Precision]]: _fractionalDigitCount_,
+          [[Unit]]: ~microsecond~,
+          [[Increment]]: 10<sup>6 - _fractionalDigitCount_</sup>
           }.
-      1. Assert: _digits_ is 7, 8, or 9.
+      1. Assert: _fractionalDigitCount_ is in the inclusive interval from 7 to 9.
       1. Return the Record {
-          [[Precision]]: _digits_,
-          [[Unit]]: *"nanosecond"*,
-          [[Increment]]: 10<sup>9 − _digits_</sup>
+        [[Precision]]: _fractionalDigitCount_,
+        [[Unit]]: ~nanosecond~,
+        [[Increment]]: 10<sup>9 - _fractionalDigitCount_</sup>
         }.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-tolargesttemporalunit" aoid="ToLargestTemporalUnit">
-    <h1>ToLargestTemporalUnit ( _normalizedOptions_, _disallowedUnits_, _fallback_ [ , _autoValue_ ] )</h1>
-    <p>
-      The abstract operation ToLargestTemporalUnit consults the `largestUnit` property of the Object _normalizedOptions_, and checks that it is a valid unit and not one of a List of _disallowedUnits_.
-      It returns a _fallback_ value if the property is not present.
-      Optionally, if an _autoValue_ is provided, then a value of *"auto"* is replaced with this value.
-    </p>
-    <p>
-      Both singular and plural unit names are accepted, but only the singular form is returned.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalunitvaluedoption" type="abstract operation">
+    <h1>
+      GetTemporalUnitValuedOption (
+        _options_: an Object,
+        _key_: a property key,
+        _unitGroup_: ~date~, ~time~, or ~datetime~,
+        _default_: ~required~, ~unset~, ~auto~, or a Temporal unit,
+        optional _extraValues_: a List of either Temporal units or ~auto~,
+      ): either a normal completion containing either a Temporal unit, ~unset~, or ~auto~, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It attempts to read from the specified property of _options_ a Temporal unit that is <emu-not-ref>covered</emu-not-ref> by the union of _unitGroup_ and _extraValues_, substituting _default_ if the property value is *undefined*.</dd>
+    </dl>
+    <p>Both singular and plural unit names are accepted, but only the singular form is used internally.</p>
     <emu-alg>
-      1. Assert: _disallowedUnits_ does not contain _fallback_.
-      1. Assert: _disallowedUnits_ does not contain *"auto"*.
-      1. Assert: _autoValue_ is not present or _fallback_ is *"auto"*.
-      1. Assert: _autoValue_ is not present or _disallowedUnits_ does not contain _autoValue_.
-      1. Let _largestUnit_ be ? GetOption(_normalizedOptions_, *"largestUnit"*, « String », « *"auto"*, *"year"*, *"years"*, *"month"*, *"months"*, *"week"*, *"weeks"*, *"day"*, *"days"*, *"hour"*, *"hours"*, *"minute"*, *"minutes"*, *"second"*, *"seconds"*, *"millisecond"*, *"milliseconds"*, *"microsecond"*, *"microseconds"*, *"nanosecond"*, *"nanoseconds"* », _fallback_).
-      1. If _largestUnit_ is *"auto"* and _autoValue_ is present, then
-        1. Return _autoValue_.
-      1. If _largestUnit_ is in the Plural column of <emu-xref href="#table-temporal-singular-and-plural-units"></emu-xref>, then
-        1. Set _largestUnit_ to the corresponding Singular value of the same row.
-      1. If _disallowedUnits_ contains _largestUnit_, then
-        1. Throw a *RangeError* exception.
-      1. Return _largestUnit_.
+      1. Let _allowedValues_ be a new empty List.
+      1. For each row of <emu-xref href="#table-temporal-units"></emu-xref>, except the header row, in table order, do
+        1. Let _unit_ be the value in the "Value" column of the row.
+        1. If the "Category" column of the row is ~date~ and _unitGroup_ is ~date~ or ~datetime~, append _unit_ to _allowedValues_.
+        1. Else if the "Category" column of the row is ~time~ and _unitGroup_ is ~time~ or ~datetime~, append _unit_ to _allowedValues_.
+      1. If _extraValues_ is present, then
+        1. Set _allowedValues_ to the list-concatenation of _allowedValues_ and _extraValues_.
+      1. If _default_ is ~unset~, then
+        1. Let _defaultValue_ be *undefined*.
+      1. Else if _default_ is ~required~, then
+        1. Let _defaultValue_ be ~required~.
+      1. Else if _default_ is ~auto~, then
+        1. Append _default_ to _allowedValues_.
+        1. Let _defaultValue_ be *"auto"*.
+      1. Else,
+        1. Assert: _allowedValues_ contains _default_.
+        1. Let _defaultValue_ be the value in the "Singular property name" column of <emu-xref href="#table-temporal-units"></emu-xref> corresponding to the row with _default_ in the "Value" column.
+      1. Let _allowedStrings_ be a new empty List.
+      1. For each element _value_ of _allowedValues_, do
+        1. If _value_ is ~auto~, then
+          1. Append *"auto"* to _allowedStrings_.
+        1. Else,
+          1. Let _singularName_ be the value in the "Singular property name" column of <emu-xref href="#table-temporal-units"></emu-xref> corresponding to the row with _value_ in the "Value" column.
+          1. Append _singularName_ to _allowedStrings_.
+          1. Let _pluralName_ be the value in the "Plural property name" column of the corresponding row.
+          1. Append _pluralName_ to _allowedStrings_.
+      1. NOTE: For each singular Temporal unit name that is contained within _allowedStrings_, the corresponding plural name is also contained within it.
+      1. Let _value_ be ? GetOption(_options_, _key_, ~string~, _allowedStrings_, _defaultValue_).
+      1. If _value_ is *undefined*, return ~unset~.
+      1. If _value_ is *"auto"*, return ~auto~.
+      1. Return the value in the "Value" column of <emu-xref href="#table-temporal-units"></emu-xref> corresponding to the row with _value_ in its "Singular property name" or "Plural property name" column.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-tosmallesttemporalunit" aoid="ToSmallestTemporalUnit">
-    <h1>ToSmallestTemporalUnit ( _normalizedOptions_, _disallowedUnits_, _fallback_ )</h1>
-    <p>
-      The abstract operation ToSmallestTemporalUnit consults the `smallestUnit` property of the Object _normalizedOptions_, and checks that it is a valid unit and not one of a List of _disallowedUnits_.
-      It returns a _fallback_ value if the property is not present.
-    </p>
-    <p>
-      Both singular and plural unit names are accepted, but only the singular form is returned.
-    </p>
+  <emu-clause id="sec-temporal-gettemporalrelativetooption" type="abstract operation">
+    <h1>
+      GetTemporalRelativeToOption (
+        _options_: an Object,
+      ): either a normal completion containing a Record with fields [[PlainRelativeTo]] (a Temporal.PlainDate or *undefined*) and [[ZonedRelativeTo]] (a Temporal.ZonedDateTime or *undefined*), or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It examines the value of the `relativeTo` property of its _options_ argument.
+        If the value is *undefined*, both the [[PlainRelativeTo]] and [[ZonedRelativeTo]] fields of the returned Record are *undefined*.
+        If the value is not a String or an Object, it throws a *TypeError*.
+        Otherwise, it attempts to return a Temporal.ZonedDateTime instance in the [[ZonedRelativeTo]] field, or a Temporal.PlainDate instance in the [[PlainRelativeTo]] field, in order of preference, by converting the value.
+        If neither of those are possible, it throws a *RangeError*.
+      </dd>
+    </dl>
     <emu-alg>
-      1. Assert: _disallowedUnits_ does not contain _fallback_.
-      1. Let _smallestUnit_ be ? GetOption(_normalizedOptions_, *"smallestUnit"*, « String », « *"year"*, *"years"*, *"month"*, *"months"*, *"week"*, *"weeks"*, *"day"*, *"days"*, *"hour"*, *"hours"*, *"minute"*, *"minutes"*, *"second"*, *"seconds"*, *"millisecond"*, *"milliseconds"*, *"microsecond"*, *"microseconds"*, *"nanosecond"*, *"nanoseconds"* », _fallback_).
-      1. If _smallestUnit_ is in the Plural column of <emu-xref href="#table-temporal-singular-and-plural-units"></emu-xref>, then
-        1. Set _smallestUnit_ to the corresponding Singular value of the same row.
-      1. If _disallowedUnits_ contains _smallestUnit_, then
-        1. Throw a *RangeError* exception.
-      1. Return _smallestUnit_.
+      1. Let _value_ be ? Get(_options_, *"relativeTo"*).
+      1. If _value_ is *undefined*, return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: *undefined* }.
+      1. Let _offsetBehaviour_ be ~option~.
+      1. Let _matchBehaviour_ be ~match-exactly~.
+      1. If _value_ is an Object, then
+        1. If _value_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
+          1. Return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: _value_ }.
+        1. If _value_ has an [[InitializedTemporalDate]] internal slot, then
+          1. Return the Record { [[PlainRelativeTo]]: _value_, [[ZonedRelativeTo]]: *undefined* }.
+        1. If _value_ has an [[InitializedTemporalDateTime]] internal slot, then
+          1. Let _plainDate_ be ! CreateTemporalDate(_value_.[[ISODateTime]].[[ISODate]], _value_.[[Calendar]]).
+          1. Return the Record { [[PlainRelativeTo]]: _plainDate_, [[ZonedRelativeTo]]: *undefined* }.
+        1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_value_).
+        1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _value_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, ~offset~, ~time-zone~ », «»).
+        1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, ~constrain~).
+        1. Let _timeZone_ be _fields_.[[TimeZone]].
+        1. Let _offsetString_ be _fields_.[[OffsetString]].
+        1. If _offsetString_ is ~unset~, then
+          1. Set _offsetBehaviour_ to ~wall~.
+        1. Let _isoDate_ be _result_.[[ISODate]].
+        1. Let _time_ be _result_.[[Time]].
+      1. Else,
+        1. If _value_ is not a String, throw a *TypeError* exception.
+        1. Let _result_ be ? ParseISODateTime(_value_, « |TemporalDateTimeString[+Zoned]|, |TemporalDateTimeString[~Zoned]| »).
+        1. Let _offsetString_ be _result_.[[TimeZone]].[[OffsetString]].
+        1. Let _annotation_ be _result_.[[TimeZone]].[[TimeZoneAnnotation]].
+        1. If _annotation_ is ~empty~, then
+          1. Let _timeZone_ be ~unset~.
+        1. Else,
+          1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_annotation_).
+          1. If _result_.[[TimeZone]].[[Z]] is *true*, then
+            1. Set _offsetBehaviour_ to ~exact~.
+          1. Else if _offsetString_ is ~empty~, then
+            1. Set _offsetBehaviour_ to ~wall~.
+          1. Set _matchBehaviour_ to ~match-minutes~.
+        1. Let _calendar_ be _result_.[[Calendar]].
+        1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Let _isoDate_ be CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+        1. Let _time_ be _result_.[[Time]].
+      1. If _timeZone_ is ~unset~, then
+        1. Let _plainDate_ be ? CreateTemporalDate(_isoDate_, _calendar_).
+        1. Return the Record { [[PlainRelativeTo]]: _plainDate_, [[ZonedRelativeTo]]: *undefined* }.
+      1. If _offsetBehaviour_ is ~option~, then
+        1. Let _offsetNs_ be ! ParseDateTimeUTCOffset(_offsetString_).
+      1. Else,
+        1. Let _offsetNs_ be 0.
+      1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_isoDate_, _time_, _offsetBehaviour_, _offsetNs_, _timeZone_, ~compatible~, ~reject~, _matchBehaviour_).
+      1. Let _zonedRelativeTo_ be ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      1. Return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: _zonedRelativeTo_ }.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-totemporaldurationtotalunit" aoid="ToTemporalDurationTotalUnit">
-    <h1>ToTemporalDurationTotalUnit ( _normalizedOptions_ )</h1>
-    <p>
-      The abstract operation ToTemporalDurationTotalUnit consults the `unit` property of the Object _normalizedOptions_, and checks that it is a valid unit.
-      It returns *undefined* if the property is not present.
-    </p>
-    <p>
-      Both singular and plural unit names are accepted, but only the singular form is returned.
-    </p>
+  <emu-clause id="sec-temporal-largeroftwotemporalunits" type="abstract operation">
+    <h1>
+      LargerOfTwoTemporalUnits (
+        _u1_: a Temporal unit,
+        _u2_: a Temporal unit,
+      ): a Temporal unit
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>Given two Temporal units, it returns the larger of the two units.</dd>
+    </dl>
     <emu-alg>
-      1. Let _unit_ be ? GetOption(_normalizedOptions_, *"unit"*, « String », « *"year"*, *"years"*, *"month"*, *"months"*, *"week"*, *"weeks"*, *"day"*, *"days"*, *"hour"*, *"hours"*, *"minute"*, *"minutes"*, *"second"*, *"seconds"*, *"millisecond"*, *"milliseconds"*, *"microsecond"*, *"microseconds"*, *"nanosecond"*, *"nanoseconds"* », *undefined*).
-      1. If _unit_ is *undefined*, then
-        1. Throw a *RangeError* exception.
-      1. If _unit_ is in the Plural column of <emu-xref href="#table-temporal-singular-and-plural-units"></emu-xref>, then
-        1. Set _unit_ to the corresponding Singular value of the same row.
-      1. Return _unit_.
+      1. For each row of <emu-xref href="#table-temporal-units"></emu-xref>, except the header row, in table order, do
+        1. Let _unit_ be the value in the "Value" column of the row.
+        1. If _u1_ is _unit_, return _unit_.
+        1. If _u2_ is _unit_, return _unit_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-singular-and-plural-units">
-    <h1>Singular and plural units</h1>
-    <p>
-      Where possible, the `smallestUnit`, `largestUnit`, and `unit` options accept both singular and plural forms.
-      Only the singular form is used internally.
-    </p>
-    <emu-table id="table-temporal-singular-and-plural-units">
-      <emu-caption>Singular and plural units</emu-caption>
+  <emu-clause id="sec-temporal-iscalendarunit" type="abstract operation">
+    <h1>
+      IsCalendarUnit (
+        _unit_: a Temporal unit,
+      ): a Boolean
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns whether _unit_ is a Temporal unit for which rounding would require calendar calculations.</dd>
+    </dl>
+    <emu-alg>
+      1. If _unit_ is ~year~, return *true*.
+      1. If _unit_ is ~month~, return *true*.
+      1. If _unit_ is ~week~, return *true*.
+      1. Return *false*.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-temporalunitcategory" type="abstract operation">
+    <h1>
+      TemporalUnitCategory (
+        _unit_: a Temporal unit,
+      ): ~date~ or ~time~
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns the category (date or time) of the Temporal unit _unit_.</dd>
+    </dl>
+    <emu-alg>
+      1. Return the value from the "Category" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> in which _unit_ is in the "Value" column.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-maximumtemporaldurationroundingincrement" type="abstract operation">
+    <h1>
+      MaximumTemporalDurationRoundingIncrement (
+        _unit_: a Temporal unit,
+      ): 24, 60, 1000, or ~unset~
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>Given a string representing a Temporal.Duration unit, it returns the maximum rounding increment for that unit, or ~unset~ if there is no maximum.</dd>
+    </dl>
+    <emu-alg>
+      1. Return the value from the "Maximum duration rounding increment" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> in which _unit_ is in the "Value" column.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-ispartialtemporalobject" type="abstract operation">
+    <h1>
+      IsPartialTemporalObject (
+        _value_: an ECMAScript language value,
+      ): either a normal completion containing a Boolean or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It determines whether _value_ is a suitable input for one of the Temporal objects' `with()` methods: it must be an Object, it must not be an instance of one of the time-related or date-related Temporal types, and it must not have a `calendar` or `timeZone` property.</dd>
+    </dl>
+    <emu-alg>
+      1. If _value_ is not an Object, return *false*.
+      1. If _value_ has an [[InitializedTemporalDate]], [[InitializedTemporalDateTime]], [[InitializedTemporalMonthDay]], [[InitializedTemporalTime]], [[InitializedTemporalYearMonth]], or [[InitializedTemporalZonedDateTime]] internal slot, return *false*.
+      1. Let _calendarProperty_ be ? Get(_value_, *"calendar"*).
+      1. If _calendarProperty_ is not *undefined*, return *false*.
+      1. Let _timeZoneProperty_ be ? Get(_value_, *"timeZone"*).
+      1. If _timeZoneProperty_ is not *undefined*, return *false*.
+      1. Return *true*.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-formatfractionalseconds" type="abstract operation">
+    <h1>
+      FormatFractionalSeconds (
+        _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
+        _precision_: either an integer in the inclusive interval from 0 to 9 or ~auto~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        If _precision_ is zero, or if _precision_ is ~auto~ and _subSecondNanoseconds_ is zero, then an empty String will be returned.
+        Otherwise, the output will be a decimal point followed by a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _precision_ is ~auto~, then
+        1. If _subSecondNanoseconds_ = 0, return the empty String.
+        1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
+        1. Set _fractionString_ to the longest prefix of _fractionString_ ending with a code unit other than 0x0030 (DIGIT ZERO).
+      1. Else,
+        1. If _precision_ = 0, return the empty String.
+        1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
+        1. Set _fractionString_ to the substring of _fractionString_ from 0 to _precision_.
+      1. Return the string-concatenation of the code unit 0x002E (FULL STOP) and _fractionString_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-formattimestring" type="abstract operation">
+    <h1>
+      FormatTimeString (
+        _hour_: an integer in the inclusive interval from 0 to 23,
+        _minute_: an integer in the inclusive interval from 0 to 59,
+        _second_: an integer in the inclusive interval from 0 to 59,
+        _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
+        _precision_: an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+        optional _style_: ~separated~ or ~unseparated~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It formats a collection of unsigned time components into a string, truncating units as necessary, and separating hours, minutes, and seconds with colons unless _style_ is ~unseparated~.
+        The output will be formatted like HH:MM or HHMM if _precision_ is ~minute~.
+        Otherwise, the output will be formatted like HH:MM:SS or HHMMSS if _precision_ is zero, or if _subSecondNanoseconds_ is zero and _precision_ is ~auto~.
+        Otherwise, the output will be formatted like HH:MM:SS.fff or HHMMSS.fff where "fff" is a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _style_ is present and _style_ is ~unseparated~, let _separator_ be the empty String; otherwise, let _separator_ be *":"*.
+      1. Let _hh_ be ToZeroPaddedDecimalString(_hour_, 2).
+      1. Let _mm_ be ToZeroPaddedDecimalString(_minute_, 2).
+      1. If _precision_ is ~minute~, return the string-concatenation of _hh_, _separator_, and _mm_.
+      1. Let _ss_ be ToZeroPaddedDecimalString(_second_, 2).
+      1. Let _subSecondsPart_ be FormatFractionalSeconds(_subSecondNanoseconds_, _precision_).
+      1. Return the string-concatenation of _hh_, _separator_, _mm_, _separator_, _ss_, and _subSecondsPart_.
+    </emu-alg>
+  </emu-clause>
+
+  <!-- copied from ECMA-402 GetUnsignedRoundingMode -->
+
+  <emu-clause id="sec-getunsignedroundingmode" type="abstract operation">
+    <h1>
+      GetUnsignedRoundingMode (
+        _roundingMode_: a rounding mode,
+        _sign_: ~negative~ or ~positive~,
+      ): an unsigned rounding mode
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns the rounding mode that should be applied to the absolute value of a number to produce the same result as if _roundingMode_ were applied to the signed value of the number (negative if _sign_ is ~negative~, or positive otherwise).</dd>
+    </dl>
+    <emu-alg>
+      1. Return the specification type in the "Unsigned Rounding Mode" column of <emu-xref href="#table-unsigned-rounding-modes"></emu-xref> for the row where the value in the "Rounding Mode" column is _roundingMode_ and the value in the "Sign" column is _sign_.
+    </emu-alg>
+    <emu-table id="table-unsigned-rounding-modes">
+      <emu-caption>Conversion from rounding mode to unsigned rounding mode</emu-caption>
       <table class="real-table">
         <thead>
           <tr>
-            <th>Singular</th>
-            <th>Plural</th>
+            <th>Rounding Mode</th>
+            <th>Sign</th>
+            <th>Unsigned Rounding Mode</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td>*"year"*</td>
-            <td>*"years"*</td>
-          </tr>
-
-          <tr>
-            <td>*"month"*</td>
-            <td>*"months"*</td>
-          </tr>
-
-          <tr>
-            <td>*"week"*</td>
-            <td>*"weeks"*</td>
-          </tr>
-
-          <tr>
-            <td>*"day"*</td>
-            <td>*"days"*</td>
-          </tr>
-
-          <tr>
-            <td>*"hour"*</td>
-            <td>*"hours"*</td>
-          </tr>
-
-          <tr>
-            <td>*"minute"*</td>
-            <td>*"minutes"*</td>
-          </tr>
-
-          <tr>
-            <td>*"second"*</td>
-            <td>*"seconds"*</td>
-          </tr>
-
-          <tr>
-            <td>*"millisecond"*</td>
-            <td>*"milliseconds"*</td>
-          </tr>
-
-          <tr>
-            <td>*"microsecond"*</td>
-            <td>*"microseconds"*</td>
-          </tr>
-
-          <tr>
-            <td>*"nanosecond"*</td>
-            <td>*"nanoseconds"*</td>
-          </tr>
-        </tbody>
+        <tr>
+          <td rowspan="2">~ceil~</td>
+          <td>~positive~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~floor~</td>
+          <td>~positive~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~expand~</td>
+          <td>~positive~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~trunc~</td>
+          <td>~positive~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-ceil~</td>
+          <td>~positive~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-floor~</td>
+          <td>~positive~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-expand~</td>
+          <td>~positive~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-trunc~</td>
+          <td>~positive~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-even~</td>
+          <td>~positive~</td>
+          <td>~half-even~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-even~</td>
+        </tr>
       </table>
     </emu-table>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-torelativetemporalobject" aoid="ToRelativeTemporalObject">
-    <h1>ToRelativeTemporalObject ( _options_ )</h1>
-    <p>
-      The abstract operation ToRelativeTemporalObject examines the value of the `relativeTo` property of its _options_ argument.
-      If this is not present, it returns *undefined*.
-      Otherwise, it attempts to return a Temporal.ZonedDateTime instance or Temporal.PlainDateTime instance, in order of preference, by converting the value.
-      If neither of those are possible, the operation throws a *RangeError*.
-    </p>
+  <!-- copied from ECMA-402 ApplyUnsignedRoundingMode -->
+
+  <emu-clause id="sec-applyunsignedroundingmode" type="abstract operation">
+    <h1>
+      ApplyUnsignedRoundingMode (
+        _x_: a mathematical value,
+        _r1_: a mathematical value,
+        _r2_: a mathematical value,
+        _unsignedRoundingMode_: a specification type from the "Unsigned Rounding Mode" column of <emu-xref href="#table-unsigned-rounding-modes"></emu-xref>, or *undefined*,
+      ): a mathematical value
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It considers _x_, bracketed below by _r1_ and above by _r2_, and returns either _r1_ or _r2_ according to _unsignedRoundingMode_.</dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_options_) is Object.
-      1. Let _value_ be ? Get(_options_, *"relativeTo"*).
-      1. If _value_ is *undefined*, then
-        1. Return _value_.
-      1. Let _offsetBehaviour_ be ~option~.
-      1. If Type(_value_) is Object, then
-        1. If _value_ has either an [[InitializedTemporalDateTime]] or [[InitializedTemporalZonedDateTime]] internal slot, then
-          1. Return _value_.
-        1. If _value_ has an [[InitializedTemporalDate]] internal slot, then
-          1. Return ? CreateTemporalDateTime(_value_.[[ISOYear]], _value_.[[ISOMonth]], _value_.[[ISODay]], 0, 0, 0, 0, 0, 0, _value_.[[Calendar]]).
-        1. Let _calendar_ be ? GetTemporalCalendarWithISODefault(_value_).
-        1. Let _fieldNames_ be ? CalendarFields(_calendar_, « *"day"*, *"month"*, *"monthCode"*, *"year"* »).
-        1. Let _fields_ be ? PrepareTemporalFields(_value_, _fieldNames_, «»).
-        1. Let _dateOptions_ be ! OrdinaryObjectCreate(*null*).
-        1. Perform ! CreateDataPropertyOrThrow(_dateOptions_, *"overflow"*, *"constrain"*).
-        1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _dateOptions_).
-        1. Let _offsetString_ be ? Get(_value_, *"offset"*).
-        1. Let _timeZone_ be ? Get(_value_, *"timeZone"*).
-        1. If _offsetString_ is *undefined*, then
-          1. Set _offsetBehaviour_ to ~wall~.
-      1. Else,
-        1. Let _string_ be ? ToString(_value_).
-        1. Let _result_ be ? ParseTemporalRelativeToString(_string_).
-        1. Let _calendar_ be ? ToTemporalCalendarWithISODefault(_result_.[[Calendar]]).
-        1. Let _offsetString_ be _result_.[[TimeZoneOffset]].
-        1. Let _timeZone_ be _result_.[[TimeZoneIANAName]].
-        1. If _result_.[[TimeZoneZ]] is *true*, then
-          1. Set _offsetBehaviour_ to ~exact~.
-        1. Else if _offsetString_ is *undefined*, then
-          1. Set _offsetBehaviour_ to ~wall~.
-      1. If _timeZone_ is not *undefined*, then
-        1. Set _timeZone_ to ? ToTemporalTimeZone(_timeZone_).
-        1. If _offsetBehaviour_ is ~option~, then
-          1. Set _offsetString_ to ? ToString(_offsetString_).
-          1. Let _offsetNs_ be ? ParseTimeZoneOffsetString(_offsetString_).
-        1. Else,
-          1. Let _offsetNs_ be 0.
-        1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _offsetBehaviour_, _offsetNs_, _timeZone_, *"compatible"*, *"reject"*).
-        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
-      1. Return ? CreateTemporalDateTime(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]], _result_.[[Hour]], _result_.[[Minute]], _result_.[[Second]], _result_.[[Millisecond]], _result_.[[Microsecond]], _result_.[[Nanosecond]], _calendar_).
+      1. If _x_ = _r1_, return _r1_.
+      1. Assert: _r1_ &lt; _x_ &lt; _r2_.
+      1. Assert: _unsignedRoundingMode_ is not *undefined*.
+      1. If _unsignedRoundingMode_ is ~zero~, return _r1_.
+      1. If _unsignedRoundingMode_ is ~infinity~, return _r2_.
+      1. Let _d1_ be <emu-eqn>_x_ – _r1_</emu-eqn>.
+      1. Let _d2_ be <emu-eqn>_r2_ – _x_</emu-eqn>.
+      1. If _d1_ &lt; _d2_, return _r1_.
+      1. If _d2_ &lt; _d1_, return _r2_.
+      1. Assert: _d1_ is equal to _d2_.
+      1. If _unsignedRoundingMode_ is ~half-zero~, return _r1_.
+      1. If _unsignedRoundingMode_ is ~half-infinity~, return _r2_.
+      1. Assert: _unsignedRoundingMode_ is ~half-even~.
+      1. Let _cardinality_ be <emu-eqn>(_r1_ / (_r2_ – _r1_)) modulo 2</emu-eqn>.
+      1. If _cardinality_ = 0, return _r1_.
+      1. Return _r2_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-validatetemporalunitrange" aoid="ValidateTemporalUnitRange">
-    <h1>ValidateTemporalUnitRange ( _largestUnit_, _smallestUnit_ )</h1>
+  <emu-clause id="sec-temporal-roundnumbertoincrement" type="abstract operation">
+    <h1>
+      RoundNumberToIncrement (
+        _x_: a mathematical value,
+        _increment_: a positive integer,
+        _roundingMode_: a rounding mode,
+      ): an integer
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It rounds _x_ to the nearest multiple of _increment_, up or down according to _roundingMode_.</dd>
+    </dl>
     <emu-alg>
-      1. If _smallestUnit_ is *"year"* and _largestUnit_ is not *"year"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"month"* and _largestUnit_ is not *"year"* or *"month"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"week"* and _largestUnit_ is not one of *"year"*, *"month"*, or *"week"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"day"* and _largestUnit_ is not one of *"year"*, *"month"*, *"week"*, or *"day"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"hour"* and _largestUnit_ is not one of *"year"*, *"month"*, *"week"*, *"day"*, or *"hour"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"minute"* and _largestUnit_ is *"second"*, *"millisecond"*, *"microsecond"*, or *"nanosecond"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"second"* and _largestUnit_ is *"millisecond"*, *"microsecond"*, or *"nanosecond"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"millisecond"* and _largestUnit_ is *"microsecond"* or *"nanosecond"*, then
-        1. Throw a *RangeError* exception.
-      1. If _smallestUnit_ is *"microsecond"* and _largestUnit_ is *"nanosecond"*, then
-        1. Throw a *RangeError* exception.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-largeroftwotemporalunits" aoid="LargerOfTwoTemporalUnits">
-    <h1>LargerOfTwoTemporalUnits ( _u1_, _u2_ )</h1>
-    <p>
-      The abstract operation LargerOfTwoTemporalUnits, given two strings representing units of time, returns the string representing the larger of the two units.
-    </p>
-    <emu-alg>
-      1. If either _u1_ or _u2_ is *"year"*, return *"year"*.
-      1. If either _u1_ or _u2_ is *"month"*, return *"month"*.
-      1. If either _u1_ or _u2_ is *"week"*, return *"week"*.
-      1. If either _u1_ or _u2_ is *"day"*, return *"day"*.
-      1. If either _u1_ or _u2_ is *"hour"*, return *"hour"*.
-      1. If either _u1_ or _u2_ is *"minute"*, return *"minute"*.
-      1. If either _u1_ or _u2_ is *"second"*, return *"second"*.
-      1. If either _u1_ or _u2_ is *"millisecond"*, return *"millisecond"*.
-      1. If either _u1_ or _u2_ is *"microsecond"*, return *"microsecond"*.
-      1. Return *"nanosecond"*.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-mergelargestunitoption" aoid="MergeLargestUnitOption">
-    <h1>MergeLargestUnitOption ( _options_, _largestUnit_ )</h1>
-    <p>
-      The abstract operation MergeLargestUnitOption returns a new plain Object with enumerable own String properties copied from the _options_ Object, and the `largestUnit` property set to _largestUnit_.
-    </p>
-    <emu-alg>
-      1. Let _merged_ be ! OrdinaryObjectCreate(%Object.prototype%).
-      1. Let _keys_ be ? EnumerableOwnPropertyNames(_options_, ~key~).
-      1. For each element _nextKey_ of _keys_, do
-        1. Let _propValue_ be ? Get(_options_, _nextKey_).
-        1. Perform ! CreateDataPropertyOrThrow(_merged_, _nextKey_, _propValue_).
-      1. Perform ! CreateDataPropertyOrThrow(_merged_, *"largestUnit"*, _largestUnit_).
-      1. Return _merged_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-maximumtemporaldurationroundingincrement" aoid="MaximumTemporalDurationRoundingIncrement">
-    <h1>MaximumTemporalDurationRoundingIncrement ( _unit_ )</h1>
-    <emu-alg>
-      1. If _unit_ is *"year"*, *"month"*, *"week"*, or *"day"*, then
-        1. Return *undefined*.
-      1. If _unit_ is *"hour"*, then
-        1. Return 24.
-      1. If _unit_ is *"minute"* or *"second"*, then
-        1. Return 60.
-      1. Assert: _unit_ is one of *"millisecond"*, *"microsecond"*, or *"nanosecond"*.
-      1. Return 1000.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-rejecttemporalcalendartype" aoid="RejectTemporalCalendarType">
-    <h1>RejectTemporalCalendarType ( _object_ )</h1>
-    <p>
-      The abstract operation RejectTemporalCalendarType throws an exception if its argument _object_ is an instance of one of the Temporal types that carries a calendar.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_object_) is Object.
-      1. If _object_ has an [[InitializedTemporalDate]], [[InitializedTemporalDateTime]], [[InitializedTemporalMonthDay]], [[InitializedTemporalTime]], [[InitializedTemporalYearMonth]], or [[InitializedTemporalZonedDateTime]] internal slot, then
-          1. Throw a *TypeError* exception.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-formatsecondsstringpart" aoid="FormatSecondsStringPart">
-    <h1>FormatSecondsStringPart ( _second_, _millisecond_, _microsecond_, _nanosecond_, _precision_ )</h1>
-    <emu-alg>
-      1. Assert: _second_, _millisecond_, _microsecond_ and _nanosecond_ are integers.
-      1. If _precision_ is *"minute"*, return *""*.
-      1. Let _secondsString_ be the string-concatenation of the code unit 0x003A (COLON) and _second_ formatted as a two-digit decimal number, padded to the left with zeroes if necessary.
-      1. Let _fraction_ be _millisecond_ × 10<sup>6</sup> + _microsecond_ × 10<sup>3</sup> + _nanosecond_.
-      1. If _precision_ is *"auto"*, then
-        1. If _fraction_ is 0, return _secondsString_.
-        1. Set _fraction_ to _fraction_ formatted as a nine-digit decimal number, padded to the left with zeroes if necessary.
-        1. Set _fraction_ to the longest possible substring of _fraction_ starting at position 0 and not ending with the code unit 0x0030 (DIGIT ZERO).
-      1. Else,
-        1. If _precision_ is 0, return _secondsString_.
-        1. Set _fraction_ to _fraction_ formatted as a nine-digit decimal number, padded to the left with zeroes if necessary.
-        1. Set _fraction_ to the substring of _fraction_ from 0 to _precision_.
-      1. Return the string-concatenation of _secondsString_, the code unit 0x002E (FULL STOP), and _fraction_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-sign" aoid="Sign">
-    <h1>Sign ( _n_ )</h1>
-    <p>
-      The abstract operation Sign takes argument _n_ and returns the mathematical sign of _n_.
-    </p>
-    <emu-note type="editor">
-      This operation is the same as Math.sign and should be used there as well when merged into ECMA-262.
-    </emu-note>
-    <emu-alg>
-      1. If _n_ is *NaN*, n is *+0*<sub>𝔽</sub>, or n is *−0*<sub>𝔽</sub>, return _n_.
-      1. If _n_ &lt; *+0*<sub>𝔽</sub>, return *−1*<sub>𝔽</sub>.
-      1. Return *1*<sub>𝔽</sub>.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-constraintorange" aoid="ConstrainToRange">
-    <h1>ConstrainToRange ( _x_, _minimum_, _maximum_ )</h1>
-    <emu-alg>
-      1. Return min(max(_x_, _minimum_), _maximum_).
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-roundtowardszero" aoid="RoundTowardsZero">
-    <h1>RoundTowardsZero ( _x_ )</h1>
-    <emu-alg>
-      1. Return the mathematical value that is the same sign as _x_ and whose magnitude is floor(abs(_x_)).
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-roundhalfawayfromzero" aoid="RoundHalfAwayFromZero">
-    <h1>RoundHalfAwayFromZero ( _x_ )</h1>
-    <emu-alg>
-      1. Return the mathematical value that is closest to _x_ and is an integer.
-         If two integers are equally close to _x_, then the result is the integer that is farther away from 0. If _x_ is already an integer, then the result is _x_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-roundnumbertoincrement" aoid="RoundNumberToIncrement">
-    <h1>RoundNumberToIncrement ( _x_, _increment_, _roundingMode_ )</h1>
-    <p>
-      The abstract operation RoundNumberToIncrement rounds the mathematical value _x_ to the nearest multiple of the integer _increment_.
-      It rounds up or down according to _roundingMode_.
-    </p>
-    <emu-note type="editor">
-      <p>
-        The rounding modes accepted by this abstract operation are intended to be the same as whatever is eventually standardized in the <a href="https://github.com/tc39/proposal-intl-numberformat-v3">Intl.NumberFormat V3</a> proposal.
-      </p>
-    </emu-note>
-    <emu-alg>
-      1. Assert: _x_ and _increment_ are mathematical values.
-      1. Assert: _roundingMode_ is *"ceil"*, *"floor"*, *"trunc"*, or *"halfExpand"*.
       1. Let _quotient_ be _x_ / _increment_.
-      1. If _roundingMode_ is *"ceil"*, then
-        1. Let _rounded_ be −floor(−_quotient_).
-      1. Else if _roundingMode_ is *"floor"*, then
-        1. Let _rounded_ be floor(_quotient_).
-      1. Else if _roundingMode_ is *"trunc"*, then
-        1. Let _rounded_ be the integral part of _quotient_, removing any fractional digits.
+      1. If _quotient_ &lt; 0, then
+        1. Let _isNegative_ be ~negative~.
+        1. Set _quotient_ to -_quotient_.
       1. Else,
-        1. Let _rounded_ be ! RoundHalfAwayFromZero(_quotient_).
+        1. Let _isNegative_ be ~positive~.
+      1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, _isNegative_).
+      1. Let _r1_ be the largest integer such that _r1_ ≤ _quotient_.
+      1. Let _r2_ be the smallest integer such that _r2_ > _quotient_.
+      1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
+      1. If _isNegative_ is ~negative~, set _rounded_ to -_rounded_.
+      1. Return _rounded_ × _increment_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-roundnumbertoincrementasifpositive" type="abstract operation">
+    <h1>
+      RoundNumberToIncrementAsIfPositive (
+        _x_: a mathematical value,
+        _increment_: a positive integer,
+        _roundingMode_: a rounding mode,
+      ): an integer
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It rounds _x_ to the nearest multiple of _increment_, up or down according to _roundingMode_, but always as if _x_ were positive.
+        For example, ~floor~ and ~trunc~ behave identically.
+        This is used when rounding exact times, where "rounding down" conceptually always means towards the beginning of time, even if the time is expressed as a negative amount of time relative to an epoch.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _quotient_ be _x_ / _increment_.
+      1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, ~positive~).
+      1. Let _r1_ be the largest integer such that _r1_ ≤ _quotient_.
+      1. Let _r2_ be the smallest integer such that _r2_ > _quotient_.
+      1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
       1. Return _rounded_ × _increment_.
     </emu-alg>
   </emu-clause>
@@ -700,12 +1015,8 @@
       Several operations in this section are intended to parse ISO 8601 strings representing a date, a time, a duration, or a combined date and time.
       For the purposes of these operations, a valid ISO 8601 string is defined as a string that can be generated by one of the goal elements of the following grammar.
     </p>
-    <p>
-      This grammar is adapted from the ABNF grammar of ISO 8601 that is given in section 5.8 of <a href="https://ryzokuken.dev/draft-ryzokuken-datetime-extended/documents/rfc-3339.html#name-internet-date-time-format">Date and Time on the Internet: Timestamps with additional information</a>, a draft update to <a href="https://tools.ietf.org/html/rfc3339#appendix-A">RFC 3339</a>.
-    </p>
-    <p>
-      The grammar deviates from the standard given in ISO 8601 in the following ways:
-    </p>
+    <p>This grammar is adapted from the ABNF grammar of ISO 8601 that is given in appendix A of <a href="https://tools.ietf.org/html/rfc3339#appendix-A">RFC 3339</a>, augmented with the grammar of annotations in section 3.1 of <a href="https://datatracker.ietf.org/doc/html/draft-ietf-sedate-datetime-extended#section-3.1">Date and Time on the Internet: Timestamps with additional information</a></p>
+    <p>The grammar deviates from the standard given in ISO 8601 in the following ways:</p>
     <ul>
       <li>Only the calendar date format is supported, not the weekdate or ordinal date format.</li>
       <li>Two-digit years are disallowed.</li>
@@ -713,926 +1024,878 @@
       <li>Fractional parts may have 1 through 9 decimal places.</li>
       <li>In time representations, only seconds are allowed to have a fractional part.</li>
       <li>In duration representations, only hours, minutes, and seconds are allowed to have a fractional part.</li>
-      <li>The time zone may be given by a suffixed <a href="https://www.iana.org/time-zones">IANA time zone name</a> in square brackets, instead of or in addition to a UTC offset.</li>
-      <li>The calendar may be given by a suffixed <a href="https://tools.ietf.org/html/bcp47#section-2.1">BCP 47 key</a> in square brackets.</li>
-      <li>A space may be used to separate the date and time in a combined date / time representation, but not in a duration.</li>
-      <li>Alphabetic designators may be in lower or upper case.</li>
-      <li>Period or comma may be used as the decimal separator.</li>
-      <li>A time zone offset of *"-00:00"* is allowed, and means the same thing as *"+00:00"*.</li>
       <li>
-        In a combined representation, combinations of date, time, and time zone offset with Basic (no `-` or `:` separators) and Extended (with `-` or `:` separators) formatting are allowed.
-        (The date, time, and time zone offset must each be fully in Basic format or Extended format.)
+        Any number of conforming <a href="https://datatracker.ietf.org/doc/html/draft-ietf-sedate-datetime-extended#section-3.1">suffixes in square brackets</a> are allowed.
+        However, the only recognized suffixes are time zone and <a href="https://tools.ietf.org/html/bcp47#section-2.1">BCP 47 calendar</a>.
+        Others are ignored, unless they are prefixed with `!`, in which case they are rejected.
+        Note that the suffix keys, although they look similar, are not the same as keys in <a href="https://www.rfc-editor.org/rfc/rfc6067.html">RFC 6067</a>.
+        In particular, <a href="https://datatracker.ietf.org/doc/html/draft-ietf-sedate-datetime-extended#section-3.1-4">keys are lowercase-only</a>.
       </li>
+      <li>A space may be used to separate the date and time in a combined date / time representation, but not in a duration (e.g., *"1970-01-01 00:00Z"* is valid but *"P1D 1H"* is not).</li>
+      <li>Alphabetic designators may be in lower or upper case (e.g., *"1970-01-01t00:00Z"* and *"1970-01-01T00:00z"* and *"pT1m"* are valid).</li>
+      <li>Period or comma may be used as the decimal separator (e.g., *"PT1,00H"* is a valid representation of a 1-hour duration).</li>
+      <li>UTC offsets of *"-00:00"* and *"-0000"* and *"-00"* are allowed, and all mean the same thing as *"+00:00"*.</li>
+      <li>UTC offsets may have seconds and up to 9 sub-second fractional digits (e.g., *"1970-01-01T00:00:00+00:00:00.123456789"* is valid).</li>
+      <li>The constituent date, time, and UTC offset parts of a combined representation may each independently use basic format (with no separator symbols) or extended format (with mandatory `-` or `:` separators), as long as each such part is itself in either basic format or extended format (e.g., *"1970-01-01T012345"* and *"19700101T01:23:45"* are valid but *"1970-0101T012345"* and *"1970-01-01T0123:45"* are not).</li>
       <li>
         When parsing a date representation for a Temporal.PlainMonthDay, the year may be omitted.
-        The year may optionally be replaced by *"--"* as in RFC 3339.
+        The year may optionally be replaced by `--` as in <a href="https://www.rfc-editor.org/rfc/rfc3339#appendix-A">RFC 3339 Appendix A</a>.
       </li>
-      <li>When parsing a date representation without a day for a Temporal.PlainYearMonth, the expression is allowed to be in Basic format.</li>
-      <li>A duration specifier of *"W"* (weeks) can be combined with any of the other specifiers.</li>
+      <li>When parsing a date representation without a day for a Temporal.PlainYearMonth, the expression is allowed to be in basic format (with no separator symbols).</li>
+      <li>A duration specifier of *"W"* (weeks) can be combined with any of the other specifiers (e.g., *"P1M1W1D"* is valid).</li>
       <li>Anything else described by the standard as requiring mutual agreement between communicating parties, is disallowed.</li>
     </ul>
 
     <emu-grammar type="definition">
-      Alpha : one of
-          `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M`
-          `N` `O` `P` `Q` `R` `S` `T` `U` `V` `W` `X` `Y` `Z`
-          `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m`
-          `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
-
-      Digit : one of
-          `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`
+      Alpha ::: one of
+        `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M` `N` `O` `P` `Q` `R`
+        `S` `T` `U` `V` `W` `X` `Y` `Z` `a` `b` `c` `d` `e` `f` `g` `h` `i` `j`
+        `k` `l` `m` `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
 
-      NonzeroDigit : one of
-          `1` `2` `3` `4` `5` `6` `7` `8` `9`
+      LowercaseAlpha ::: one of
+        `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m` `n` `o` `p` `q` `r`
+        `s` `t` `u` `v` `w` `x` `y` `z`
 
-      ASCIISign : one of
-          `+` `-`
+      DateSeparator[Extended] :::
+        [+Extended] `-`
+        [~Extended] [empty]
 
-      Sign :
-          ASCIISign
-          U+2212
+      DaysDesignator ::: one of
+        `D` `d`
+
+      HoursDesignator ::: one of
+        `H` `h`
+
+      MinutesDesignator ::: one of
+        `M` `m`
+
+      MonthsDesignator ::: one of
+        `M` `m`
 
-      Hour :
-          `0` Digit
-          `1` Digit
-          `20`
-          `21`
-          `22`
-          `23`
+      DurationDesignator ::: one of
+        `P` `p`
 
-      MinuteSecond :
-          `0` Digit
-          `1` Digit
-          `2` Digit
-          `3` Digit
-          `4` Digit
-          `5` Digit
+      SecondsDesignator ::: one of
+        `S` `s`
+
+      DateTimeSeparator :::
+        &lt;SP&gt;
+        `T`
+        `t`
+
+      TimeDesignator ::: one of
+        `T` `t`
+
+      WeeksDesignator ::: one of
+        `W` `w`
+
+      YearsDesignator ::: one of
+        `Y` `y`
 
-      DecimalSeparator : one of
-          `.` `,`
+      UTCDesignator ::: one of
+        `Z` `z`
+
+      AnnotationCriticalFlag :::
+        `!`
+
+      DateYear :::
+        DecimalDigit DecimalDigit DecimalDigit DecimalDigit
+        ASCIISign DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
 
-      DaysDesignator : one of
-          `D` `d`
+      DateMonth :::
+        `0` NonZeroDigit
+        `10`
+        `11`
+        `12`
 
-      HoursDesignator : one of
-          `H` `h`
+      DateDay :::
+        `0` NonZeroDigit
+        `1` DecimalDigit
+        `2` DecimalDigit
+        `30`
+        `31`
 
-      MinutesDesignator : one of
-          `M` `m`
+      DateSpecYearMonth :::
+        DateYear DateSeparator[+Extended] DateMonth
+        DateYear DateSeparator[~Extended] DateMonth
 
-      MonthsDesignator : one of
-          `M` `m`
+      DateSpecMonthDay :::
+        `--`? DateMonth DateSeparator[+Extended] DateDay
+        `--`? DateMonth DateSeparator[~Extended] DateDay
 
-      DurationDesignator : one of
-          `P` `p`
+      DateSpec[Extended] :::
+        DateYear DateSeparator[?Extended] DateMonth DateSeparator[?Extended] DateDay
 
-      SecondsDesignator : one of
-          `S` `s`
+      Date :::
+        DateSpec[+Extended]
+        DateSpec[~Extended]
 
-      DateTimeSeparator :
-          &lt;SP&gt;
-          `T`
-          `t`
+      TimeSecond :::
+        MinuteSecond
+        `60`
 
-      DurationTimeDesignator : one of
-          `T` `t`
+      NormalizedUTCOffset :::
+        ASCIISign Hour TimeSeparator[+Extended] MinuteSecond
 
-      WeeksDesignator : one of
-          `W` `w`
+      UTCOffset[SubMinutePrecision] :::
+        ASCIISign Hour
+        ASCIISign Hour TimeSeparator[+Extended] MinuteSecond
+        ASCIISign Hour TimeSeparator[~Extended] MinuteSecond
+        [+SubMinutePrecision] ASCIISign Hour TimeSeparator[+Extended] MinuteSecond TimeSeparator[+Extended] MinuteSecond TemporalDecimalFraction?
+        [+SubMinutePrecision] ASCIISign Hour TimeSeparator[~Extended] MinuteSecond TimeSeparator[~Extended] MinuteSecond TemporalDecimalFraction?
 
-      YearsDesignator : one of
-          `Y` `y`
+      DateTimeUTCOffset[Z] :::
+        [+Z] UTCDesignator
+        UTCOffset[+SubMinutePrecision]
 
-      UTCDesignator : one of
-          `Z` `z`
+      TZLeadingChar :::
+        Alpha
+        `.`
+        `_`
 
-      Digits :
-          Digit Digits?
+      TZChar :::
+        TZLeadingChar
+        DecimalDigit
+        `-`
+        `+`
 
-      DateFourDigitYear :
-          Digit Digit Digit Digit
+      TimeZoneIANANameComponent :::
+        TZLeadingChar
+        TimeZoneIANANameComponent TZChar
 
-      DateExtendedYear :
-          Sign Digit Digit Digit Digit Digit Digit
+      TimeZoneIANAName :::
+        TimeZoneIANANameComponent
+        TimeZoneIANAName `/` TimeZoneIANANameComponent
 
-      DateYear :
-          DateFourDigitYear
-          DateExtendedYear
+      TimeZoneIdentifier :::
+        UTCOffset[~SubMinutePrecision]
+        TimeZoneIANAName
 
-      DateMonth :
-          `0` NonzeroDigit
-          `10`
-          `11`
-          `12`
+      TimeZoneAnnotation :::
+        `[` AnnotationCriticalFlag? TimeZoneIdentifier `]`
 
-      DateDay :
-          `0` NonzeroDigit
-          `1` Digit
-          `2` Digit
-          `30`
-          `31`
+      AKeyLeadingChar :::
+        LowercaseAlpha
+        `_`
 
-      DateSpecYearMonth :
-          DateYear `-`? DateMonth
+      AKeyChar :::
+        AKeyLeadingChar
+        DecimalDigit
+        `-`
 
-      TwoDashes :
-          `--`
-      DateSpecMonthDay :
-          TwoDashes? DateMonth `-`? DateDay
+      AnnotationKey :::
+        AKeyLeadingChar
+        AnnotationKey AKeyChar
 
-      Date :
-          DateYear `-` DateMonth `-` DateDay
-          DateYear DateMonth DateDay
+      AnnotationValueComponent :::
+        Alpha AnnotationValueComponent?
+        DecimalDigit AnnotationValueComponent?
 
-      TimeHour :
-          Hour
+      AnnotationValue :::
+        AnnotationValueComponent
+        AnnotationValueComponent `-` AnnotationValue
 
-      TimeMinute :
-          MinuteSecond
+      Annotation :::
+        `[` AnnotationCriticalFlag? AnnotationKey `=` AnnotationValue `]`
 
-      TimeSecond :
-          MinuteSecond
-          `60`
+      Annotations :::
+        Annotation Annotations?
 
-      TimeFractionalPart :
-          Digit Digit? Digit? Digit? Digit? Digit? Digit? Digit? Digit?
+      TimeSpec[Extended] :::
+        Hour
+        Hour TimeSeparator[?Extended] MinuteSecond
+        Hour TimeSeparator[?Extended] MinuteSecond TimeSeparator[?Extended] TimeSecond TemporalDecimalFraction?
 
-      Fraction :
-          DecimalSeparator TimeFractionalPart
+      Time :::
+        TimeSpec[+Extended]
+        TimeSpec[~Extended]
 
-      TimeFraction :
-          Fraction
+      DateTime[Z, TimeRequired] :::
+        [~TimeRequired] Date
+        Date DateTimeSeparator Time DateTimeUTCOffset[?Z]?
 
-      TimeZoneUTCOffsetSign :
-          Sign
+      AnnotatedTime :::
+        TimeDesignator Time DateTimeUTCOffset[~Z]? TimeZoneAnnotation? Annotations?
+        Time DateTimeUTCOffset[~Z]? TimeZoneAnnotation? Annotations?
 
-      TimeZoneUTCOffsetHour :
-          Hour
+      AnnotatedDateTime[Zoned, TimeRequired] :::
+        [~Zoned] DateTime[~Z, ?TimeRequired] TimeZoneAnnotation? Annotations?
+        [+Zoned] DateTime[+Z, ?TimeRequired] TimeZoneAnnotation Annotations?
 
-      TimeZoneUTCOffsetMinute :
-          MinuteSecond
+      AnnotatedYearMonth :::
+        DateSpecYearMonth TimeZoneAnnotation? Annotations?
 
-      TimeZoneUTCOffsetSecond :
-          MinuteSecond
+      AnnotatedMonthDay :::
+        DateSpecMonthDay TimeZoneAnnotation? Annotations?
 
-      TimeZoneUTCOffsetFraction :
-          Fraction
+      DurationSecondsPart :::
+        DecimalDigits[~Sep] TemporalDecimalFraction? SecondsDesignator
 
-      TimeZoneNumericUTCOffset :
-          TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour
-          TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour `:` TimeZoneUTCOffsetMinute
-          TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour TimeZoneUTCOffsetMinute
-          TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour `:` TimeZoneUTCOffsetMinute `:` TimeZoneUTCOffsetSecond TimeZoneUTCOffsetFraction?
-          TimeZoneUTCOffsetSign TimeZoneUTCOffsetHour TimeZoneUTCOffsetMinute TimeZoneUTCOffsetSecond TimeZoneUTCOffsetFraction?
+      DurationMinutesPart :::
+        DecimalDigits[~Sep] TemporalDecimalFraction MinutesDesignator
+        DecimalDigits[~Sep] MinutesDesignator DurationSecondsPart?
 
-      TimeZoneUTCOffset :
-          TimeZoneNumericUTCOffset
-          UTCDesignator
+      DurationHoursPart :::
+        DecimalDigits[~Sep] TemporalDecimalFraction HoursDesignator
+        DecimalDigits[~Sep] HoursDesignator DurationMinutesPart
+        DecimalDigits[~Sep] HoursDesignator DurationSecondsPart?
 
-      TimeZoneUTCOffsetName :
-          Sign Hour
-          Sign Hour `:` MinuteSecond
-          Sign Hour MinuteSecond
-          Sign Hour `:` MinuteSecond `:` MinuteSecond Fraction?
-          Sign Hour MinuteSecond MinuteSecond Fraction?
+      DurationTime :::
+        TimeDesignator DurationHoursPart
+        TimeDesignator DurationMinutesPart
+        TimeDesignator DurationSecondsPart
 
-      TZLeadingChar :
-          Alpha
-          `.`
-          `_`
+      DurationDaysPart :::
+        DecimalDigits[~Sep] DaysDesignator
 
-      TZChar :
-          Alpha
-          `.`
-          `-`
-          `_`
+      DurationWeeksPart :::
+        DecimalDigits[~Sep] WeeksDesignator DurationDaysPart?
 
-      TimeZoneIANANameComponent :
-          TZLeadingChar TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? TZChar? but not one of `.` or `..`
+      DurationMonthsPart :::
+        DecimalDigits[~Sep] MonthsDesignator DurationWeeksPart
+        DecimalDigits[~Sep] MonthsDesignator DurationDaysPart?
 
-      TimeZoneIANANameTail :
-          TimeZoneIANANameComponent
-          TimeZoneIANANameComponent `/` TimeZoneIANANameTail
+      DurationYearsPart :::
+        DecimalDigits[~Sep] YearsDesignator DurationMonthsPart
+        DecimalDigits[~Sep] YearsDesignator DurationWeeksPart
+        DecimalDigits[~Sep] YearsDesignator DurationDaysPart?
 
-      TimeZoneIANAName :
-          TimeZoneIANANameTail
+      DurationDate :::
+        DurationYearsPart DurationTime?
+        DurationMonthsPart DurationTime?
+        DurationWeeksPart DurationTime?
+        DurationDaysPart DurationTime?
 
-      TimeZoneBracketedName :
-          TimeZoneIANAName
-          `Etc/GMT` ASCIISign Hour
-          TimeZoneUTCOffsetName
+      Duration :::
+        ASCIISign? DurationDesignator DurationDate
+        ASCIISign? DurationDesignator DurationTime
 
-      TimeZoneBracketedAnnotation :
-          `[` TimeZoneBracketedName `]`
+      TemporalInstantString :::
+        Date DateTimeSeparator Time DateTimeUTCOffset[+Z] TimeZoneAnnotation? Annotations?
 
-      TimeZoneOffsetRequired :
-          TimeZoneUTCOffset TimeZoneBracketedAnnotation?
+      TemporalDateTimeString[Zoned] :::
+        AnnotatedDateTime[?Zoned, ~TimeRequired]
 
-      TimeZoneNameRequired :
-          TimeZoneUTCOffset? TimeZoneBracketedAnnotation
+      TemporalDurationString :::
+        Duration
 
-      TimeZone :
-          TimeZoneOffsetRequired
-          TimeZoneNameRequired
+      TemporalMonthDayString :::
+        AnnotatedMonthDay
+        AnnotatedDateTime[~Zoned, ~TimeRequired]
 
-      CalChar :
-          Alpha
-          Digit
+      TemporalTimeString :::
+        AnnotatedTime
+        AnnotatedDateTime[~Zoned, +TimeRequired]
 
-      CalendarNameComponent :
-          CalChar CalChar CalChar CalChar? CalChar? CalChar? CalChar? CalChar?
-
-      CalendarNameTail :
-          CalendarNameComponent
-          CalendarNameComponent `-` CalendarNameTail
-
-      CalendarName :
-          CalendarNameTail
-
-      Calendar :
-          `[u-ca=` CalendarName `]`
-
-      TimeSpec :
-          TimeHour
-          TimeHour `:` TimeMinute
-          TimeHour TimeMinute
-          TimeHour `:` TimeMinute `:` TimeSecond TimeFraction?
-          TimeHour TimeMinute TimeSecond TimeFraction?
-
-      Time :
-          TimeSpec TimeZone?
-
-      CalendarDate :
-          Date Calendar?
-
-      TimeSpecSeparator :
-          DateTimeSeparator TimeSpec
-
-      DateTime :
-          Date TimeSpecSeparator? TimeZone?
-
-      CalendarDateTime:
-          DateTime Calendar?
-
-      DurationWholeSeconds :
-          Digits
-
-      DurationSecondsFraction :
-          TimeFraction
-
-      DurationSecondsPart :
-          DurationWholeSeconds DurationSecondsFraction? SecondsDesignator
-
-      DurationWholeMinutes :
-          Digits
-
-      DurationMinutesFraction :
-          TimeFraction
-
-      DurationMinutesPart :
-          DurationWholeMinutes DurationMinutesFraction? MinutesDesignator DurationSecondsPart?
-
-      DurationWholeHours :
-          Digits
-
-      DurationHoursFraction :
-          TimeFraction
-
-      DurationHoursPart :
-          DurationWholeHours DurationHoursFraction? HoursDesignator DurationMinutesPart
-          DurationWholeHours DurationHoursFraction? HoursDesignator DurationSecondsPart?
-
-      DurationTime :
-          DurationTimeDesignator DurationHoursPart
-          DurationTimeDesignator DurationMinutesPart
-          DurationTimeDesignator DurationSecondsPart
-
-      DurationDays :
-          Digits
-
-      DurationDaysPart :
-          DurationDays DaysDesignator
-
-      DurationWeeks :
-          Digits
-
-      DurationWeeksPart :
-          DurationWeeks WeeksDesignator DurationDaysPart?
-
-      DurationMonths :
-          Digits
-
-      DurationMonthsPart :
-          DurationMonths MonthsDesignator DurationWeeksPart
-          DurationMonths MonthsDesignator DurationDaysPart?
-
-      DurationYears :
-          Digits
-
-      DurationYearsPart :
-          DurationYears YearsDesignator DurationMonthsPart
-          DurationYears YearsDesignator DurationWeeksPart
-          DurationYears YearsDesignator DurationDaysPart?
-
-      DurationDate :
-          DurationYearsPart DurationTime?
-          DurationMonthsPart DurationTime?
-          DurationWeeksPart DurationTime?
-          DurationDaysPart DurationTime?
-
-      Duration :
-          Sign? DurationDesignator DurationDate
-          Sign? DurationDesignator DurationTime
-
-      TemporalInstantString :
-          Date TimeZoneOffsetRequired
-          Date DateTimeSeparator TimeSpec TimeZoneOffsetRequired
-
-      TemporalDateString :
-          CalendarDateTime
-
-      TemporalDateTimeString :
-          CalendarDateTime
-
-      TemporalDurationString :
-          Duration
-
-      TemporalMonthDayString :
-          DateSpecMonthDay
-          DateTime
-
-      TemporalTimeString :
-          Time
-          DateTime
-
-      TemporalTimeZoneIdentifier :
-          TimeZoneNumericUTCOffset
-          TimeZoneIANAName
-
-      TemporalTimeZoneString :
-          TemporalTimeZoneIdentifier
-          Date TimeSpecSeparator? TimeZone Calendar?
-
-      TemporalYearMonthString :
-          DateSpecYearMonth
-          DateTime
-
-      TemporalZonedDateTimeString :
-          Date TimeSpecSeparator? TimeZoneNameRequired Calendar?
-
-      TemporalCalendarString :
-          CalendarName
-          TemporalInstantString
-          CalendarDateTime
-          Time
-          DateSpecYearMonth
-          DateSpecMonthDay
-
-      TemporalRelativeToString :
-          TemporalDateTimeString
-          TemporalZonedDateTimeString
+      TemporalYearMonthString :::
+        AnnotatedYearMonth
+        AnnotatedDateTime[~Zoned, ~TimeRequired]
     </emu-grammar>
+
+    <emu-clause id="sec-temporal-iso8601grammar-static-semantics-isvalidmonthday" type="sdo">
+      <h1>Static Semantics: IsValidMonthDay ( ): a Boolean</h1>
+      <dl class="header"></dl>
+      <emu-grammar>
+        DateSpec[Extended] :::
+          DateYear DateSeparator[?Extended] DateMonth DateSeparator[?Extended] DateDay
+
+        DateSpecMonthDay :::
+          `--`? DateMonth DateSeparator[+Extended] DateDay
+          `--`? DateMonth DateSeparator[~Extended] DateDay
+      </emu-grammar>
+      <emu-alg>
+        1. If |DateDay| is *"31"* and |DateMonth| is *"02"*, *"04"*, *"06"*, *"09"*, *"11"*, return *false*.
+        1. If |DateMonth| is *"02"* and |DateDay| is *"30"*, return *false*.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-iso8601grammar-static-semantics-isvaliddate" type="sdo">
+      <h1>Static Semantics: IsValidDate ( ): a Boolean</h1>
+      <dl class="header"></dl>
+      <emu-grammar>
+        DateSpec[Extended] :::
+          DateYear DateSeparator[?Extended] DateMonth DateSeparator[?Extended] DateDay
+      </emu-grammar>
+      <emu-alg>
+        1. If IsValidMonthDay of |DateSpec| is *false*, return *false*.
+        1. Let _year_ be ℝ(StringToNumber(CodePointsToString(|DateYear|))).
+        1. If |DateMonth| is *"02"* and |DateDay| is *"29"* and MathematicalInLeapYear(EpochTimeForYear(_year_)) = 0, return *false*.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal-iso8601grammar-static-semantics-early-errors">
+      <h1>Static Semantics: Early Errors</h1>
+      <emu-grammar>
+        AnnotatedTime :::
+          Time DateTimeUTCOffset[~Z]? TimeZoneAnnotation? Annotations?
+      </emu-grammar>
+      <ul>
+        <li>
+          It is a Syntax Error if ParseText(|Time| |DateTimeUTCOffset[~Z]|, |DateSpecMonthDay|) is a Parse Node.
+        </li>
+        <li>
+          It is a Syntax Error if ParseText(|Time| |DateTimeUTCOffset[~Z]|, |DateSpecYearMonth|) is a Parse Node.
+        </li>
+      </ul>
+      <emu-grammar>
+        DateSpec[Extended] :::
+          DateYear DateSeparator[?Extended] DateMonth DateSeparator[?Extended] DateDay
+      </emu-grammar>
+      <ul>
+        <li>
+          It is a Syntax Error if IsValidDate of |DateSpec| is *false*.
+        </li>
+      </ul>
+      <emu-grammar>
+        DateSpecMonthDay :::
+          `--`? DateMonth DateSeparator[+Extended] DateDay
+          `--`? DateMonth DateSeparator[~Extended] DateDay
+      </emu-grammar>
+      <ul>
+        <li>
+          It is a Syntax Error if IsValidMonthDay of |DateSpecMonthDay| is *false*.
+        </li>
+      </ul>
+      <emu-grammar>
+        DateYear :::
+          ASCIISign DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
+      </emu-grammar>
+      <ul>
+        <li>
+          It is a Syntax Error if |DateYear| is *"-000000"*.
+        </li>
+      </ul>
+    </emu-clause>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-parseisodatetime" aoid="ParseISODateTime">
-    <h1>ParseISODateTime ( _isoString_ )</h1>
+  <emu-clause id="sec-temporal-iso-string-time-zone-parse-records">
+    <h1>ISO String Time Zone Parse Records</h1>
+    <p>A <dfn variants="ISO String Time Zone Parse Records">ISO String Time Zone Parse Record</dfn> is a Record value used to represent the result of parsing the representation of the time zone in an ISO 8601 string.</p>
+    <p>ISO String Time Zone Parse Records have the fields listed in <emu-xref href="#table-temporal-iso-string-time-zone-parse-record-fields"></emu-xref>.</p>
+    <emu-table id="table-temporal-iso-string-time-zone-parse-record-fields" caption="ISO String Time Zone Parse Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Z]]</td>
+          <td>a Boolean</td>
+          <td>
+            Whether the ISO 8601 string contained the `Z` UTC designator.
+          </td>
+        </tr>
+        <tr>
+          <td>[[OffsetString]]</td>
+          <td>a String or ~empty~</td>
+          <td>
+            The UTC offset from the ISO 8601 string, or ~empty~ if none was present.
+          </td>
+        </tr>
+        <tr>
+          <td>[[TimeZoneAnnotation]]</td>
+          <td>a String or ~empty~</td>
+          <td>
+            The time zone annotation from the ISO 8601 string, or ~empty~ if none was present.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-iso-date-time-parse-records">
+    <h1>ISO Date-Time Parse Records</h1>
+    <p>An <dfn variants="ISO Date-Time Parse Records">ISO Date-Time Parse Record</dfn> is a Record value used to represent the result of parsing an ISO 8601 string.</p>
     <p>
-      The ParseISODateTime abstract operation examines any |Time|, |DateTime| or |CalendarDateTime| string accepted by the grammar in <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref> and returns a record with all the date and time components found.
+      For any ISO Date-Time Parse Record _r_, IsValidISODate(_r_.[[Year]], _r_.[[Month]], _r_.[[Day]]) must return *true*, or, if _r_.[[Year]] is ~empty~, IsValidISODate(1972, _r_.[[Month]], _r_.[[Day]]) must return *true*.
+      It is not necessary for the represented date and time to be within the range given by ISODateTimeWithinLimits.
     </p>
-    <emu-note>The value of ? ToIntegerOrInfinity(*undefined*) is 0.</emu-note>
+    <p>ISO Date-Time Parse Records have the fields listed in <emu-xref href="#table-temporal-iso-date-time-parse-record-fields"></emu-xref>.</p>
+    <emu-table id="table-temporal-iso-date-time-parse-record-fields" caption="ISO Date-Time Parse Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Year]]</td>
+          <td>an integer or ~empty~</td>
+          <td>
+            The year in the ISO 8601 calendar, or ~empty~ if the ISO 8601 string's format was that of |TemporalMonthDayString| and the year was omitted.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Month]]</td>
+          <td>an integer between 1 and 12, inclusive</td>
+          <td>
+            The number of the month in the ISO 8601 calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Day]]</td>
+          <td>an integer between 1 and 31, inclusive</td>
+          <td>
+            The number of the day of the month in the ISO 8601 calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Time]]</td>
+          <td>either a Time Record with [[Days]] value 0, or ~start-of-day~</td>
+          <td>
+            The time of day, or ~start-of-day~ if the time was omitted from the string.
+          </td>
+        </tr>
+        <tr>
+          <td>[[TimeZone]]</td>
+          <td>an ISO String Time Zone Parse Record</td>
+          <td>
+            A representation of how the time zone was expressed in the ISO 8601 string.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Calendar]]</td>
+          <td>a String or ~empty~</td>
+          <td>
+            The calendar type from the ISO 8601 string, or ~empty~ if none was present.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-parseisodatetime" type="abstract operation">
+    <h1>
+      ParseISODateTime (
+        _isoString_: a String,
+        _allowedFormats_: a List of nonterminals,
+      ): either a normal completion containing an ISO Date-Time Parse Record or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It parses the argument as an ISO 8601 string and returns a Record representing each date and time component as a distinct field.</dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. Let _year_, _month_, _day_, _hour_, _minute_, _second_, _fraction_, and _calendar_ be the parts of _isoString_ produced respectively by the |DateYear|, |DateMonth|, |DateDay|, |TimeHour|, |TimeMinute|, |TimeSecond|, |TimeFractionalPart|, and |CalendarName| productions, or *undefined* if not present.
-      1. Let _year_ be the part of _isoString_ produced by the |DateYear| production.
-      1. If the first code unit of _year_ is 0x2212 (MINUS SIGN), replace it with the code unit 0x002D (HYPHEN-MINUS).
-      1. Set _year_ to ! ToIntegerOrInfinity(_year_).
-      1. If _month_ is *undefined*, then
-        1. Set _month_ to 1.
+      1. Let _parseResult_ be ~empty~.
+      1. Let _calendar_ be ~empty~.
+      1. Let _yearAbsent_ be *false*.
+      1. For each nonterminal _goal_ of _allowedFormats_, do
+        1. If _parseResult_ is not a Parse Node, then
+          1. Set _parseResult_ to ParseText(StringToCodePoints(_isoString_), _goal_).
+          1. If _parseResult_ is a Parse Node, then
+            1. Let _calendarWasCritical_ be *false*.
+            1. For each |Annotation| Parse Node _annotation_ contained within _parseResult_, do
+              1. Let _key_ be the source text matched by the |AnnotationKey| Parse Node contained within _annotation_.
+              1. Let _value_ be the source text matched by the |AnnotationValue| Parse Node contained within _annotation_.
+              1. If CodePointsToString(_key_) is *"u-ca"*, then
+                1. If _calendar_ is ~empty~, then
+                  1. Set _calendar_ to CodePointsToString(_value_).
+                  1. If _annotation_ contains an |AnnotationCriticalFlag| Parse Node, set _calendarWasCritical_ to *true*.
+                1. Else,
+                  1. If _annotation_ contains an |AnnotationCriticalFlag| Parse Node, or _calendarWasCritical_ is *true*, throw a *RangeError* exception.
+              1. Else,
+                1. If _annotation_ contains an |AnnotationCriticalFlag| Parse Node, throw a *RangeError* exception.
+            1. If _goal_ is |TemporalMonthDayString| or |TemporalYearMonthString|, _calendar_ is not ~empty~, and the ASCII-lowercase of _calendar_ is not *"iso8601"*, throw a *RangeError* exception.
+            1. If _goal_ is |TemporalMonthDayString| and _parseResult_ does not contain a |DateYear| Parse Node, then
+              1. Assert: _goal_ is the last element of _allowedFormats_.
+              1. Set _yearAbsent_ to *true*.
+      1. If _parseResult_ is not a Parse Node, throw a *RangeError* exception.
+      1. NOTE: Applications of StringToNumber below do not lose precision, since each of the parsed values is guaranteed to be a sufficiently short string of decimal digits.
+      1. Let each of _year_, _month_, _day_, _hour_, _minute_, _second_, and _fSeconds_ be the source text matched by the respective |DateYear|, |DateMonth|, |DateDay|, the first |Hour|, the first |MinuteSecond|, |TimeSecond|, and the first |TemporalDecimalFraction| Parse Node contained within _parseResult_, or an empty sequence of code points if not present.
+      1. Let _yearMV_ be ℝ(StringToNumber(CodePointsToString(_year_))).
+      1. If _month_ is empty, then
+        1. Let _monthMV_ be 1.
       1. Else,
-        1. Set _month_ to ! ToIntegerOrInfinity(_month_).
-      1. If _day_ is *undefined*, then
-        1. Set _day_ to 1.
+        1. Let _monthMV_ be ℝ(StringToNumber(CodePointsToString(_month_))).
+      1. If _day_ is empty, then
+        1. Let _dayMV_ be 1.
       1. Else,
-        1. Set _day_ to ! ToIntegerOrInfinity(_day_).
-      1. Set _hour_ to ! ToIntegerOrInfinity(_hour_).
-      1. Set _minute_ to ! ToIntegerOrInfinity(_minute_).
-      1. Set _second_ to ! ToIntegerOrInfinity(_second_).
-      1. If _second_ is 60, then
-        1. Set _second_ to 59.
-      1. If _fraction_ is not *undefined*, then
-        1. Set _fraction_ to the string-concatenation of the previous value of _fraction_ and the string *"000000000"*.
-        1. Let _millisecond_ be the String value equal to the substring of _fraction_ from 0 to 3.
-        1. Set _millisecond_ to ! ToIntegerOrInfinity(_millisecond_).
-        1. Let _microsecond_ be the String value equal to the substring of _fraction_ from 3 to 6.
-        1. Set _microsecond_ to ! ToIntegerOrInfinity(_microsecond_).
-        1. Let _nanosecond_ be the String value equal to the substring of _fraction_ from 6 to 9.
-        1. Set _nanosecond_ to ! ToIntegerOrInfinity(_nanosecond_).
+        1. Let _dayMV_ be ℝ(StringToNumber(CodePointsToString(_day_))).
+      1. If _hour_ is empty, then
+        1. Let _hourMV_ be 0.
       1. Else,
-        1. Let _millisecond_ be 0.
-        1. Let _microsecond_ be 0.
-        1. Let _nanosecond_ be 0.
-      1. If ! IsValidISODate(_year_, _month_, _day_) is *false*, throw a *RangeError* exception.
-      1. If ! IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
-      1. Return the Record {
-        [[Year]]: _year_,
-        [[Month]]: _month_,
-        [[Day]]: _day_,
-        [[Hour]]: _hour_,
-        [[Minute]]: _minute_,
-        [[Second]]: _second_,
-        [[Millisecond]]: _millisecond_,
-        [[Microsecond]]: _microsecond_,
-        [[Nanosecond]]: _nanosecond_,
+        1. Let _hourMV_ be ℝ(StringToNumber(CodePointsToString(_hour_))).
+      1. If _minute_ is empty, then
+        1. Let _minuteMV_ be 0.
+      1. Else,
+        1. Let _minuteMV_ be ℝ(StringToNumber(CodePointsToString(_minute_))).
+      1. If _second_ is empty, then
+        1. Let _secondMV_ be 0.
+      1. Else,
+        1. Let _secondMV_ be ℝ(StringToNumber(CodePointsToString(_second_))).
+        1. If _secondMV_ = 60, then
+          1. Set _secondMV_ to 59.
+      1. If _fSeconds_ is not empty, then
+        1. Let _fSecondsDigits_ be the substring of CodePointsToString(_fSeconds_) from 1.
+        1. Let _fSecondsDigitsExtended_ be the string-concatenation of _fSecondsDigits_ and *"000000000"*.
+        1. Let _millisecond_ be the substring of _fSecondsDigitsExtended_ from 0 to 3.
+        1. Let _microsecond_ be the substring of _fSecondsDigitsExtended_ from 3 to 6.
+        1. Let _nanosecond_ be the substring of _fSecondsDigitsExtended_ from 6 to 9.
+        1. Let _millisecondMV_ be ℝ(StringToNumber(_millisecond_)).
+        1. Let _microsecondMV_ be ℝ(StringToNumber(_microsecond_)).
+        1. Let _nanosecondMV_ be ℝ(StringToNumber(_nanosecond_)).
+      1. Else,
+        1. Let _millisecondMV_ be 0.
+        1. Let _microsecondMV_ be 0.
+        1. Let _nanosecondMV_ be 0.
+      1. Assert: IsValidISODate(_yearMV_, _monthMV_, _dayMV_) is *true*.
+      1. If _hour_ is empty, then
+        1. Let _time_ be ~start-of-day~.
+      1. Else,
+        1. Let _time_ be CreateTimeRecord(_hourMV_, _minuteMV_, _secondMV_, _millisecondMV_, _microsecondMV_, _nanosecondMV_).
+      1. Let _timeZoneResult_ be ISO String Time Zone Parse Record { [[Z]]: *false*, [[OffsetString]]: ~empty~, [[TimeZoneAnnotation]]: ~empty~ }.
+      1. If _parseResult_ contains a |TimeZoneIdentifier| Parse Node, then
+        1. Let _identifier_ be the source text matched by the |TimeZoneIdentifier| Parse Node contained within _parseResult_.
+        1. Set _timeZoneResult_.[[TimeZoneAnnotation]] to CodePointsToString(_identifier_).
+      1. If _parseResult_ contains a |UTCDesignator| Parse Node, then
+        1. Set _timeZoneResult_.[[Z]] to *true*.
+      1. Else if _parseResult_ contains a |UTCOffset[+SubMinutePrecision]| Parse Node, then
+        1. Let _offset_ be the source text matched by the |UTCOffset[+SubMinutePrecision]| Parse Node contained within _parseResult_.
+        1. Set _timeZoneResult_.[[OffsetString]] to CodePointsToString(_offset_).
+      1. If _yearAbsent_ is *true*, let _yearReturn_ be ~empty~; else let _yearReturn_ be _yearMV_.
+      1. Return ISO Date-Time Parse Record {
+        [[Year]]: _yearReturn_,
+        [[Month]]: _monthMV_,
+        [[Day]]: _dayMV_,
+        [[Time]]: _time_,
+        [[TimeZone]]: _timeZoneResult_,
         [[Calendar]]: _calendar_
         }.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-parsetemporalinstantstring" aoid="ParseTemporalInstantString">
-    <h1>ParseTemporalInstantString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalInstantString abstract operation parses an ISO 8601 string and returns the information needed to construct a Temporal.Instant instance.
-    </p>
+  <emu-clause id="sec-temporal-parsetemporalcalendarstring" type="abstract operation">
+    <h1>
+      ParseTemporalCalendarString (
+        _string_: a String,
+      ): either a normal completion containing a String or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It parses the argument either as an ISO 8601 string or bare calendar type, and returns the calendar type.
+        The returned string is syntactically a valid calendar type, but not necessarily an existing one.
+      </dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalInstantString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ! ParseISODateTime(_isoString_).
-      1. Let _timeZoneResult_ be ? ParseTemporalTimeZoneString(_isoString_).
-      1. Let _offsetString_ be _timeZoneResult_.[[OffsetString]].
-      1. If _timeZoneResult_.[[Z]] is *true*, then
-        1. Set _offsetString_ to *"+00:00"*.
-      1. Assert: _offsetString_ is not *undefined*.
-      1. Return the Record {
-        [[Year]]: _result_.[[Year]],
-        [[Month]]: _result_.[[Month]],
-        [[Day]]: _result_.[[Day]],
-        [[Hour]]: _result_.[[Hour]],
-        [[Minute]]: _result_.[[Minute]],
-        [[Second]]: _result_.[[Second]],
-        [[Millisecond]]: _result_.[[Millisecond]],
-        [[Microsecond]]: _result_.[[Microsecond]],
-        [[Nanosecond]]: _result_.[[Nanosecond]],
-        [[TimeZoneOffsetString]]: _offsetString_
-        }.
+      1. Let _parseResult_ be Completion(ParseISODateTime(_string_, « |TemporalDateTimeString[+Zoned]|, |TemporalDateTimeString[~Zoned]|, |TemporalInstantString|, |TemporalTimeString|, |TemporalMonthDayString|, |TemporalYearMonthString| »)).
+      1. If _parseResult_ is a normal completion, then
+        1. Let _calendar_ be _parseResult_.[[Value]].[[Calendar]].
+        1. If _calendar_ is ~empty~, return *"iso8601"*.
+        1. Else, return _calendar_.
+      1. Else,
+        1. Set _parseResult_ to ParseText(StringToCodePoints(_string_), |AnnotationValue|).
+        1. If _parseResult_ is a List of errors, throw a *RangeError* exception.
+        1. Else, return _string_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-parsetemporalzoneddatetimestring" aoid="ParseTemporalZonedDateTimeString">
-    <h1>ParseTemporalZonedDateTimeString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalZonedDateTimeString abstract operation parses an ISO 8601 string and returns the information needed to construct a Temporal.ZonedDateTime instance.
-    </p>
+  <emu-clause id="sec-temporal-parsetemporaldurationstring" type="abstract operation">
+    <h1>
+      ParseTemporalDurationString (
+        _isoString_: a String,
+      ): either a normal completion containing a Temporal.Duration or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It parses the argument as an ISO 8601 duration string.</dd>
+    </dl>
+    <emu-note>The value of ToIntegerWithTruncation(the empty String) is 0.</emu-note>
+    <emu-note>Use of mathematical values rather than approximations is important to avoid off-by-one errors with input like "PT46H66M71.50040904S".</emu-note>
     <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalZonedDateTimeString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ! ParseISODateTime(_isoString_).
-      1. Let _timeZoneResult_ be ? ParseTemporalTimeZoneString(_isoString_).
-      1. Return the Record {
-        [[Year]]: _result_.[[Year]],
-        [[Month]]: _result_.[[Month]],
-        [[Day]]: _result_.[[Day]],
-        [[Hour]]: _result_.[[Hour]],
-        [[Minute]]: _result_.[[Minute]],
-        [[Second]]: _result_.[[Second]],
-        [[Millisecond]]: _result_.[[Millisecond]],
-        [[Microsecond]]: _result_.[[Microsecond]],
-        [[Nanosecond]]: _result_.[[Nanosecond]],
-        [[Calendar]]: _result_.[[Calendar]],
-        [[TimeZoneZ]]: _timeZoneResult_.[[Z]],
-        [[TimeZoneOffsetString]]: _timeZoneResult_.[[OffsetString]],
-        [[TimeZoneName]]: _timeZoneResult_.[[Name]]
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporalcalendarstring" aoid="ParseTemporalCalendarString">
-    <h1>ParseTemporalCalendarString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalCalendarString abstract operation interprets an ISO 8601 string and retrieves the calendar identifier from it.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalCalendarString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _id_ be the part of _isoString_ produced by the |CalendarName| production, or *undefined* if not present.
-      1. If _id_ is *undefined*, then
-        1. Return *"iso8601"*.
-      1. If ! IsBuiltinCalendar(_id_) is *false*, then
-        1. Throw a *RangeError* exception.
-      1. Return _id_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporaldatestring" aoid="ParseTemporalDateString">
-    <h1>ParseTemporalDateString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalDateString abstract operation parses a full or partial ISO 8601 string and returns the information needed to construct a Temporal.PlainDate instance.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalDateString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ? ParseISODateTime(_isoString_).
-      1. Return the Record {
-        [[Year]]: _result_.[[Year]],
-        [[Month]]: _result_.[[Month]],
-        [[Day]]: _result_.[[Day]],
-        [[Calendar]]: _result_.[[Calendar]]
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporaldatetimestring" aoid="ParseTemporalDateTimeString">
-    <h1>ParseTemporalDateTimeString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalDateTimeString abstract operation parses an ISO 8601 string and returns the information needed to construct a Temporal.PlainDateTime instance.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalDateTimeString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ? ParseISODateTime(_isoString_).
-      1. Return _result_.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporaldurationstring" aoid="ParseTemporalDurationString">
-    <h1>ParseTemporalDurationString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalDurationString abstract operation parses an ISO 8601 string and returns the information needed to construct a Temporal.Duration instance.
-    </p>
-    <emu-note>The value of ? ToIntegerOrInfinity(*undefined*) is 0.</emu-note>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalDurationString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _sign_, _years_, _months_, _weeks_, _days_, _hours_, _fHours_, _minutes_, _fMinutes_, _seconds_, and _fSeconds_ be the parts of _isoString_ produced respectively by the |Sign|, |DurationYears|, |DurationMonths|, |DurationWeeks|, |DurationDays|, |DurationWholeHours|, |DurationHoursFraction|, |DurationWholeMinutes|, |DurationMinutesFraction|, |DurationWholeSeconds|, and |DurationSecondsFraction| productions, or *undefined* if not present.
-      1. If _sign_ is the code unit 0x002D (HYPHEN-MINUS) or 0x2212 (MINUS SIGN), then
-        1. Let _factor_ be −1.
+      1. Let _duration_ be ParseText(StringToCodePoints(_isoString_), |TemporalDurationString|).
+      1. If _duration_ is a List of errors, throw a *RangeError* exception.
+      1. Let _sign_ be the source text matched by the |ASCIISign| Parse Node contained within _duration_, or an empty sequence of code points if not present.
+      1. If _duration_ contains a |DurationYearsPart| Parse Node, then
+        1. Let _yearsNode_ be that |DurationYearsPart| Parse Node contained within _duration_.
+        1. Let _years_ be the source text matched by the |DecimalDigits| Parse Node contained within _yearsNode_.
+      1. Else,
+        1. Let _years_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationMonthsPart| Parse Node, then
+        1. Let _monthsNode_ be the |DurationMonthsPart| Parse Node contained within _duration_.
+        1. Let _months_ be the source text matched by the |DecimalDigits| Parse Node contained within _monthsNode_.
+      1. Else,
+        1. Let _months_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationWeeksPart| Parse Node, then
+        1. Let _weeksNode_ be the |DurationWeeksPart| Parse Node contained within _duration_.
+        1. Let _weeks_ be the source text matched by the |DecimalDigits| Parse Node contained within _weeksNode_.
+      1. Else,
+        1. Let _weeks_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationDaysPart| Parse Node, then
+        1. Let _daysNode_ be the |DurationDaysPart| Parse Node contained within _duration_.
+        1. Let _days_ be the source text matched by the |DecimalDigits| Parse Node contained within _daysNode_.
+      1. Else,
+        1. Let _days_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationHoursPart| Parse Node, then
+        1. Let _hoursNode_ be the |DurationHoursPart| Parse Node contained within _duration_.
+        1. Let _hours_ be the source text matched by the |DecimalDigits| Parse Node contained within _hoursNode_.
+        1. Let _fHours_ be the source text matched by the |TemporalDecimalFraction| Parse Node contained within _hoursNode_, or an empty sequence of code points if not present.
+      1. Else,
+        1. Let _hours_ be an empty sequence of code points.
+        1. Let _fHours_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationMinutesPart| Parse Node, then
+        1. Let _minutesNode_ be the |DurationMinutesPart| Parse Node contained within _duration_.
+        1. Let _minutes_ be the source text matched by the |DecimalDigits| Parse Node contained within _minutesNode_.
+        1. Let _fMinutes_ be the source text matched by the |TemporalDecimalFraction| Parse Node contained within _minutesNode_, or an empty sequence of code points if not present.
+      1. Else,
+        1. Let _minutes_ be an empty sequence of code points.
+        1. Let _fMinutes_ be an empty sequence of code points.
+      1. If _duration_ contains a |DurationSecondsPart| Parse Node, then
+        1. Let _secondsNode_ be the |DurationSecondsPart| Parse Node contained within _duration_.
+        1. Let _seconds_ be the source text matched by the |DecimalDigits| Parse Node contained within _secondsNode_.
+        1. Let _fSeconds_ be the source text matched by the |TemporalDecimalFraction| Parse Node contained within _secondsNode_, or an empty sequence of code points if not present.
+      1. Else,
+        1. Let _seconds_ be an empty sequence of code points.
+        1. Let _fSeconds_ be an empty sequence of code points.
+      1. Let _yearsMV_ be ? ToIntegerWithTruncation(CodePointsToString(_years_)).
+      1. Let _monthsMV_ be ? ToIntegerWithTruncation(CodePointsToString(_months_)).
+      1. Let _weeksMV_ be ? ToIntegerWithTruncation(CodePointsToString(_weeks_)).
+      1. Let _daysMV_ be ? ToIntegerWithTruncation(CodePointsToString(_days_)).
+      1. Let _hoursMV_ be ? ToIntegerWithTruncation(CodePointsToString(_hours_)).
+      1. If _fHours_ is not empty, then
+        1. Assert: _minutes_, _fMinutes_, _seconds_, and _fSeconds_ are empty.
+        1. Let _fHoursDigits_ be the substring of CodePointsToString(_fHours_) from 1.
+        1. Let _fHoursScale_ be the length of _fHoursDigits_.
+        1. Let _minutesMV_ be ? ToIntegerWithTruncation(_fHoursDigits_) / 10<sup>_fHoursScale_</sup> × 60.
+      1. Else,
+        1. Let _minutesMV_ be ? ToIntegerWithTruncation(CodePointsToString(_minutes_)).
+      1. If _fMinutes_ is not empty, then
+        1. Assert: _seconds_ and _fSeconds_ are empty.
+        1. Let _fMinutesDigits_ be the substring of CodePointsToString(_fMinutes_) from 1.
+        1. Let _fMinutesScale_ be the length of _fMinutesDigits_.
+        1. Let _secondsMV_ be ? ToIntegerWithTruncation(_fMinutesDigits_) / 10<sup>_fMinutesScale_</sup> × 60.
+      1. Else if _seconds_ is not empty, then
+        1. Let _secondsMV_ be ? ToIntegerWithTruncation(CodePointsToString(_seconds_)).
+      1. Else,
+        1. Let _secondsMV_ be remainder(_minutesMV_, 1) × 60.
+      1. If _fSeconds_ is not empty, then
+        1. Let _fSecondsDigits_ be the substring of CodePointsToString(_fSeconds_) from 1.
+        1. Let _fSecondsScale_ be the length of _fSecondsDigits_.
+        1. Let _millisecondsMV_ be ? ToIntegerWithTruncation(_fSecondsDigits_) / 10<sup>_fSecondsScale_</sup> × 1000.
+      1. Else,
+        1. Let _millisecondsMV_ be remainder(_secondsMV_, 1) × 1000.
+      1. Let _microsecondsMV_ be remainder(_millisecondsMV_, 1) × 1000.
+      1. Let _nanosecondsMV_ be remainder(_microsecondsMV_, 1) × 1000.
+      1. If _sign_ contains the code point U+002D (HYPHEN-MINUS), then
+        1. Let _factor_ be -1.
       1. Else,
         1. Let _factor_ be 1.
-      1. Set _years_ to ? ToIntegerOrInfinity(_years_) × _factor_.
-      1. Set _months_ to ? ToIntegerOrInfinity(_months_) × _factor_.
-      1. Set _weeks_ to ? ToIntegerOrInfinity(_weeks_) × _factor_.
-      1. Set _days_ to ? ToIntegerOrInfinity(_days_) × _factor_.
-      1. Set _hours_ to ? ToIntegerOrInfinity(_hours_) × _factor_.
-      1. Set _minutes_ to ? ToIntegerOrInfinity(_minutes_) × _factor_.
-      1. Set _seconds_ to ? ToIntegerOrInfinity(_seconds_) × _factor_.
-      1. If _fSeconds_ is not *undefined*, then
-        1. Let _fraction_ be the part of _isoString_ produced by the |TimeFractionalPart| production.
-        1. Set _fraction_ to the string-concatenation of the previous value of _fraction_ and the string *"000000000"*.
-        1. Let _milliseconds_ be the String value equal to the substring of _fraction_ from 0 to 3.
-        1. Set _milliseconds_ to ! ToIntegerOrInfinity(_milliseconds_) × _factor_.
-        1. Let _microseconds_ be the String value equal to the substring of _fraction_ from 3 to 6.
-        1. Set _microseconds_ to ! ToIntegerOrInfinity(_microseconds_) × _factor_.
-        1. Let _nanoseconds_ be the String value equal to the substring of _fraction_ from 6 to 9.
-        1. Set _nanoseconds_ to ! ToIntegerOrInfinity(_nanoseconds_) × _factor_.
-      1. Else,
-        1. Let _milliseconds_ be 0.
-        1. Let _microseconds_ be 0.
-        1. Let _nanoseconds_ be 0.
-      1. If _fHours_ is not *undefined*, then
-        1. Let _fraction_ be the part of _isoString_ produced by the |TimeFractionalPart| production.
-        1. Set _fHours_ to ! ToIntegerOrInfinity(_fraction_) × _factor_ / 10 raised to the power of the length of _fHours_.
-      1. Else,
-        1. Set _fHours_ to 0.
-      1. If _fMinutes_ is not *undefined*, then
-        1. Let _fraction_ be the part of _isoString_ produced by the |TimeFractionalPart| production.
-        1. Set _fMinutes_ to ! ToIntegerOrInfinity(_fraction_) × _factor_ / 10 raised to the power of the length of _fMinutes_.
-      1. Else,
-        1. Set _fMinutes_ to 0.
-      1. Let _result_ be ? DurationHandleFractions(_fHours_, _minutes_, _fMinutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
-      1. Return the Record {
-        [[Years]]: _years_,
-        [[Months]]: _months_,
-        [[Weeks]]: _weeks_,
-        [[Days]]: _days_,
-        [[Hours]]: _hours_,
-        [[Minutes]]: _result_.[[Minutes]],
-        [[Seconds]]: _result_.[[Seconds]],
-        [[Milliseconds]]: _result_.[[Milliseconds]],
-        [[Microseconds]]: _result_.[[Microseconds]],
-        [[Nanoseconds]]: _result_.[[Nanoseconds]]
-        }.
+      1. Set _yearsMV_ to _yearsMV_ × _factor_.
+      1. Set _monthsMV_ to _monthsMV_ × _factor_.
+      1. Set _weeksMV_ to _weeksMV_ × _factor_.
+      1. Set _daysMV_ to _daysMV_ × _factor_.
+      1. Set _hoursMV_ to _hoursMV_ × _factor_.
+      1. Set _minutesMV_ to floor(_minutesMV_) × _factor_.
+      1. Set _secondsMV_ to floor(_secondsMV_) × _factor_.
+      1. Set _millisecondsMV_ to floor(_millisecondsMV_) × _factor_.
+      1. Set _microsecondsMV_ to floor(_microsecondsMV_) × _factor_.
+      1. Set _nanosecondsMV_ to floor(_nanosecondsMV_) × _factor_.
+      1. Return ? CreateTemporalDuration(_yearsMV_, _monthsMV_, _weeksMV_, _daysMV_, _hoursMV_, _minutesMV_, _secondsMV_, _millisecondsMV_, _microsecondsMV_, _nanosecondsMV_).
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-parsetemporalmonthdaystring" aoid="ParseTemporalMonthDayString">
-    <h1>ParseTemporalMonthDayString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalMonthDayString abstract operation parses an ISO 8601 string and returns the information needed to construct a Temporal.PlainMonthDay instance.
-    </p>
-    <emu-note>The value of ? ToIntegerOrInfinity(*undefined*) is 0.</emu-note>
+  <emu-clause id="sec-temporal-parsetemporaltimezonestring" type="abstract operation">
+    <h1>
+      ParseTemporalTimeZoneString (
+        _timeZoneString_: a String,
+      ): either a normal completion containing a Record containing information about the time zone, or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It parses the argument as either a time zone identifier or an ISO 8601 string.
+        The returned Record's fields are set as follows:
+        <ul>
+          <li>If _timeZoneString_ is a named time zone identifier, then [[Name]] is _timeZoneString_ and [[OffsetMinutes]] is ~empty~.</li>
+          <li>Otherwise, if _timeZoneString_ is an offset time zone identifier, then [[OffsetMinutes]] is a signed integer and [[Name]] is ~empty~.</li>
+          <li>Otherwise, if _timeZoneString_ is an ISO 8601 string with a time zone annotation containing a named time zone identifier, then [[Name]] is the time zone identifier contained in the annotation and [[OffsetMinutes]] is ~empty~.</li>
+          <li>Otherwise, if _timeZoneString_ is an ISO 8601 string with a time zone annotation containing an offset time zone identifier, then [[OffsetMinutes]] is a signed integer and [[Name]] is ~empty~.</li>
+          <li>Otherwise, if _timeZoneString_ is an ISO 8601 string using a *Z* offset designator, then [[Name]] is *"UTC"* and [[OffsetMinutes]] is ~empty~.</li>
+          <li>Otherwise, if _timeZoneString_ is an ISO 8601 string using a numeric UTC offset, then [[OffsetMinutes]] is a signed integer and [[Name]] is ~empty~.</li>
+          <li>Otherwise, a *RangeError* is thrown.</li>
+        </ul>
+      </dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalMonthDayString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _year_, _month_ and _day_ be the parts of _isoString_ produced respectively by the |DateYear|, |DateMonth| and |DateDay| productions, or *undefined* if not present.
-      1. If _year_ is not *undefined*, then
-        1. Set _year_ to ! ToIntegerOrInfinity(_year_).
-      1. If _month_ is *undefined*, then
-        1. Set _month_ to 1.
-      1. Else,
-        1. Set _month_ to ! ToIntegerOrInfinity(_month_).
-      1. If _day_ is *undefined*, then
-        1. Set _day_ to 1.
-      1. Else,
-        1. Set _day_ to ! ToIntegerOrInfinity(_day_).
-      1. Return the Record {
-        [[Year]]: _year_,
-        [[Month]]: _month_,
-        [[Day]]: _day_
-        }.
+      1. Let _parseResult_ be ParseText(StringToCodePoints(_timeZoneString_), |TimeZoneIdentifier|).
+      1. If _parseResult_ is a Parse Node, then
+        1. Return ! ParseTimeZoneIdentifier(_timeZoneString_).
+      1. Let _result_ be ? ParseISODateTime(_timeZoneString_, « |TemporalDateTimeString[+Zoned]|, |TemporalDateTimeString[~Zoned]|, |TemporalInstantString|, |TemporalTimeString|, |TemporalMonthDayString|, |TemporalYearMonthString| »).
+      1. Let _timeZoneResult_ be _result_.[[TimeZone]].
+      1. If _timeZoneResult_.[[TimeZoneAnnotation]] is not ~empty~, then
+        1. Return ! ParseTimeZoneIdentifier(_timeZoneResult_.[[TimeZoneAnnotation]]).
+      1. If _timeZoneResult_.[[Z]] is *true*, then
+        1. Return ! ParseTimeZoneIdentifier(*"UTC"*).
+      1. If _timeZoneResult_.[[OffsetString]] is not ~empty~, then
+        1. Return ? ParseTimeZoneIdentifier(_timeZoneResult_.[[OffsetString]]).
+      1. Throw a *RangeError* exception.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-parsetemporalrelativetostring" aoid="ParseTemporalRelativeToString">
-    <h1>ParseTemporalRelativeToString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalRelativeToString abstract operation parses an ISO 8601 string with or without a time zone, and returns the information needed to construct either a Temporal.ZonedDateTime or a Temporal.PlainDateTime instance, e.g. as the value of a `relativeTo` option.
-    </p>
+  <emu-clause id="sec-topositiveintegerwithtruncation" type="abstract operation">
+    <h1>
+      ToPositiveIntegerWithTruncation (
+        _argument_: an ECMAScript language value,
+      ): either a normal completion containing a positive integer or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It converts _argument_ to an integer representing its Number value with fractional part truncated, or throws a *RangeError* when that value is not finite or not positive.</dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalRelativeToString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ! ParseISODateTime(_isoString_).
-      1. If _isoString_ satisfies the syntax of a |TemporalZonedDateTimeString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Let _timeZoneResult_ be ! ParseTemporalTimeZoneString(_isoString_).
-        1. Let _z_ be _timeZoneResult_.[[Z]].
-        1. Let _offset_ be _timeZoneResult_.[[Offset]].
-        1. Let _timeZone_ be _timeZoneResult_.[[Name]].
-      1. Else,
-        1. Let _z_ be *false*.
-        1. Let _offset_ be *undefined*.
-        1. Let _timeZone_ be *undefined*.
-      1. Return the Record {
-          [[Year]]: _result_.[[Year]],
-          [[Month]]: _result_.[[Month]],
-          [[Day]]: _result_.[[Day]],
-          [[Hour]]: _result_.[[Hour]],
-          [[Minute]]: _result_.[[Minute]],
-          [[Second]]: _result_.[[Second]],
-          [[Millisecond]]: _result_.[[Millisecond]],
-          [[Microsecond]]: _result_.[[Microsecond]],
-          [[Nanosecond]]: _result_.[[Nanosecond]],
-          [[Calendar]]: _result_.[[Calendar]],
-          [[TimeZoneZ]]: _z_,
-          [[TimeZoneOffset]]: _offset_,
-          [[TimeZoneIANAName]]: _timeZone_
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporaltimestring" aoid="ParseTemporalTimeString">
-    <h1>ParseTemporalTimeString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalTimeString abstract operation parses an ISO 8601 string representing a wall-clock time and returns the information needed to construct a Temporal.PlainTime instance.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalTimeString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ? ParseISODateTime(_isoString_).
-      1. Return the Record {
-        [[Hour]]: _result_.[[Hour]],
-        [[Minute]]: _result_.[[Minute]],
-        [[Second]]: _result_.[[Second]],
-        [[Millisecond]]: _result_.[[Millisecond]],
-        [[Microsecond]]: _result_.[[Microsecond]],
-        [[Nanosecond]]: _result_.[[Nanosecond]],
-        [[Calendar]]: _result_.[[Calendar]]
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporaltimezonestring" aoid="ParseTemporalTimeZoneString">
-    <h1>ParseTemporalTimeZoneString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalTimeZoneString abstract operation interprets an ISO 8601 string and retrieves the information about the time zone from it.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalTimeZoneString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _z_, _sign_, _hours_, _minutes_, _seconds_, _fraction_ and _name_ be the parts of _isoString_ produced respectively by the |UTCDesignator|, |TimeZoneUTCOffsetSign|, |TimeZoneUTCOffsetHour|, |TimeZoneUTCOffsetMinute|, |TimeZoneUTCOffsetSecond|, |TimeZoneUTCOffsetFraction|, and |TimeZoneIANAName| productions, or *undefined* if not present.
-      1. If _z_ is not *undefined*, then
-        1. Return the Record {
-          [[Z]]: *true*,
-          [[OffsetString]]: *undefined*,
-          [[Name]]: _name_
-          }.
-      1. If _hours_ is *undefined*, then
-        1. Let _offsetString_ be *undefined*.
-      1. Else,
-        1. Assert: _sign_ is not *undefined*.
-        1. Set _hours_ to ! ToIntegerOrInfinity(_hours_).
-        1. If _sign_ is the code unit 0x002D (HYPHEN-MINUS) or the code unit 0x2212 (MINUS SIGN), then
-          1. Set _sign_ to −1.
-        1. Else,
-          1. Set _sign_ to 1.
-        1. Set _minutes_ to ! ToIntegerOrInfinity(_minutes_).
-        1. Set _seconds_ to ! ToIntegerOrInfinity(_seconds_).
-        1. If _fraction_ is not *undefined*, then
-          1. Set _fraction_ to the string-concatenation of the previous value of _fraction_ and the string *"000000000"*.
-          1. Let _nanoseconds_ be the String value equal to the substring of _fraction_ from 0 to 9.
-          1. Set _nanoseconds_ to ! ToIntegerOrInfinity(_nanoseconds_).
-        1. Else,
-          1. Let _nanoseconds_ be 0.
-        1. Let _offsetNanoseconds_ be _sign_ × (((_hours_ × 60 + _minutes_) × 60 + _seconds_) × 10<sup>9</sup> + _nanoseconds_).
-        1. Let _offsetString_ be ! FormatTimeZoneOffsetString(_offsetNanoseconds_).
-      1. If _name_ is not *undefined*, then
-        1. If ! IsValidTimeZoneName(_name_) is *false*, throw a *RangeError* exception.
-        1. Set _name_ to ! CanonicalizeTimeZoneName(_name_).
-      1. Return the Record {
-        [[Z]]: *false*,
-        [[OffsetString]]: _offsetString_,
-        [[Name]]: _name_
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-parsetemporalyearmonthstring" aoid="ParseTemporalYearMonthString">
-    <h1>ParseTemporalYearMonthString ( _isoString_ )</h1>
-    <p>
-      The ParseTemporalYearMonthString abstract operation parses a full or partial ISO 8601 string and returns the information needed to construct a Temporal.PlainYearMonth instance.
-      It returns a Record with four fields ([[Year]], [[Month]], [[Day]], and [[Calendar]]). [[Calendar]] is a String, and the others are integers.
-    </p>
-    <emu-alg>
-      1. Assert: Type(_isoString_) is String.
-      1. If _isoString_ does not satisfy the syntax of a |TemporalYearMonthString| (see <emu-xref href="#sec-temporal-iso8601grammar"></emu-xref>), then
-        1. Throw a *RangeError* exception.
-      1. Let _result_ be ? ParseISODateTime(_isoString_).
-      1. Return the Record {
-        [[Year]]: _result_.[[Year]],
-        [[Month]]: _result_.[[Month]],
-        [[Day]]: _result_.[[Day]],
-        [[Calendar]]: _result_.[[Calendar]]
-        }.
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-temporal-topositiveinteger" aoid="ToPositiveInteger">
-    <h1>ToPositiveInteger ( _argument_ )</h1>
-    <p>
-      The abstract operation ToPositiveInteger takes argument _argument_. It converts _argument_ to an integer _i_ for which <emu-eqn>0 &lt; _i_</emu-eqn>. It performs the following steps:
-    </p>
-    <emu-alg>
-      1. Let _integer_ be ? ToIntegerThrowOnInfinity(_argument_).
-      1. If _integer_ &le; 0, then
-        1. Throw a *RangeError* exception.
+      1. Let _integer_ be ? ToIntegerWithTruncation(_argument_).
+      1. If _integer_ ≤ 0, throw a *RangeError* exception.
       1. Return _integer_.
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-tointegerthrowoninfinity" aoid="ToIntegerThrowOnInfinity">
-    <h1>ToIntegerThrowOnInfinity ( _argument_ )</h1>
-    <p>
-      The abstract operation ToIntegerThrowOnInfinity takes argument _argument_. It converts _argument_ to an integer. It performs the following steps:
-    </p>
+  <emu-clause id="sec-tointegerwithtruncation" type="abstract operation">
+    <h1>
+      ToIntegerWithTruncation (
+        _argument_: an ECMAScript language value,
+      ): either a normal completion containing an integer or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It converts _argument_ to an integer representing its Number value with fractional part truncated, or throws a *RangeError* when that value is not finite.</dd>
+    </dl>
     <emu-alg>
-      1. Let _integer_ be ? ToIntegerOrInfinity(_argument_).
-      1. If _integer_ is −∞ or +∞ , then
-        1. Throw a *RangeError* exception.
-      1. Return _integer_.
+      1. Let _number_ be ? ToNumber(_argument_).
+      1. If _number_ is *NaN*, *+∞*<sub>𝔽</sub> or *-∞*<sub>𝔽</sub>, throw a *RangeError* exception.
+      1. Return truncate(ℝ(_number_)).
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-preparetemporalfields" aoid="PrepareTemporalFields">
-    <h1>PrepareTemporalFields ( _fields_, _fieldNames_, _requiredFields_ )</h1>
-    <p>
-      The abstract operation PrepareTemporalFields reads the relevant properties of an Object _fields_; ensures all the required properties are present; and creates a new Object with all the properties converted to the correct type.
-      The relevant property names are given by the List of Strings _fieldNames_, and the required property names are given by the List of Strings _requiredFields_.
-      It performs the following steps:
-    </p>
-    <emu-note>The values of ? ToIntegerThrowOnInfinity(*undefined*) and ? ToPositiveInteger(*undefined*) are 0.</emu-note>
+  <emu-clause id="sec-tointegerifintegral" type="abstract operation">
+    <h1>
+      ToIntegerIfIntegral (
+        _argument_: an ECMAScript language value,
+      ): either a normal completion containing an integer or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It converts _argument_ to an integer representing its Number value, or throws a *RangeError* when that value is not <emu-xref href="#integral-number">integral</emu-xref>.</dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_fields_) is Object.
-      1. Let _result_ be ! OrdinaryObjectCreate(%Object.prototype%).
-      1. For each value _property_ of _fieldNames_, do
-        1. Let _value_ be ? Get(_fields_, _property_).
-        1. If _value_ is *undefined*, then
-          1. If _requiredFields_ contains _property_, then
-            1. Throw a *TypeError* exception.
-          1. If _property_ is in the Property column of <emu-xref href="#table-temporal-field-requirements"></emu-xref>, then
-            1. Set _value_ to the corresponding Default value of the same row.
-        1. Else,
-          1. If _property_ is in the Property column of <emu-xref href="#table-temporal-field-requirements"></emu-xref> and there is a Conversion value in the same row, then
-            1. Let _Conversion_ represent the abstract operation named by the Conversion value of the same row.
-            1. Set _value_ to ? _Conversion_(_value_).
-        1. Perform ! CreateDataPropertyOrThrow(_result_, _property_, _value_).
-      1. Return _result_.
+      1. Let _number_ be ? ToNumber(_argument_).
+      1. If _number_ is not an integral Number, throw a *RangeError* exception.
+      1. Return ℝ(_number_).
     </emu-alg>
-    <emu-table id="table-temporal-field-requirements">
-      <emu-caption>Temporal field requirements</emu-caption>
-      <table class="real-table">
-        <thead>
-          <tr>
-            <th>Property</th>
-            <th>Conversion</th>
-            <th>Default</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>*"year"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"month"*</td>
-            <td>ToPositiveInteger</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"monthCode"*</td>
-            <td>ToString</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"day"*</td>
-            <td>ToPositiveInteger</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"hour"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"minute"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"second"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"millisecond"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"microsecond"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"nanosecond"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>0</td>
-          </tr>
-          <tr>
-            <td>*"offset"*</td>
-            <td>ToString</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"era"*</td>
-            <td>ToString</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"eraYear"*</td>
-            <td>ToIntegerThrowOnInfinity</td>
-            <td>*undefined*</td>
-          </tr>
-          <tr>
-            <td>*"timeZone"*</td>
-            <td></td>
-            <td>*undefined*</td>
-          </tr>
-        </tbody>
-      </table>
-    </emu-table>
   </emu-clause>
 
-  <emu-clause id="sec-temporal-preparepartialtemporalfields" aoid="PreparePartialTemporalFields">
-    <h1>PreparePartialTemporalFields ( _fields_, _fieldNames_ )</h1>
-    <p>
-      The abstract operation PreparePartialTemporalFields reads the relevant properties of an Object _fields_ and creates a new Object with all the properties converted to the correct type.
-      The relevant property names are given by the List of Strings _fieldNames_.
-      It performs the following steps:
-    </p>
-    <emu-note>The values of ? ToIntegerThrowOnInfinity(*undefined*) and ? ToPositiveInteger(*undefined*) are 0.</emu-note>
+  <emu-clause id="sec-temporal-tomonthcode" type="abstract operation">
+    <h1>
+      ToMonthCode (
+        _argument_: an ECMAScript language value,
+      ): either a normal completion containing a String or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It converts _argument_ to a String, or throws a *TypeError* if that is not possible.
+        It also requires that the String is a syntactically valid month code, or throws a *RangeError* if it is not.
+        The month code is not guaranteed to be correct in the context of any particular calendar; for example, some calendars do not have leap months.
+      </dd>
+    </dl>
     <emu-alg>
-      1. Assert: Type(_fields_) is Object.
-      1. Let _result_ be ! OrdinaryObjectCreate(%Object.prototype%).
-      1. Let _any_ be *false*.
-      1. For each value _property_ of _fieldNames_, do
-        1. Let _value_ be ? Get(_fields_, _property_).
-        1. If _value_ is not *undefined*, then
-          1. Set _any_ to *true*.
-          1. If _property_ is in the Property column of <emu-xref href="#table-temporal-field-requirements"></emu-xref>, then
-            1. Let _Conversion_ represent the abstract operation named by the Conversion value of the same row.
-            1. Set _value_ to ? _Conversion_(_value_).
-        1. Perform ! CreateDataPropertyOrThrow(_result_, _property_, _value_).
-      1. If _any_ is *false*, then
-        1. Throw a *TypeError* exception.
-      1. Return _result_.
+      1. Let _monthCode_ be ? ToPrimitive(_argument_, ~string~).
+      1. If _monthCode_ is not a String, throw a *TypeError* exception.
+      1. If the length of _monthCode_ is not 3 or 4, throw a *RangeError* exception.
+      1. If the first code unit of _monthCode_ is not 0x004D (LATIN CAPITAL LETTER M), throw a *RangeError* exception.
+      1. If the second code unit of _monthCode_ is not in the inclusive interval from 0x0030 (DIGIT ZERO) to 0x0039 (DIGIT NINE), throw a *RangeError* exception.
+      1. If the third code unit of _monthCode_ is not in the inclusive interval from 0x0030 (DIGIT ZERO) to 0x0039 (DIGIT NINE), throw a *RangeError* exception.
+      1. If the length of _monthCode_ is 4 and the fourth code unit of _monthCode_ is not 0x004C (LATIN CAPITAL LETTER L), throw a *RangeError* exception.
+      1. Let _monthCodeDigits_ be the substring of monthCode from 1 to 3.
+      1. Let _monthCodeInteger_ be ℝ(StringToNumber(_monthCodeDigits_)).
+      1. If _monthCodeInteger_ is 0 and the length of _monthCode_ is not 4, throw a *RangeError* exception.
+      1. Return _monthCode_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-tooffsetstring" type="abstract operation">
+    <h1>
+      ToOffsetString (
+        _argument_: an ECMAScript language value,
+      ): either a normal completion containing a String or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It converts _argument_ to a String, or throws a *TypeError* if that is not possible.
+        It also requires that the String is parseable as a UTC offset string, or throws a *RangeError* if it is not.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _offset_ be ? ToPrimitive(_argument_, ~string~).
+      1. If _offset_ is not a String, throw a *TypeError* exception.
+      1. Perform ? ParseDateTimeUTCOffset(_offset_).
+      1. Return _offset_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-isodatetofields" type="abstract operation">
+    <h1>
+      ISODateToFields (
+        _calendar_: a calendar type,
+        _isoDate_: an ISO Date Record,
+        _type_: ~date~, ~year-month~, or ~month-day~,
+      ): a Calendar Fields Record
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd></dd>
+    </dl>
+    <emu-alg>
+      1. Let _fields_ be an empty Calendar Fields Record with all fields set to ~unset~.
+      1. Let _calendarDate_ be CalendarISOToDate(_calendar_, _isoDate_).
+      1. Set _fields_.[[MonthCode]] to _calendarDate_.[[MonthCode]].
+      1. If _type_ is ~month-day~ or ~date~, then
+        1. Set _fields_.[[Day]] to _calendarDate_.[[Day]].
+      1. If _type_ is ~year-month~ or ~date~, then
+        1. Set _fields_.[[Year]] to _calendarDate_.[[Year]].
+      1. Return _fields_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-getdifferencesettings" type="abstract operation">
+    <h1>
+      GetDifferenceSettings (
+        _operation_: ~since~ or ~until~,
+        _options_: an Object,
+        _unitGroup_: ~date~, ~time~, or ~datetime~,
+        _disallowedUnits_: a List of Temporal units,
+        _fallbackSmallestUnit_: a Temporal unit,
+        _smallestLargestDefaultUnit_: a Temporal unit,
+      ): either a normal completion containing a Record with fields [[SmallestUnit]] (a Temporal unit), [[LargestUnit]] (a Temporal unit), [[RoundingMode]] (a rounding mode), and [[RoundingIncrement]] (an integer in the inclusive interval from 1 to 10<sup>9</sup>), or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It reads unit and rounding options needed by difference operations.</dd>
+    </dl>
+    <emu-alg>
+      1. NOTE: The following steps read options and perform independent validation in alphabetical order.
+      1. Let _largestUnit_ be ? GetTemporalUnitValuedOption(_options_, *"largestUnit"*, _unitGroup_, ~auto~).
+      1. If _disallowedUnits_ contains _largestUnit_, throw a *RangeError* exception.
+      1. Let _roundingIncrement_ be ? GetRoundingIncrementOption(_options_).
+      1. Let _roundingMode_ be ? GetRoundingModeOption(_options_, ~trunc~).
+      1. If _operation_ is ~since~, then
+        1. Set _roundingMode_ to NegateRoundingMode(_roundingMode_).
+      1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_options_, *"smallestUnit"*, _unitGroup_, _fallbackSmallestUnit_).
+      1. If _disallowedUnits_ contains _smallestUnit_, throw a *RangeError* exception.
+      1. Let _defaultLargestUnit_ be LargerOfTwoTemporalUnits(_smallestLargestDefaultUnit_, _smallestUnit_).
+      1. If _largestUnit_ is ~auto~, set _largestUnit_ to _defaultLargestUnit_.
+      1. If LargerOfTwoTemporalUnits(_largestUnit_, _smallestUnit_) is not _largestUnit_, throw a *RangeError* exception.
+      1. Let _maximum_ be MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
+      1. If _maximum_ is not ~unset~, perform ? ValidateTemporalRoundingIncrement(_roundingIncrement_, _maximum_, *false*).
+      1. Return the Record {
+        [[SmallestUnit]]: _smallestUnit_,
+        [[LargestUnit]]: _largestUnit_,
+        [[RoundingMode]]: _roundingMode_,
+        [[RoundingIncrement]]: _roundingIncrement_,
+        }.
     </emu-alg>
   </emu-clause>
 </emu-clause>

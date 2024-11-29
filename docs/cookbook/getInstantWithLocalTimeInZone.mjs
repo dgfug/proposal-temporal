@@ -1,7 +1,8 @@
 /**
  * Get an exact time corresponding with a calendar date / wall-clock time in a
- * particular time zone, the same as Temporal.TimeZone.getInstantFor() or
- * Temporal.PlainDateTime.toInstant(), but with more disambiguation options.
+ * particular time zone, the same as
+ * Temporal.PlainDateTime.toZonedDateTimeISO(), but with more disambiguation
+ * options.
  *
  * As well as the default Temporal disambiguation options 'compatible',
  * 'earlier', 'later', and 'reject', there are additional options possible:
@@ -14,7 +15,7 @@
  *
  * @param {Temporal.PlainDateTime} dateTime - Calendar date and wall-clock time to
  *   convert
- * @param {Temporal.TimeZone} timeZone - Time zone in which to consider the
+ * @param {string} timeZone - IANA identifier of time zone in which to consider the
  *   wall-clock time
  * @param {string} [disambiguation='earlier'] - Disambiguation mode, see description.
  * @returns {Temporal.Instant} Absolute time in timeZone at the time of the
@@ -23,32 +24,30 @@
 function getInstantWithLocalTimeInZone(dateTime, timeZone, disambiguation = 'earlier') {
   // Handle the built-in modes first
   if (['compatible', 'earlier', 'later', 'reject'].includes(disambiguation)) {
-    return timeZone.getInstantFor(dateTime, { disambiguation });
+    return dateTime.toZonedDateTime(timeZone, { disambiguation }).toInstant();
   }
 
-  const possible = timeZone.getPossibleInstantsFor(dateTime);
+  const zdts = ['earlier', 'later'].map((disambiguation) => dateTime.toZonedDateTime(timeZone, { disambiguation }));
+  const instants = zdts.map((zdt) => zdt.toInstant()).reduce((a, b) => (a.equals(b) ? [a] : [a, b]));
 
   // Return only possibility if no disambiguation needed
-  if (possible.length === 1) return possible[0];
+  if (instants.length === 1) return instants[0];
 
   switch (disambiguation) {
     case 'clipEarlier':
-      if (possible.length === 0) {
-        const before = timeZone.getInstantFor(dateTime, { disambiguation: 'earlier' });
-        return timeZone.getNextTransition(before).subtract({ nanoseconds: 1 });
+      if (zdts[0].toPlainDateTime().equals(dateTime)) {
+        return instants[0];
       }
-      return possible[0];
+      return zdts[0].getTimeZoneTransition('next').subtract({ nanoseconds: 1 }).toInstant();
     case 'clipLater':
-      if (possible.length === 0) {
-        const before = timeZone.getInstantFor(dateTime, { disambiguation: 'earlier' });
-        return timeZone.getNextTransition(before);
+      if (zdts[1].toPlainDateTime().equals(dateTime)) {
+        return instants[1];
       }
-      return possible[possible.length - 1];
+      return zdts[0].getTimeZoneTransition('next').toInstant();
   }
   throw new RangeError(`invalid disambiguation ${disambiguation}`);
 }
 
-const germany = Temporal.TimeZone.from('Europe/Berlin');
 const nonexistentGermanWallTime = Temporal.PlainDateTime.from('2019-03-31T02:45');
 
 const germanResults = {
@@ -60,12 +59,13 @@ const germanResults = {
 };
 for (const [disambiguation, result] of Object.entries(germanResults)) {
   assert.equal(
-    getInstantWithLocalTimeInZone(nonexistentGermanWallTime, germany, disambiguation).toString({ timeZone: germany }),
+    getInstantWithLocalTimeInZone(nonexistentGermanWallTime, 'Europe/Berlin', disambiguation).toString({
+      timeZone: 'Europe/Berlin'
+    }),
     result
   );
 }
 
-const brazilEast = Temporal.TimeZone.from('America/Sao_Paulo');
 const doubleEasternBrazilianWallTime = Temporal.PlainDateTime.from('2019-02-16T23:45');
 
 const brazilianResults = {
@@ -77,8 +77,8 @@ const brazilianResults = {
 };
 for (const [disambiguation, result] of Object.entries(brazilianResults)) {
   assert.equal(
-    getInstantWithLocalTimeInZone(doubleEasternBrazilianWallTime, brazilEast, disambiguation).toString({
-      timeZone: brazilEast
+    getInstantWithLocalTimeInZone(doubleEasternBrazilianWallTime, 'America/Sao_Paulo', disambiguation).toString({
+      timeZone: 'America/Sao_Paulo'
     }),
     result
   );

@@ -54,11 +54,11 @@ For more detailed information, see the ISO 8601 standard or the [Wikipedia page]
 **Returns:** a new `Temporal.Duration` object.
 
 All of the arguments are optional.
-Any missing or `undefined` numerical arguments are taken to be zero, and all non-integer numerical arguments are rounded to the nearest integer, towards zero.
+Any missing or `undefined` numerical arguments are taken to be zero, and all arguments must be integers.
 Any non-zero arguments must all have the same sign.
 
 Use this constructor directly if you have the correct parameters already as numerical values.
-Otherwise `Temporal.Duration.from()` is probably more convenient because it accepts more kinds of input and allows controlling the overflow behaviour.
+Otherwise `Temporal.Duration.from()` is probably more convenient because it accepts more kinds of input and allows controlling the overflow behavior.
 
 Usage examples:
 
@@ -67,15 +67,17 @@ new Temporal.Duration(1, 2, 3, 4, 5, 6, 7, 987, 654, 321); // => P1Y2M3W4DT5H6M7
 new Temporal.Duration(0, 0, 0, 40); // => P40D
 new Temporal.Duration(undefined, undefined, undefined, 40); // => P40D
 new Temporal.Duration(); // => PT0S
+
+/* WRONG */ new Temporal.Duration(0, 0, 0, 1.5); // => throws
 ```
 
 ## Static methods
 
-### Temporal.Duration.**from**(_thing_: any) : Temporal.Duration
+### Temporal.Duration.**from**(_item_: Temporal.Duration | object | string) : Temporal.Duration
 
 **Parameters:**
 
-- `thing`: A `Duration`-like object or a string from which to create a `Temporal.Duration`.
+- `item`: a value convertible to a `Temporal.Duration`.
 
 **Returns:** a new `Temporal.Duration` object.
 
@@ -84,10 +86,10 @@ If the value is another `Temporal.Duration` object, a new object representing th
 If the value is any other object, a `Temporal.Duration` will be constructed from the values of any `years`, `months`, `weeks`, `days`, `hours`, `minutes`, `seconds`, `milliseconds`, `microseconds`, and `nanoseconds` properties that are present.
 Any missing ones will be assumed to be 0.
 
-All non-zero values must have the same sign, and must not be infinite.
+All non-zero values must be integers, must have the same sign, and must not be infinite.
 Otherwise, the function will throw a `RangeError`.
 
-Any non-object value is converted to a string, which is expected to be in ISO 8601 format.
+If the value is not an object, it must be a string, which is expected to be in ISO 8601 format.
 
 > **NOTE:** This function understands strings where weeks and other units are combined, and strings with a single sign character at the start, which are extensions to the ISO 8601 standard described in ISO 8601-2.
 > For example, `P3W1D` is understood to mean three weeks and one day, `-P1Y1M` is a negative duration of one year and one month, and `+P1Y1M` is one year and one month.
@@ -105,6 +107,11 @@ d = Temporal.Duration.from('P1Y1D'); // => P1Y1D
 d = Temporal.Duration.from('-P2DT12H'); // => -P2DT12H
 d = Temporal.Duration.from('P0D'); // => PT0S
 
+// Non-integer numbers are never allowed, even if they are allowed in an ISO string:
+/* WRONG */ d = Temporal.Duration.from({ seconds: 1.5 }); // => throws
+d = Temporal.Duration.from("PT1.5S"); // ok
+d = Temporal.Duration.from({ seconds: 1, milliseconds: 500 }); // ok
+
 // Mixed-sign values are never allowed, even if overall positive:
 /* WRONG */ d = Temporal.Duration.from({ hours: 1, minutes: -30 }); // => throws
 ```
@@ -117,7 +124,7 @@ d = Temporal.Duration.from('P0D'); // => PT0S
 - `two` (`Temporal.Duration` or value convertible to one): Second duration to compare.
 - `options` (object): An object with properties representing options for the operation.
   The following option is recognized:
-  - `relativeTo` (`Temporal.PlainDateTime`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when converting between years, months, weeks, and days.
+  - `relativeTo` (`Temporal.PlainDate`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when converting between years, months, weeks, and days.
 
 **Returns:** &minus;1, 0, or 1.
 
@@ -134,10 +141,10 @@ If any of the `years`, `months`, or `weeks` properties of either of the duration
 
 Negative durations are treated as the same as negative numbers for comparison purposes: they are "less" (shorter) than zero.
 
-The `relativeTo` option may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when comparing days with hours. If `relativeTo` is a `Temporal.PlainDateTime`, then days are always considered equal to 24 hours.
+The `relativeTo` option may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when comparing days with hours. If `relativeTo` is a `Temporal.PlainDate`, then days are always considered equal to 24 hours.
 
-If `relativeTo` is neither a `Temporal.PlainDateTime` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDateTime.from()`.
-This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDateTime`.
+If `relativeTo` is neither a `Temporal.PlainDate` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDate.from()`.
+This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDate`.
 
 This function can be used to sort arrays of `Temporal.Duration` objects.
 For example:
@@ -240,7 +247,7 @@ Usage example:
 <!-- prettier-ignore-start -->
 ```javascript
 duration = Temporal.Duration.from({ months: 50, days: 50, hours: 50, minutes: 100 });
-// Perform a balance operation using additional ISO calendar rules:
+// Perform a balance operation using additional ISO 8601 calendar rules:
 let { years, months } = duration;
 years += Math.floor(months / 12);
 months %= 12;
@@ -249,14 +256,11 @@ duration = duration.with({ years, months });
 ```
 <!-- prettier-ignore-end -->
 
-### duration.**add**(_other_: Temporal.Duration | object | string, _options_?: object) : Temporal.Duration
+### duration.**add**(_other_: Temporal.Duration | object | string) : Temporal.Duration
 
 **Parameters:**
 
 - `other` (`Temporal.Duration` or value convertible to one): The duration to add.
-- `options` (optional object): An object with properties representing options for the addition.
-  The following option is recognized:
-  - `relativeTo` (`Temporal.PlainDateTime`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when adding years, months, weeks, and days.
 
 **Returns:** a new `Temporal.Duration` object which represents the sum of the durations of `duration` and `other`.
 
@@ -268,13 +272,9 @@ If `other` is not a `Temporal.Duration` object, then it will be converted to one
 In order to be valid, the resulting duration must not have fields with mixed signs, and so the result is balanced.
 For usage examples and a more complete explanation of how balancing works and why it is necessary, see [Duration balancing](./balancing.md).
 
-By default, you cannot add durations with years, months, or weeks, as that could be ambiguous depending on the start date.
-To do this, you must provide a start date using the `relativeTo` option.
-
-The `relativeTo` option may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when converting between days and hours. If `relativeTo` is omitted or is a `Temporal.PlainDateTime`, then days are always considered equal to 24 hours.
-
-If `relativeTo` is neither a `Temporal.PlainDateTime` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDateTime.from()`.
-This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDateTime`.
+You cannot convert between years, months, or weeks when adding durations, as that could be ambiguous depending on the start date.
+If `duration` or `other` have nonzero years, months, or weeks, this function will throw an exception.
+If you need to add durations with years, months, or weeks, add the two durations to a start date, and then figure the difference between the resulting date and the start date.
 
 Adding a negative duration is equivalent to subtracting the absolute value of that duration.
 
@@ -291,27 +291,27 @@ one = Temporal.Duration.from({ hours: 1, minutes: 30 });
 two = Temporal.Duration.from({ hours: 2, minutes: 45 });
 result = one.add(two); // => PT4H15M
 
-fifty = Temporal.Duration.from('P50Y50M50DT50H50M50.500500500S');
-/* WRONG */ result = fifty.add(fifty); // => throws, need relativeTo
-result = fifty.add(fifty, { relativeTo: '1900-01-01' }); // => P108Y7M12DT5H41M41.001001S
+// Example of adding calendar units
+oneAndAHalfMonth = Temporal.Duration.from({ months: 1, days: 16 });
+/* WRONG */ oneAndAHalfMonth.add(oneAndAHalfMonth); // => not allowed, throws
 
-// Example of converting ambiguous units relative to a start date
-oneAndAHalfMonth = Temporal.Duration.from({ months: 1, days: 15 });
-/* WRONG */ oneAndAHalfMonth.add(oneAndAHalfMonth); // => throws
-oneAndAHalfMonth.add(oneAndAHalfMonth, { relativeTo: '2000-02-01' }); // => P3M
-oneAndAHalfMonth.add(oneAndAHalfMonth, { relativeTo: '2000-03-01' }); // => P2M30D
+// To convert units, use arithmetic relative to a start date:
+startDate1 = Temporal.PlainDate.from('2000-12-01');
+startDate1.add(oneAndAHalfMonth).add(oneAndAHalfMonth)
+  .since(startDate1, { largestUnit: 'months' });  // => P3M4D
+
+startDate2 = Temporal.PlainDate.from('2001-01-01');
+startDate2.add(oneAndAHalfMonth).add(oneAndAHalfMonth)
+  .since(startDate2, { largestUnit: 'months' });  // => P3M1D
 ```
 
 <!-- prettier-ignore-start -->
 
-### duration.**subtract**(_other_: Temporal.Duration | object | string, _options_?: object) : Temporal.Duration
+### duration.**subtract**(_other_: Temporal.Duration | object | string) : Temporal.Duration
 
 **Parameters:**
 
 - `other` (`Temporal.Duration` or value convertible to one): The duration to subtract.
-- `options` (optional object): An object with properties representing options for the subtraction.
-  The following option is recognized:
-  - `relativeTo` (`Temporal.PlainDateTime`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when adding years, months, weeks, and days.
 
 **Returns:** a new `Temporal.Duration` object which represents the duration of `duration` less the duration of `other`.
 
@@ -320,18 +320,12 @@ This method subtracts `other` from `duration`, resulting in a shorter duration.
 The `other` argument is an object with properties denoting a duration, such as `{ hours: 5, minutes: 30 }`, or a string such as `PT5H30M`, or a `Temporal.Duration` object.
 If `duration` is not a `Temporal.Duration` object, then it will be converted to one as if it were passed to `Temporal.Duration.from()`.
 
-If `other` is larger than `duration` and the subtraction would result in a negative duration, the method will throw a `RangeError`.
-
 In order to be valid, the resulting duration must not have fields with mixed signs, and so the result is balanced.
 For usage examples and a more complete explanation of how balancing works and why it is necessary, see [Duration balancing](./balancing.md#duration-arithmetic).
 
-By default, you cannot subtract durations with years, months, or weeks, as that could be ambiguous depending on the start date.
-To do this, you must provide a start date using the `relativeTo` option.
-
-The `relativeTo` option may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when converting between days and hours. If `relativeTo` is omitted or is a `Temporal.PlainDateTime`, then days are always considered equal to 24 hours.
-
-If `relativeTo` is neither a `Temporal.PlainDateTime` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDateTime.from()`.
-This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDateTime`.
+You cannot convert between years, months, or weeks when adding durations, as that could be ambiguous depending on the start date.
+If `duration` or `other` have nonzero years, months, or weeks, this function will throw an exception.
+If you need to add durations with years, months, or weeks, add the two durations to a start date, and then figure the difference between the resulting date and the start date.
 
 Subtracting a negative duration is equivalent to adding the absolute value of that duration.
 
@@ -346,12 +340,20 @@ two = Temporal.Duration.from({ seconds: 30 });
 one.subtract(two); // => PT179M30S
 one.subtract(two).round({ largestUnit: 'hour' }); // => PT2H59M30S
 
-// Example of converting ambiguous units relative to a start date
+// Example of subtracting calendar units; cannot be subtracted using
+// subtract() because units need to be converted
 threeMonths = Temporal.Duration.from({ months: 3 });
 oneAndAHalfMonth = Temporal.Duration.from({ months: 1, days: 15 });
-/* WRONG */ threeMonths.subtract(oneAndAHalfMonth); // => throws
-threeMonths.subtract(oneAndAHalfMonth, { relativeTo: '2000-02-01' }); // => P1M16D
-threeMonths.subtract(oneAndAHalfMonth, { relativeTo: '2000-03-01' }); // => P1M15D
+/* WRONG */ threeMonths.subtract(oneAndAHalfMonth); // => not allowed, throws
+
+// To convert units, use arithmetic relative to a start date:
+startDate1 = Temporal.PlainDate.from('2001-01-01');
+startDate1.add(threeMonths).subtract(oneAndAHalfMonth)
+  .since(startDate1, { largestUnit: 'months' });  // => P1M13D
+
+startDate2 = Temporal.PlainDate.from('2001-02-01');
+startDate2.add(threeMonths).subtract(oneAndAHalfMonth)
+  .since(startDate2, { largestUnit: 'months' });  // => P1M16D
 ```
 
 ### duration.**negated**() : Temporal.Duration
@@ -386,25 +388,27 @@ d = Temporal.Duration.from('-PT8H30M');
 d.abs(); // PT8H30M
 ```
 
-### duration.**round**(_options_: object) : Temporal.Duration
+### duration.**round**(_roundTo_: string | object) : Temporal.Duration
 
 **Parameters:**
 
-- `options` (object): An object with properties representing options for the operation.
-  The following options are recognized:
-  - `largestUnit` (string): The largest unit of time to allow in the resulting `Temporal.Duration` object.
-    Valid values are `'auto'`, `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-    The default is `'auto'`.
-  - `smallestUnit` (string): The smallest unit of time to round to in the resulting `Temporal.Duration` object.
-    Valid values are `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-    The default is `'nanosecond'`, i.e. no rounding.
-  - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
-    The default is 1.
-  - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
-    The default is `'halfExpand'`.
-  - `relativeTo` (`Temporal.PlainDateTime`): The starting point to use when converting between years, months, weeks, and days.
-    It must be a `Temporal.PlainDateTime`, or a value that can be passed to `Temporal.PlainDateTime.from()`.
+- `roundTo` (string | object): A required string or object to control the operation.
+  - If a string is provided, the resulting `Temporal.Duration` object will be rounded to that unit.
+    Valid values are `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+    A string parameter is treated the same as an object whose `smallestUnit` property value is that string.
+  - If an object is passed, the following properties are recognized:
+    - `largestUnit` (string): The largest unit of time to allow in the resulting `Temporal.Duration` object.
+      Valid values are `'auto'`, `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+      The default is `'auto'`.
+    - `smallestUnit` (string): The smallest unit of time to round to in the resulting `Temporal.Duration` object.
+      Valid values are `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+      The default is `'nanosecond'`, i.e. no rounding.
+    - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
+      The default is 1.
+    - `roundingMode` (string): How to handle the remainder, if rounding.
+      Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
+      The default is `'halfExpand'`.
+    - `relativeTo` (`Temporal.PlainDate`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when converting between years, months, weeks, and days.
 
 **Returns:** a new `Temporal.Duration` object which is `duration`, rounded and/or balanced.
 
@@ -418,15 +422,15 @@ This operation is called "balancing."
 
 For usage examples and a more complete explanation of how balancing works, see [Duration balancing](./balancing.md).
 
-A `largestUnit` value of `'auto'`, which is the default if only `smallestUnit` is given, means that `largestUnit` should be the largest nonzero unit in the duration that is larger than `smallestUnit`.
+A `largestUnit` value of `'auto'`, which is the default if only `smallestUnit` is given (or if `roundTo` is a string), means that `largestUnit` should be the largest nonzero unit in the duration that is larger than `smallestUnit`.
 For example, in a duration of 3 days and 12 hours, `largestUnit: 'auto'` would mean the same as `largestUnit: 'day'`.
-This behavior implies that the default balancing behaviour of this method to not 'grow' the duration beyond its current largest unit unless needed for rounding.
+This behavior implies that the default balancing behavior of this method to not "grow" the duration beyond its current largest unit unless needed for rounding.
 
-The `smallestUnit` option determines the unit to round to.
+The `smallestUnit` option (or the value of `roundTo` if a string parameter is used) determines the unit to round to.
 For example, to round to the nearest minute, use `smallestUnit: 'minute'`.
-The default, if only `largestUnit` is given, is to do no rounding.
+The default, if only `largestUnit` is given, is to do no rounding of smaller units.
 
-At least one of `largestUnit` or `smallestUnit` is required.
+If an object parameter is used, at least one of `largestUnit` or `smallestUnit` is required.
 
 Converting between years, months, weeks, and other units requires a reference point.
 If `largestUnit` or `smallestUnit` is years, months, or weeks, or the duration has nonzero years, months, or weeks, then the `relativeTo` option is required.
@@ -441,20 +445,28 @@ Instead of 60 minutes, use 1 hour.
 
 The `roundingMode` option controls how the rounding is performed.
 
-- `halfExpand`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
-  When there is a tie, round away from zero like `ceil` for positive durations and like `floor` for negative durations.
-- `ceil`: Always round towards positive infinity.
+- `'halfExpand'`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
+  When there is a tie, round away from zero like `'ceil'` for positive durations and like `'floor'` for negative durations.
+  This is the default, and matches how rounding is often taught in school.
+- `'ceil'`: Always round towards positive infinity.
   For negative durations this option will decrease the absolute value of the duration which may be unexpected.
-  To round away from zero, use `ceil` for positive durations and `floor` for negative durations.
-- `trunc`: Always round towards zero, chopping off the part after the decimal point.
-- `floor`: Always round down, towards negative infinity.
-  This mode acts the same as `trunc` for positive durations but for negative durations it will increase the absolute value of the result which may be unexpected.
-  For this reason, `trunc` is recommended for most "round down" use cases.
+  To round away from zero, use `'expand'`.
+- `'expand'`:  Always round away from zero like `'ceil'` for positive durations and like `'floor'` for negative durations.
+- `'trunc'`: Always round towards zero, chopping off the part after the decimal point.
+- `'floor'`: Always round down, towards negative infinity.
+  This mode acts the same as `'trunc'` for positive durations but for negative durations it will increase the absolute value of the result which may be unexpected.
+  For this reason, `'trunc'` is recommended for most "round down" use cases.
+- `'halfCeil'`: Round to the nearest of the allowed values like `'halfExpand'`, but when there is a tie, round towards positive infinity like `'ceil'`.
+- `'halfFloor'`: Round to the nearest of the allowed values like `'halfExpand'`, but when there is a tie, round towards negative infinity like `'floor'`.
+- `'halfTrunc'`: Round to the nearest of the allowed values like `'halfExpand'`, but when there is a tie, round towards zero like `'trunc'`.
+- `'halfEven'`: Round to the nearest of the allowed values like `'halfExpand'`, but when there is a tie, round towards the value that is an even multiple of the `roundingIncrement`.
+  For example, with a `roundingIncrement` of 2, the number 7 would round up to 8 instead of down to 6, because 8 is an even multiple of 2 (2 × 4 = 8, and 4 is even), whereas 6 is an odd multiple (2 × 3 = 6, and 3 is odd).
 
 The `relativeTo` option gives the starting point used when converting between or rounding to years, months, weeks, or days.
-It is a `Temporal.PlainDateTime` instance.
-If any other type of value is given, then it will be converted to a `Temporal.PlainDateTime` as if it were passed to `Temporal.PlainDateTime.from(..., { overflow: 'reject' })`.
-A `Temporal.PlainDate` or a date string like `2020-01-01` is also accepted because time is optional when creating a `Temporal.PlainDateTime`.
+It may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when converting between days and hours. If `relativeTo` is omitted or is a `Temporal.PlainDate`, then days are always considered equal to 24 hours.
+
+If `relativeTo` is neither a `Temporal.PlainDate` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDate.from()`.
+This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDate`.
 
 Example usage:
 
@@ -516,17 +528,19 @@ quarters = d.months / 3;
 quarters; // => 3
 ```
 
-### duration.**total**(_options_: object) : number
+### duration.**total**(_totalOf_: string | object) : number
 
 **Parameters:**
 
-- `options` (object): An object with properties representing options for the operation.
-  The following options are recognized:
-  - `unit` (string): The unit of time that will be returned.
-    Valid values are `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-    There is no default; `unit` is required.
-  - `relativeTo` (`Temporal.PlainDateTime`): The starting point to use when converting between years, months, weeks, and days.
-    It must be a `Temporal.PlainDateTime`, or a value that can be passed to `Temporal.PlainDateTime.from()`.
+- `totalOf` (string | object): A required string or object to control the operation.
+  - If a string is passed, it represents the unit of time that will be returned.
+    Valid values are `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+    A string parameter is treated the same as an object whose `unit` property value is that string.
+  - If an object is passed, the following properties are recognized:
+    - `unit` (string): The unit of time that will be returned.
+      Valid values are `'year'`, `'month'`, `'week'`, `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+      There is no default; `unit` is required.
+    - `relativeTo` (`Temporal.PlainDate`, `Temporal.ZonedDateTime`, or value convertible to one of those): The starting point to use when converting between years, months, weeks, and days.
 
 **Returns:** a floating-point number representing the number of desired units in the `Temporal.Duration`.
 
@@ -535,17 +549,19 @@ If the duration IS NOT evenly divisible by the desired unit, then a fractional r
 If the duration IS evenly divisible by the desired unit, then the integer result will be identical to `duration.round({ smallestUnit: unit, largestUnit: unit, relativeTo })[unit]`.
 
 Interpreting years, months, or weeks requires a reference point.
-Therefore, `unit` is `'year'`, `'month'`, or `'week'`, or the duration has nonzero 'year', 'month', or 'week', then the `relativeTo` option is required.
+Therefore, if `unit` is `'year'`, `'month'`, or `'week'`, or the duration has nonzero 'year', 'month', or 'week', then the `relativeTo` option is required.
+For this reason, it's required to use the object (not string) form of `totalOf` in these cases.
 
 The `relativeTo` option gives the starting point used when converting between or rounding to years, months, weeks, or days.
-It is a `Temporal.PlainDateTime` instance.
-If any other type is provided, then it will be converted to a `Temporal.PlainDateTime` as if it were passed to `Temporal.PlainDateTime.from(..., { overflow: 'reject' })`.
-A `Temporal.PlainDate` or a date string like `2020-01-01` is also accepted because time is optional when creating a `Temporal.PlainDateTime`.
+It may be a `Temporal.ZonedDateTime` in which case time zone offset changes will be taken into account when converting between days and hours. If `relativeTo` is omitted or is a `Temporal.PlainDate`, then days are always considered equal to 24 hours.
+
+If `relativeTo` is neither a `Temporal.PlainDate` nor a `Temporal.ZonedDateTime`, then it will be converted to one of the two, as if it were first attempted with `Temporal.ZonedDateTime.from()` and then with `Temporal.PlainDate.from()`.
+This means that an ISO 8601 string with a time zone name annotation in it, or a property bag with a `timeZone` property, will be converted to a `Temporal.ZonedDateTime`, and an ISO 8601 string without a time zone name or a property bag without a `timeZone` property will be converted to a `Temporal.PlainDate`.
 
 Example usage:
 
 ```javascript
-// How many seconds in 18 hours and 20 minutes?
+// How many seconds in 130 hours and 20 minutes?
 d = Temporal.Duration.from({ hours: 130, minutes: 20 });
 d.total({ unit: 'second' }); // => 469200
 
@@ -578,7 +594,7 @@ d.total({
     This option overrides `fractionalSecondDigits` if both are given.
     Valid values are `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
   - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'ceil'`, `'floor'`, `'trunc'`, and `'halfExpand'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`.
 
 **Returns:** the duration as an ISO 8601 string.

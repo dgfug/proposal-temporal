@@ -6,7 +6,7 @@
 </details>
 
 A `Temporal.ZonedDateTime` is a timezone-aware, calendar-aware date/time type that represents a real event that has happened (or will happen) at a particular instant from the perspective of a particular region on Earth.
-As the broadest `Temporal` type, `Temporal.ZonedDateTime` can be considered a combination of `Temporal.TimeZone`, `Temporal.Instant`, and `Temporal.PlainDateTime` (which includes `Temporal.Calendar`).
+As the broadest `Temporal` type, `Temporal.ZonedDateTime` can be considered a combination of `Temporal.Instant`, `Temporal.PlainDateTime`, and a time zone.
 
 As the only `Temporal` type that persists a time zone, `Temporal.ZonedDateTime` is optimized for use cases that require a time zone:
 
@@ -14,7 +14,7 @@ As the only `Temporal` type that persists a time zone, `Temporal.ZonedDateTime` 
 - Creating derived values (e.g. change time to 2:30AM) can avoid worrying that the result will be invalid due to the time zone's DST rules.
 - Properties are available to easily measure attributes like "length of day" or "starting time of day" which may not be the same on all days in all time zones due to DST transitions or political changes to the definitions of time zones.
 - It's easy to flip back and forth between a human-readable representation (like `Temporal.PlainDateTime`) and the UTC timeline (like `Temporal.Instant`) without having to do any work to keep the two in sync.
-- A date/time, an offset, a time zone, and an optional calendar can be persisted in a single string that can be sorted alphabetically by the exact time they happened.
+- A date/time, an offset, a time zone, and an optional calendar can be persisted in a single string.
   This behavior is also be helpful for developers who are not sure which of those components will be needed by later readers of this data.
 - Multiple time-zone-sensitive operations can be performed in a chain without having to repeatedly provide the same time zone.
 
@@ -23,15 +23,60 @@ A `Temporal.ZonedDateTime` instance can be losslessly converted into every other
 
 The `Temporal.ZonedDateTime` API is a superset of `Temporal.PlainDateTime`, which makes it easy to port code back and forth between the two types as needed. Because `Temporal.PlainDateTime` is not aware of time zones, in use cases where the time zone is known it's recommended to use `Temporal.ZonedDateTime` which will automatically adjust for DST and can convert easily to `Temporal.Instant` without having to re-specify the time zone.
 
+
+## Time zone identifiers
+
+Time zones in `Temporal` are represented by string identifiers from the IANA Time Zone Database (like `Asia/Tokyo`, `America/Los_Angeles`, or `UTC`) or by a fixed UTC offset like `+05:30`.
+For example:
+
+```javascript
+inBerlin = Temporal.ZonedDateTime.from('2022-01-28T19:53+01:00[Europe/Berlin]');
+inTokyo = inBerlin.withTimeZone('Asia/Tokyo');
+```
+
+## Handling changes to the IANA Time Zone Database
+
+Time zone identifiers are occasionally renamed or merged in the IANA Time Zone Database.
+For example, `Asia/Calcutta` was renamed to `Asia/Kolkata`, and `America/Montreal` was merged into `America/Toronto` because both identifiers are in the same country and share the same time zone rules since 1970.
+
+Identifiers that have been renamed or merged are considered equivalent by ECMAScript.
+Equivalence can be tested using `Temporal.ZonedDateTime.prototype.equals`.
+
+```javascript
+function areTimeZoneIdentifiersEquivalent(id1, id2) {
+  return new Temporal.ZonedDateTime(0n, id1).equals(new Temporal.ZonedDateTime(0n, id2));
+  // DON'T DO THIS: return id1 === id2;
+}
+areTimeZoneIdentifiersEquivalent('Asia/Calcutta', 'ASIA/KOLKATA'); // => true
+areTimeZoneIdentifiersEquivalent('Asia/Calcutta', '+05:30'); // => false
+areTimeZoneIdentifiersEquivalent('UTC', '+00:00'); // => false
+```
+
+Time zones that resolve to different Zones in the IANA Time Zone Database are not equivalent, even if those Zones use the same offsets.
+Similarly, a numeric-offset identifier is never equivalent to an IANA time zone identifier, even if they always represent the same offset.
+
+In any set of equivalent identifiers, only one identifier will be considered canonical.
+To avoid redundancy, the output of `Intl.supportedValuesOf('timeZone')` and `Temporal.Now.timeZoneId()` are limited to canonical identifiers.
+Other than those cases, canonicalization is not observable in ECMAScript code, which ensures that changes to the IANA Time Zone Database will have minimal impact on the behavior of existing applications.
+
+## Variation between ECMAScript and other consumers of the IANA Time Zone Database
+
+The IANA Time Zone Database can be built with different options that can change which time zones are equivalent.
+ECMAScript implementations generally use build options that guarantee at least one canonical identifier for every <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 Alpha-2</a> country code, and that ensure that identifiers for different country codes are never equivalent.
+This behavior avoids the risk that future political changes in one country can affect the behavior of ECMAScript code using a different country's time zones.
+
+For example, the default build options consider Europe/Oslo, Europe/Stockholm, Europe/Copenhagen, and Europe/Berlin to be equivalent.
+However, ECMAScript implementations generally do not treat those as equivalent.
+
 ## Constructor
 
-### **new Temporal.ZonedDateTime**(_epochNanoseconds_: bigint, _timeZone_: string | object, _calendar_?: string | object) : Temporal.ZonedDateTime
+### **new Temporal.ZonedDateTime**(_epochNanoseconds_: bigint, _timeZone_: string, _calendar_: string = "iso8601") : Temporal.ZonedDateTime
 
 **Parameters:**
 
 - `epochNanoseconds` (bigint): A number of nanoseconds.
-- `timeZone` (`Temporal.TimeZone` or plain object): The time zone in which the event takes place.
-- `calendar` (optional `Temporal.Calendar`, plain object, or string): Calendar used to interpret dates and times. Usually set to `'iso8601'`.
+- `timeZone` (string): The time zone in which the event takes place.
+- `calendar` (optional string): Calendar used to interpret dates and times.
 
 **Returns:** a new `Temporal.ZonedDateTime` object.
 
@@ -41,12 +86,17 @@ Instead of the constructor, `Temporal.ZonedDateTime.from()` is preferred instead
 The range of allowed values for this type is the same as the old-style JavaScript `Date`: 100 million (10<sup>8</sup>) days before or after the Unix epoch.
 This range covers approximately half a million years. If `epochNanoseconds` is outside of this range, a `RangeError` will be thrown.
 
+`timeZone` is a string containing the identifier of a built-in time zone, such as `'UTC'`, `'Europe/Madrid'`, or `'+05:30'`.
+
+`calendar` is a string containing the identifier of a built-in calendar, such as `'islamic'` or `'gregory'`.
+If omitted, the ISO 8601 calendar will be used, which is identical to the Gregorian calendar except negative years are used instead of eras like BC/BCE or AD/CE.
+
 Usage examples:
 
 <!-- prettier-ignore-start -->
 ```javascript
 // UNIX epoch in California
-new Temporal.ZonedDateTime(0n, Temporal.TimeZone.from('America/Los_Angeles'), Temporal.Calendar.from('iso8601'));
+new Temporal.ZonedDateTime(0n, 'America/Los_Angeles', 'iso8601');
   // => 1969-12-31T16:00:00-08:00[America/Los_Angeles]
 new Temporal.ZonedDateTime(0n, 'America/Los_Angeles');
   // => 1969-12-31T16:00:00-08:00[America/Los_Angeles]
@@ -56,13 +106,13 @@ new Temporal.ZonedDateTime(0n, 'America/Los_Angeles');
 
 ## Static methods
 
-### Temporal.ZonedDateTime.**from**(_thing_: any, _options_?: object) : Temporal.ZonedDateTime
+### Temporal.ZonedDateTime.**from**(_item_: Temporal.ZonedDateTime | object | string, _options_?: object) : Temporal.ZonedDateTime
 
 **Parameters:**
 
-- `thing`: The value representing the desired date, time, time zone, and calendar.
+- `item`: a value convertible to a `Temporal.ZonedDateTime`.
 - `options` (optional object): An object which may have some or all of the following properties:
-  - `overflow` (string): How to deal with out-of-range values if `thing` is an object.
+  - `overflow` (string): How to deal with out-of-range values if `item` is an object.
     Allowed values are `'constrain'` and `'reject'`.
     The default is `'constrain'`.
   - `disambiguation` (string): How to disambiguate if the date and time given by `zonedDateTime` does not exist in the time zone, or exists more than once.
@@ -76,9 +126,9 @@ new Temporal.ZonedDateTime(0n, 'America/Los_Angeles');
 
 This static method creates a new `Temporal.ZonedDateTime` object from another value.
 If the value is another `Temporal.ZonedDateTime` object, a new but otherwise identical object will be returned.
-If the value is any other object, a `Temporal.ZonedDateTime` will be constructed from the values of any `year` (or `era` and `eraYear`), `month` (or `monthCode`), `day`, `hour`, `minute`, `second`, `millisecond`, `microsecond`, `nanosecond`, and/or `calendar` properties that are present.
+If the value is any other object, a `Temporal.ZonedDateTime` will be constructed from the values of any `timeZone`, `year` (or `era` and `eraYear`), `month` (or `monthCode`), `day`, `hour`, `minute`, `second`, `millisecond`, `microsecond`, `nanosecond`, and/or `calendar` properties that are present.
 At least the `timeZone`, `year` (or `era` and `eraYear`), `month` (or `monthCode`), and `day` properties must be present. Other properties are optional.
-If `calendar` is missing, it will be assumed to be `Temporal.Calendar.from('iso8601')`.
+If `calendar` is missing, it will be assumed to be `'iso8601'` (identifying the [ISO 8601 calendar](https://en.wikipedia.org/wiki/ISO_8601#Dates)).
 Any other missing properties will be assumed to be 0 (for time fields).
 
 Date/time values will be interpreted in context of the provided offset and/or time zone, depending on the `offset` option.
@@ -86,7 +136,7 @@ Date/time values will be interpreted in context of the provided offset and/or ti
 Date/time values in object inputs will be interpreted in the context of `calendar`.
 However, date/time values in string inputs are always interpreted in the context of the ISO 8601 calendar.
 
-Any non-object value is converted to a string, which is expected to be an ISO 8601 string that includes a time zone ID in brackets, and an optional calendar.
+If the value is not an object, it must be a string, which is expected to be an ISO 8601 string that includes a time zone ID in brackets, and an optional calendar.
 For example:
 
 ```
@@ -95,8 +145,8 @@ For example:
 
 If the string isn't valid, then a `RangeError` will be thrown regardless of the value of `overflow`.
 
-Note that this string format (albeit limited to the ISO calendar system) is also used by `java.time` and some other time-zone-aware libraries.
-For more information on `Temporal`'s extensions to the ISO string format and the progress towards becoming a published standard, see [ISO standard extensions](./iso-string-ext.md).
+Note that this string format (albeit limited to the ISO 8601 calendar system) is also used by `java.time` and some other time-zone-aware libraries.
+For more information on `Temporal`'s extensions to the ISO 8601 / RFC 3339 string format and the progress towards becoming a published standard, see [String Parsing, Serialization, and Formatting](./strings.md).
 
 The time zone ID is always required.
 `2020-08-05T20:06:13+09:00` and `2020-08-05T11:06:13Z` are not valid inputs to this method because they don't include a time zone ID in square brackets.
@@ -113,7 +163,7 @@ For example, `Etc/GMT+8` would be used for cases where the UTC offset is always 
 If a non-whole-hour single-offset time zone is needed, the offset can be used as the time zone ID of an offset time zone.
 
 ```javascript
-Temporal.Instant.from('2020-08-05T20:06:13+05:45[+05:45]');
+Temporal.ZonedDateTime.from('2020-08-05T20:06:13+05:45[+05:45]');
 // OR
 Temporal.Instant.from('2020-08-05T20:06:13+05:45').toZonedDateTimeISO('+05:45');
 // => 2020-08-05T20:06:13+05:45[+05:45]
@@ -123,18 +173,18 @@ Note that using `Temporal.ZonedDateTime` with a single-offset time zone will not
 Therefore, using offset time zones with `Temporal.ZonedDateTime` is relatively unusual.
 Instead of using `Temporal.ZonedDateTime` with an offset time zone, it may be easier for most use cases to use `Temporal.PlainDateTime` and/or `Temporal.Instant` instead.
 
-The `overflow` option works as follows, if `thing` is an object:
+The `overflow` option works as follows, if `item` is an object:
 
-- In `'constrain'` mode (the default), any out-of-range values are clamped to the nearest in-range value.
-- In `'reject'` mode, the presence of out-of-range values will cause the function to throw a `RangeError`.
+- In `'constrain'` mode (the default), any out-of-range values are clamped to the nearest in-range value (after assuming extension of eras over arbitrary years to substitute `era` and `eraYear` with appropriate values for the `item`).
+- In `'reject'` mode, the presence of out-of-range values (after assuming extension of eras over arbitrary years to substitute `era` and `eraYear` with appropriate values for the `item`) will cause the function to throw a `RangeError`.
 
-The `overflow` option is ignored if `thing` is a string.
+The `overflow` option is ignored if `item` is a string.
 
 Additionally, if the result is earlier or later than the range of dates that `Temporal.PlainDateTime` can represent (approximately half a million years centered on the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time)), then this method will throw a `RangeError` regardless of `overflow`.
 
 > **NOTE**: Although Temporal does not deal with leap seconds, dates coming from other software may have a `second` value of 60.
 > In the default `'constrain'` mode and when parsing an ISO 8601 string, this will be converted to 59.
-> In `'reject'` mode, this function will throw, so if you have to interoperate with times that may contain leap seconds, don't use `reject`.
+> In `'reject'` mode, this function will throw, so if you have to interoperate with times that may contain leap seconds, don't use `'reject'`.
 
 If the input contains a time zone offset, in rare cases it's possible for those values to conflict for a particular local date and time.
 For example, this could happen if the definition of a time zone is changed (e.g. to abolish DST) after storing a `Temporal.ZonedDateTime` as a string representing a far-future event.
@@ -150,9 +200,9 @@ If the time zone and offset are in conflict, then the `offset` option is used to
   See the documentation of `with()` for more details about why this option is used.
 - `'reject'`: Throw a `RangeError` if the offset is not valid for the provided date and time in the provided time zone.
 
-An example of why `offset` is needed is Brazil which permanently stopped using DST in 2019.
+An example of why `offset` is needed is Brazil's abolition of DST in 2019.
 This change meant that previously-stored values for 2020 and beyond might now be ambiguous.
-For details about problems like this and how to solve them with `offset`, see [Ambiguity Caused by Permanent Changes to a Time Zone Definition](./ambiguity.md#ambiguity-caused-by-permanent-changes-to-a-time-zone-definition).
+For details about problems like this and how to solve them with `offset`, see [Ambiguity Caused by Permanent Changes to a Time Zone Definition](./timezone.md#ambiguity-caused-by-permanent-changes-to-a-time-zone-definition).
 
 The `offset` option is ignored if an offset is not present in the input.
 In that case, the time zone and the `disambiguation` option are used to convert date/time values to exact time.
@@ -168,14 +218,14 @@ When interoperating with existing code or services, `'compatible'` mode matches 
 This mode also matches the behavior of cross-platform standards like [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545).
 
 During "skipped" clock time like the hour after DST starts, this method interprets invalid times using the pre-transition time zone offset if `'compatible'` or `'later'` is used or the post-transition time zone offset if `'earlier'` is used.
-This behavior avoids exceptions when converting non-existent local time values to `Temporal.ZonedDateTime`.
+This behavior avoids exceptions when converting nonexistent local time values to `Temporal.ZonedDateTime`.
 
-For usage examples and a more complete explanation of how this disambiguation works and why it is necessary, see [Resolving Ambiguity](./ambiguity.md).
+For usage examples and a more complete explanation of how this disambiguation works and why it is necessary, see [Time Zones and Resolving Ambiguity](./timezone.md).
 
 The `disambiguation` option is only used if there is no offset in the input, or if the offset is ignored by using the `offset` option as described above.
 If the offset in the input is used, then there is no ambiguity and the `disambiguation` option is ignored.
 
-> **NOTE**: The allowed values for the `thing.month` property start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
+> **NOTE**: The allowed values for the `item.month` property start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 
 Example usage:
 
@@ -183,6 +233,7 @@ Example usage:
 ```javascript
 zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30+02:00[Africa/Cairo]');
 zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30+02:00[Africa/Cairo][u-ca=islamic]');
+zdt = Temporal.ZonedDateTime.from('19951207T032430+0200[Africa/Cairo]');
 /* WRONG */ zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30');  // => throws RangeError: time zone ID required
 /* WRONG */ zdt = Temporal.ZonedDateTime.from('1995-12-07T01:24:30Z');  // => throws RangeError: time zone ID required
 /* WRONG */ zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30+02:00');  // => throws RangeError: time zone ID required
@@ -220,19 +271,16 @@ zdt = Temporal.ZonedDateTime.from({ timeZone: 'Europe/Paris', year: 2001, month:
 
 **Returns:** an integer indicating whether `one` comes before or after or is equal to `two`.
 
-- Zero if all fields are equal, including the calendar ID and the time zone ID.
 - &minus;1 if `one` is less than `two`
-- 1 if `one` is greater than `two`.
+- Zero if the two instances describe the same exact instant, ignoring the time zone and calendar
+- 1 if `one` is greater than `two`
+
+Comparison uses exact time, not calendar date and clock time, because sorting is almost always based on when events happen in the real world (and note that sorting by clock time may not match the order of actual occurrence near discontinuities such as DST transitions).
+
+Calendars and time zones are also ignored in the comparison for the same reason.
+For example, this method returns `0` for instances that fall on the same date and time in the ISO 8601 calendar and UTC time zone, even if fields like `day` or `hour` do not match due to use of different calendars and/or time zones.
 
 This function can be used to sort arrays of `Temporal.ZonedDateTime` objects.
-
-Comparison will use exact time, not clock time, because sorting is almost always based on when events happened in the real world.
-Note that during the hour before and after DST ends, sorting of clock time may not match the order the events actually occurred.
-
-Note that this function will not return 0 if the two objects have different `calendar` or `timeZone` properties, even if the exact timestamps are equal.
-If exact timestamps are equal, then `.calendar.id` will be compared lexicographically, in order to ensure a deterministic sort order.
-If those are equal too, then `.timeZone.id` will be compared lexicographically.
-
 For example:
 
 ```javascript
@@ -248,8 +296,8 @@ JSON.stringify(sorted, undefined, 2);
 // '[
 //   "2020-02-01T12:30+01:00[Europe/Brussels]",
 //   "2020-02-01T12:30+00:00[Europe/London]",
-//   "2020-02-01T12:30-05:00[America/New_York]",
-//   "2020-02-01T12:30-05:00[America/Toronto]"
+//   "2020-02-01T12:30-05:00[America/Toronto]",
+//   "2020-02-01T12:30-05:00[America/New_York]"
 // ]'
 ```
 
@@ -299,7 +347,7 @@ Date unit details:
 
 - `year` is a signed integer representing the number of years relative to a calendar-specific epoch.
   For calendars that use eras, the anchor is usually aligned with the latest era so that `eraYear === year` for all dates in that era.
-  However, some calendars like Japanese may use a different anchor.
+  However, some calendars use a different anchor (e.g., the Japanese calendar `year` matches the ISO 8601 and Gregorian calendars in counting from ISO year 0001 as `1`).
 - `month` is a positive integer representing the ordinal index of the month in the current year.
   For calendars like Hebrew or Chinese that use leap months, the same-named month may have a different `month` value depending on the year.
   The first month in every year has `month` equal to `1`.
@@ -307,12 +355,12 @@ Date unit details:
   `month` values start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 - `monthCode` is a calendar-specific string that identifies the month in a year-independent way.
   For common (non-leap) months, `monthCode` should be `` `M${month}` ``, where `month` is zero padded up to two digits.
-  For uncommon (leap) months in lunisolar calendars like Hebrew or Chinese, the month code is the previous month's code with with an "L" suffix appended.
+  For uncommon (leap) months in lunisolar calendars like Hebrew or Chinese, the month code is the previous month's code with an "L" suffix appended.
   Examples: `'M02'` => February; `'M08L'` => repeated 8th month in the Chinese calendar; `'M05L'` => Adar I in the Hebrew calendar.
 - `day` is a positive integer representing the day of the month.
 
 Either `month` or `monthCode` can be used in `from` or `with` to refer to the month.
-Similarly, in calendars that user eras an `era`/`eraYear` pair can be used in place of `year` when calling `from` or `with`.
+Similarly, in calendars that use eras, an `era`/`eraYear` pair can be used in place of `year` when calling `from` or `with`.
 
 Time unit details:
 
@@ -356,29 +404,23 @@ dt.nanosecond;  // => 500
 
 > **NOTE**: The possible values for the `month` property start at 1, which is different from legacy `Date` where months are represented by zero-based indices (0 to 11).
 
-### zonedDateTime.**epochSeconds**: number
-
 ### zonedDateTime.**epochMilliseconds**: number
-
-### zonedDateTime.**epochMicroseconds**: bigint
 
 ### zonedDateTime.**epochNanoseconds**: bigint
 
-The above read-only properties return the integer number of full seconds, milliseconds, microseconds, or nanoseconds between `zonedDateTime` and 00:00 UTC on 1970-01-01, otherwise known as the [UNIX Epoch](https://en.wikipedia.org/wiki/Unix_time).
+The above two read-only properties give the integer number of milliseconds or nanoseconds (respectively) from the [Unix epoch](https://en.wikipedia.org/wiki/Unix_time) of January 1, 1970 at 00:00 UTC until `zonedDateTime`, ignoring leap seconds.
 
-These properties are equivalent to `zonedDateTime.toInstant().epochSeconds`, `zonedDateTime.toInstant().epochMilliseconds`, `zonedDateTime.toInstant().epochMicroseconds`, `zonedDateTime.toInstant().epochNanoseconds`, respectively.
-Any fractional remainders are truncated towards zero.
-The time zone is irrelevant to these properties because time because there is only one epoch, not one per time zone.
+These properties are equivalent to `zonedDateTime.toInstant().epochMilliseconds` and `zonedDateTime.toInstant().epochNanoseconds`, respectively.
+Any fractional milliseconds are truncated towards the beginning of time.
+The time zone is irrelevant to these properties, because there is only one epoch, not one per time zone.
 
-Note that the `epochSeconds` and `epochMilliseconds` properties are of type `number` (although only integers are returned) while the `epochMicroseconds` and `epochNanoseconds` are of type `bigint`.
+Note that the `epochMilliseconds` property is of type `number` (although only integers are returned) while the `epochNanoseconds` property is of type `bigint`.
 
 The `epochMilliseconds` property is the easiest way to construct a legacy `Date` object from a `Temporal.ZonedDateTime` instance.
 
 <!-- prettier-ignore-start -->
 ```javascript
 zdt = Temporal.ZonedDateTime.from('2020-02-01T12:30+09:00[Asia/Tokyo]');
-epochSecs = zdt.epochSeconds;
-  // => 1580527800
 epochMs = zdt.epochMilliseconds;
   // => 1580527800000
 zdt.toInstant().epochMilliseconds;
@@ -386,16 +428,25 @@ zdt.toInstant().epochMilliseconds;
 legacyDate = new Date(epochMs);
   // => 2020-02-01T03:30:00.000Z
   // (if the system time zone is America/Los_Angeles)
-epochMicros = zdt.epochMicroseconds;
-  // => 1580527800000000n
 epochNanos = zdt.epochNanoseconds;
   // => 1580527800000000000n
+
+// If you need epoch seconds data:
+epochSecs = Math.floor(zdt.epochMillieconds / 1000); // => 1553906700
+  // => 1580527800
+
+// If you need epoch microseconds data:
+// (Note the extra check for correct floor rounding with bigints)
+ns = zdt.epochNanoseconds;
+epochMicros = ns / 1000n + ((ns % 1000n) < 0n ? -1n : 0n);
+  // => 1580527800000000n
 ```
 <!-- prettier-ignore-end -->
 
-### zonedDateTime.**calendar** : object
+### zonedDateTime.**calendarId** : object
 
-The `calendar` read-only property gives the calendar used to calculate date/time field values.
+The `calendarId` read-only property gives the identifier of the calendar used to calculate date/time field values.
+
 Calendar-sensitive values are used in most places, including:
 
 - Accessing properties like `.year` or `.month`
@@ -411,18 +462,21 @@ Calendar-specific date/time values are NOT used in only a few places:
 - In the values returned by the `getISOFields()` method which is explicitly used to provide ISO 8601 calendar values
 - In arguments to the `Temporal.ZonedDateTime` constructor which is used for advanced use cases only
 
-### zonedDateTime.**timeZone** : Temporal.TimeZoneProtocol
+### zonedDateTime.**timeZoneId** : string
 
-The `timeZone` read-only property represents the persistent time zone of `zonedDateTime`.
+The `timeZoneId` read-only property is the identifier of the persistent time zone of `zonedDateTime`.
+
 By storing its time zone, `Temporal.ZonedDateTime` is able to use that time zone when deriving other values, e.g. to automatically perform DST adjustment when adding or subtracting time.
-
-If a non-canonical time zone ID is used, it will be normalized by `Temporal` into its canonical name listed in the [IANA time zone database](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
 
 Usually, the time zone ID will be an IANA time zone ID.
 However, in unusual cases, a time zone can also be created from a time zone offset string like `+05:30`.
 Offset time zones function just like IANA time zones except that their offset can never change due to DST or political changes.
 This can be problematic for many use cases because by using an offset time zone you lose the ability to safely derive past or future dates because, even in time zones without DST, offsets sometimes change for political reasons (e.g. countries change their time zone).
 Therefore, using an IANA time zone is recommended wherever possible.
+
+Time zone identifiers are normalized before being used to determine the time zone.
+For example, capitalization will be corrected to match the [IANA time zone database](https://www.iana.org/time-zones), and offsets like `+01` or `+0100` will be converted to `+01:00`.
+Link names in the IANA Time Zone Database are not resolved to Zone names.
 
 In very rare cases, you may choose to use `UTC` as your time zone ID.
 This is generally not advised because no humans actually live in the UTC time zone; it's just for computers.
@@ -435,31 +489,27 @@ To change the time zone while keeping the exact time constant, use `.withTimeZon
 The time zone is a required property when creating `Temporal.ZonedDateTime` instances.
 If you don't know the time zone of your underlying data, please use `Temporal.Instant` and/or `Temporal.PlainDateTime`, neither of which have awareness of time zones.
 
-Although this property is a `Temporal.TimeZoneProtocol` object (which is usually a `Temporal.TimeZone` except custom timezones), it will be automatically coerced to its string form (e.g. `"Europe/Paris"`) when displayed by `console.log`, `JSON.stringify`, `${zonedDateTime.timeZone}`, or other similar APIs.
-
 Usage example:
 
 <!-- prettier-ignore-start -->
 ```javascript
 zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24-08:00[America/Los_Angeles]');
-`Time zone is: ${zdt.timeZone}`;
+`Time zone is: ${zdt.timeZoneId}`;
   // => 'Time zone is: America/Los_Angeles'
-zdt.withTimeZone('Asia/Singapore').timeZone;
-  // => Asia/Singapore
-zdt.withTimeZone('Asia/Chongqing').timeZone;
-  // => Asia/Shanghai
-  // (time zone IDs are normalized, e.g. Asia/Chongqing -> Asia/Shanghai)
-zdt.withTimeZone('+05:00').timeZone;
+zdt.withTimeZone('Asia/Kolkata').timeZoneId;
+  // => Asia/Kolkata
+zdt.withTimeZone('Asia/Calcutta').timeZoneId;
+  // => Asia/Calcutta (does not follow links in the IANA Time Zone Database)
+
+zdt.withTimeZone('europe/paris').timeZoneId;
+  // => Europe/Paris (normalized to match IANA Time Zone Database capitalization)
+
+zdt.withTimeZone('+05:00').timeZoneId;
   // => +05:00
-zdt.withTimeZone('+05').timeZone;
-  // => +05:00
-  // (normalized to canonical form)
-zdt.withTimeZone('utc').timeZone;
-  // => UTC
-  // (normalized to canonical form which is uppercase)
-zdt.withTimeZone('GMT').timeZone;
-  // => UTC
-  // (normalized to canonical form)
+zdt.withTimeZone('+05').timeZoneId;
+  // => +05:00  (normalized to ±HH:MM)
+zdt.withTimeZone('+0500').timeZoneId;
+  // => +05:00  (normalized to ±HH:MM)
 ```
 <!-- prettier-ignore-end -->
 
@@ -515,13 +565,24 @@ For the ISO 8601 calendar, this is normally a value between 1 and 52, but in a f
 ISO week 1 is the week containing the first Thursday of the year.
 For more information on ISO week numbers, see for example the Wikipedia article on [ISO week date](https://en.wikipedia.org/wiki/ISO_week_date).
 
+When combining the week number with a year number, make sure to use `zonedDateTime.yearOfWeek` instead of `zonedDateTime.year`.
+This is because the first few days of a calendar year may be part of the last week of the previous year, and the last few days of a calendar year may be part of the first week of the new year, depending on which year the first Thursday falls in.
+
 Usage example:
 
 ```javascript
-zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24-08:00[America/Los_Angeles]');
+zdt = Temporal.ZonedDateTime.from('2022-01-01T03:24-08:00[America/Los_Angeles]');
 // ISO week date
-console.log(zdt.year, zdt.weekOfYear, zdt.dayOfWeek); // => '1995 49 4'
+console.log(zdt.yearOfWeek, zdt.weekOfYear, zdt.dayOfWeek); // => '2021 52 6'
 ```
+
+### zonedDateTime.**yearOfWeek** : number
+
+The `yearOfWeek` read-only property gives the ISO "week calendar year" of the date, which is the year number corresponding to the ISO week number.
+For the ISO 8601 calendar, this is normally the same as `zonedDateTime.year`, but in a few cases it may be the previous or following year.
+For more information on ISO week numbers, see for example the Wikipedia article on [ISO week date](https://en.wikipedia.org/wiki/ISO_week_date).
+
+See `weekOfYear` for a usage example.
 
 ### zonedDateTime.**daysInWeek** : number
 
@@ -590,8 +651,7 @@ zdt.monthsInYear; // => 12
 The `inLeapYear` read-only property tells whether the year of this `Temporal.ZonedDateTime` is a leap year.
 Its value is `true` if the year is a leap year, and `false` if not.
 
-For the ISO calendar, leap years are years evenly divisible by 4, except years evenly divisible by 100 but not evenly divisible by 400.
-Other calendar systems may calculate leap years differently.
+NOTE: A "leap year" is a year that contains more days than other years (for solar or lunar calendars) or more months than other years (for lunisolar calendars like Hebrew or Chinese). In the ISO 8601 calendar, a year is a leap year (and has exactly one extra day, February 29) if it is evenly divisible by 4 but not 100 or if it is evenly divisible by 400.
 
 Usage example:
 
@@ -613,6 +673,14 @@ If a time zone offset transition happens exactly at midnight, the transition wil
 
 Note that transitions that skip entire days (like the 2011 [change](https://en.wikipedia.org/wiki/Time_in_Samoa#2011_time_zone_change) of `Pacific/Apia` to the opposite side of the International Date Line) will return `24` because there are 24 real-world hours between one day's midnight and the next day's midnight.
 
+When the same day starts twice (due to an offset transition), `hoursInDay` reflects the total amount of time between the first start of the day, and the second end of the day. For example, on 2010-11-07 at 00:00:59 (1 minute after midnight), the `America/St_Johns` time zone transitioned from offset `-02:30` to offset `-03:30`, meaning that the time transitioned to 23:01:00 on the previous day. After 1 hour of wall-clock time passed, 2010-11-07 began again:
+
+```javascript
+const zdt = Temporal.ZonedDateTime.from('2010-11-07T23:00:00-03:30[America/St_Johns]);
+zdt.hoursInDay; // 25
+```
+Similar examples include `America/Goose_Bay` before 2010, `America/Moncton` before 2006, `Pacific/Guam` and `Pacific/Saipan` in 1969, and `America/Phoenix` in 1944.
+
 Usage example:
 
 <!-- prettier-ignore-start -->
@@ -626,32 +694,6 @@ Temporal.ZonedDateTime.from('2020-03-08T12:00-07:00[America/Los_Angeles]').hours
 Temporal.ZonedDateTime.from('2020-11-01T12:00-08:00[America/Los_Angeles]').hoursInDay;
   // => 25
   // (DST ends on this day)
-```
-<!-- prettier-ignore-end -->
-
-### zonedDateTime.**startOfDay** : Temporal.ZonedDateTime
-
-The `startOfDay` read-only property returns a new `Temporal.ZonedDateTime` instance representing the earliest valid local clock time during the current calendar day and time zone of `zonedDateTime`.
-
-The local time of the result is almost always `00:00`, but in rare cases it could be a later time e.g. if DST starts at midnight in a time zone. For example:
-
-```javascript
-const zdt = Temporal.ZonedDateTime.from('2015-10-18T12:00-02:00[America/Sao_Paulo]');
-zdt.startOfDay(); // => 2015-10-18T01:00:00-02:00[America/Sao_Paulo]
-```
-
-Also note that some calendar systems (e.g. `ethiopic`) may not start days at `00:00`.
-
-Usage example:
-
-<!-- prettier-ignore-start -->
-```javascript
-zdt = Temporal.ZonedDateTime.from('2020-01-01T12:00-08:00[America/Los_Angeles]').startOfDay();
-  // => 2020-01-01T00:00:00-08:00[America/Los_Angeles]
-zdt = Temporal.ZonedDateTime.from('2018-11-04T12:00-02:00[America/Sao_Paulo]').startOfDay();
-  // => 2018-11-04T01:00:00-02:00[America/Sao_Paulo]
-  // Note the 1:00AM start time because the first clock hour was skipped due to DST transition
-  // that started at midnight.
 ```
 <!-- prettier-ignore-end -->
 
@@ -705,7 +747,7 @@ repeated0130 = daylightTime0130.with({ offset: minus8Hours });
 
 ## Methods
 
-### zonedDateTime.**with**(_zonedDateTimeLike_: object | string, _options_?: object) : Temporal.ZonedDateTime
+### zonedDateTime.**with**(_zonedDateTimeLike_: object, _options_?: object) : Temporal.ZonedDateTime
 
 **Parameters:**
 
@@ -751,12 +793,11 @@ For example, if a `Temporal.ZonedDateTime` is set to the "second" 1:30AM on a da
 Because the existing offset is valid for the new time, it will be retained so the result will be the "second" 1:45AM.
 However, if the existing offset is not valid for the new result (e.g. `.with({hour: 0})`), then the default behavior will change the offset to match the new local time in that time zone.
 
-Options on `with` behave identically to options on `from`, with only the following exceptions:
+If the `offset` option is set to `'ignore'` (or in very rare cases when `'prefer'` is used), then the object's current time zone and the `disambiguation` option determine the offset is used for times that are ambiguous due to DST and other time zone offset transitions.
+Otherwise, the `offset` option determines the offset during skipped or repeated clock times and the `disambiguation` option is ignored.
 
-- The default for `offset` is `'prefer'` to support the use case described above.
-- If the input's `timeZone` field is both provided and has a different ID than the current object, then the object's current `offsetNanoseconds` field will be ignored regardless of the `offset` option chosen.
-
-Please see the documentation of `from` for more details on options behavior.
+Other than the `offset` option behaviors noted above, options on `with` behave identically to options on `from`.
+See the documentation of `from` for more details on options behavior.
 
 Usage example:
 
@@ -765,22 +806,26 @@ zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:00-06:00[America/Chicago]');
 zdt.with({ year: 2015, minute: 31 }); // => 2015-12-07T03:31:00-06:00[America/Chicago]
 ```
 
-### zonedDateTime.**withPlainTime**(_plainTime_?: object | string) : Temporal.PlainDateTime
+### zonedDateTime.**withPlainTime**(_plainTime_?: object | string) : Temporal.ZonedDateTime
 
 **Parameters:**
 
 - `plainTime` (optional `Temporal.PlainTime` or plain object or string): The clock time that should replace the current clock time of `zonedDateTime`.
-  If omitted, the clock time of the result will be `00:00:00`.
 
 **Returns:** a new `Temporal.ZonedDateTime` object which replaces the clock time of `zonedDateTime` with the clock time represented by `plainTime`.
 
-Valid input to `withPlainTime` is the same as valid input to `Temporal.PlainTime.from`, including strings like `12:15:36`, plain object property bags like `{ hour: 20, minute: 30 }`, or `Temporal` objects that contain time fields: `Temporal.PlainTime`, `Temporal.ZonedDateTime`, or `Temporal.PlainDateTime`.
+The default `plainTime`, if it's not provided, is the first valid local time in `zonedDateTime`'s time zone on its calendar date.
+Usually this is midnight (`00:00`), but may be a different time in rare circumstances like DST skipping midnight.
+
+If provided, valid input to `withPlainTime` is the same as valid input to `Temporal.PlainTime.from`, including strings like `12:15:36`, plain object property bags like `{ hour: 20, minute: 30 }`, or `Temporal` objects that contain time fields: `Temporal.PlainTime`, `Temporal.ZonedDateTime`, or `Temporal.PlainDateTime`.
 
 This method is similar to `with`, but with a few important differences:
 
 - `withPlainTime` accepts strings, Temporal objects, or object property bags.
   `with` only accepts object property bags and does not accept strings nor `Temporal.PlainTime` objects because they can contain calendar information.
 - `withPlainTime` will default all missing time units to zero, while `with` will only change units that are present in the input object.
+- `withPlainTime` does not accept options like `disambiguation` or `offset`.
+  For fine-grained control, use `with`.
 
 If `plainTime` is a `Temporal.PlainTime` object, then this method returns the same result as `plainTime.toZonedDateTime({ plainTime: zonedDateTime, timeZone: zonedDateTime})` but can be easier to use, especially when chained to previous operations that return a `Temporal.ZonedDateTime`.
 
@@ -797,55 +842,11 @@ zdt.withPlainTime('12:34'); // => 2015-12-07T12:34:00-08:00[America/Los_Angeles]
 zdt.add({ days: 2, hours: 22 }).withPlainTime('00:00'); // => 2015-12-10T00:00:00-08:00[America/Los_Angeles]
 ```
 
-### zonedDateTime.**withPlainDate**(_plainDate_: object | string) : Temporal.ZonedDateTime
-
-**Parameters:**
-
-- `plainDate` (`Temporal.PlainDate` or plain object or string): The calendar date that should replace the current calendar date of `zonedDateTime`.
-
-**Returns:** a new `Temporal.ZonedDateTime` object which replaces the calendar date of `zonedDateTime` with the calendar date represented by `plainDate`.
-
-Valid input to `withPlainDate` is the same as valid input to `Temporal.PlainDate.from`, including strings like `2000-03-01`, plain object property bags like `{ year: 2020, month: 3, day: 1 }`, or `Temporal` objects that contain a `year`, `month`, and `day` property, including `Temporal.PlainDate`, `Temporal.ZonedDateTime`, or `Temporal.PlainDateTime`.
-
-All three date units (`year`, `month`, and `day`) are required.
-`Temporal.YearMonth` and `Temporal.MonthDay` are not valid input because they lack all date units.
-Both of those types have a `toPlainDate` method that can be used to obtain a `Temporal.PlainDate` which can in turn be used as input to `withPlainDate`.
-
-If `plainDate` contains a non-ISO 8601 calendar, then the result of `withPlainDate` will be the calendar of `plainDate`.
-However, if `zonedDateTime.calendar` is already a non-ISO 8601 calendar, then this method wil throw a `RangeError`.
-To resolve the error, first convert one of the instances to the same calendar or the ISO 8601 calendar, e.g. using `.withCalendar('iso8601')`.
-
-This method is similar to `with`, but with a few important differences:
-
-- `withPlainDate` accepts strings, Temporal objects, or object property bags.
-  `with` only accepts object property bags and does not accept strings nor `Temporal.PlainDate` objects because they can contain calendar information.
-- `withPlainDate` will update all date units, while `with` only changes individual units that are present in the input, e.g. setting the `day` to `1` while leaving `month` and `year` unchanged.
-
-If `plainDate` is a `Temporal.PlainDate` object, then this method returns the same result as `plainDate.toZonedDateTime({ plainDate: zonedDateTime, timeZone: zonedDateTime})` but can be easier to use, especially when chained to previous operations that return a `Temporal.ZonedDateTime`.
-
-Usage example:
-
-```javascript
-zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30-08:00[America/Los_Angeles]');
-zdt.withPlainDate({ year: 2000, month: 6, day: 1 }); // => 2000-06-01T03:24:30-07:00[America/Los_Angeles]
-date = Temporal.PlainDate.from('2020-01-23');
-zdt.withPlainDate(date); // => 2020-01-23T03:24:30-08:00[America/Los_Angeles]
-zdt.withPlainDate('2018-09-15'); // => 2018-09-15T03:24:30-07:00[America/Los_Angeles]
-
-// easier for chaining
-zdt.add({ hours: 12 }).withPlainDate('2000-06-01'); // => 2000-06-01T15:24:30-07:00[America/Los_Angeles]
-
-// result contains a non-ISO calendar if present in the input
-zdt.withCalendar('japanese').withPlainDate('2008-09-06'); // => 2008-09-06T03:24:30-07:00[America/Los_Angeles][u-ca=japanese]
-zdt.withPlainDate('2017-09-06[u-ca=japanese]'); // => 2017-09-06T03:24:30-07:00[America/Los_Angeles][u-ca=japanese]
-/* WRONG */ zdt.withCalendar('japanese').withPlainDate('2017-09-06[u-ca=hebrew]'); // => RangeError (calendar conflict)
-```
-
 ### zonedDateTime.**withTimeZone**(_timeZone_: object | string) : Temporal.ZonedDateTime
 
 **Parameters:**
 
-- `timeZone` (`Temporal.TimeZone` or plain object or string): The time zone into which to project `zonedDateTime`.
+- `timeZone` (object or string): The time zone into which to project `zonedDateTime`.
 
 **Returns:** a new `Temporal.ZonedDateTime` object which is the date indicated by `zonedDateTime`, projected into `timeZone`.
 
@@ -861,7 +862,7 @@ zdt.withTimeZone('Africa/Accra').toString(); // => '1995-12-06T18:24:30+00:00[Af
 
 **Parameters:**
 
-- `calendar` (`Temporal.Calendar` or plain object or string): The calendar into which to project `zonedDateTime`.
+- `calendar` (object or string): The calendar into which to project `zonedDateTime`.
 
 **Returns:** a new `Temporal.ZonedDateTime` object which is the date indicated by `zonedDateTime`, projected into `calendar`.
 
@@ -880,8 +881,8 @@ zdt.withCalendar('gregory').eraYear; // => 1995
 - `duration` (object): A `Temporal.Duration` object or a duration-like object.
 - `options` (optional object): An object which may have some or all of the following properties:
   - `overflow` (string): How to deal with additions that result in out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.ZonedDateTime` object representing the sum of `zonedDateTime` plus `duration`.
 
@@ -891,11 +892,9 @@ The `duration` argument is an object with properties denoting a duration, such a
 
 Addition and subtraction are performed according to rules defined in [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545):
 
-- Add/subtract the date portion of a duration using calendar days, like (like `Temporal.PlainDateTime`).
+- Add/subtract the date portion of a duration using calendar arithmetic (like `Temporal.PlainDateTime`).
   The result will automatically adjust for Daylight Saving Time using the rules of this instance's `timeZone` field.
-- Add/subtract the time portion of a duration using real-world time, like (like `Temporal.Instant`).
-- Addition (or subtraction of a negative duration) is performed in order from largest unit to smallest unit.
-- Subtraction (or addition of a negative duration) is performed in order from smallest unit to largest unit.
+- Add/subtract the time portion of a duration using real-world time (like `Temporal.Instant`).
 - If a result is ambiguous or invalid due to a time zone offset transition, the later of the two possible instants will be used for time-skipped transitions and the earlier of the two possible instants will be used for time-repeated transitions.
   This behavior corresponds to the default `disambiguation: 'compatible'` option used in `from` and used by legacy `Date` and moment.js.
 
@@ -945,8 +944,8 @@ laterHours.since(zdt, { largestUnit: 'hour' }).hours; // => 24
 - `duration` (object): A `Temporal.Duration` object or a duration-like object.
 - `options` (optional object): An object which may have some or all of the following properties:
   - `overflow` (string): How to deal with additions that result in out-of-range values.
-    Allowed values are `constrain` and `reject`.
-    The default is `constrain`.
+    Allowed values are `'constrain'` and `'reject'`.
+    The default is `'constrain'`.
 
 **Returns:** a new `Temporal.ZonedDateTime` object representing the result of `zonedDateTime` minus `duration`.
 
@@ -954,24 +953,7 @@ This method subtracts a `duration` from `zonedDateTime`.
 
 The `duration` argument is an object with properties denoting a duration, such as `{ hours: 5, minutes: 30 }`, or a `Temporal.Duration` object. Subtracting a negative duration like `{ hours: -5, minutes: -30 }` is equivalent to adding the absolute value of that duration.
 
-Addition and subtraction are performed according to rules defined in [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545):
-
-- Add/subtract the date portion of a duration using calendar days, like (like `Temporal.PlainDateTime`).
-  The result will automatically adjust for Daylight Saving Time using the rules of this instance's `timeZone` field.
-- Add/subtract the time portion of a duration using real-world time, like (like `Temporal.Instant`).
-- Addition (or subtraction of a negative duration) is performed in order from largest unit to smallest unit.
-- Subtraction (or addition of a negative duration) is performed in order from smallest unit to largest unit.
-- If a result is ambiguous or invalid due to a time zone offset transition, the later of the two possible instants will be used for time-skipped transitions and the earlier of the two possible instants will be used for time-repeated transitions.
-  This behavior corresponds to the default `disambiguation: 'compatible'` option used in `from` and used by legacy `Date` and moment.js.
-
-These rules make arithmetic with `Temporal.ZonedDateTime` "DST-safe", which means that the results most closely match the expectations of both real-world users and implementers of other standards-compliant calendar applications. These expectations include:
-
-- Adding or subtracting days should keep clock time consistent across DST transitions.
-  For example, if you have an appointment on Saturday at 1:00PM and you ask to reschedule it 1 day later, you would expect the reschedule appointment to still be at 1:00PM, even if there was a DST transition overnight.
-- Adding or subtracting the time portion of a duration should ignore DST transitions.
-  For example, a friend you've asked to meet in in 2 hours will be annoyed if you show up 1 hour or 3 hours later.
-- There should be a consistent and relatively-unsurprising order of operations.
-- If results are at or near a DST transition, ambiguities should be handled automatically (no crashing) and deterministically.
+Addition and subtraction are performed according to rules defined in [RFC 5545 (iCalendar)](https://tools.ietf.org/html/rfc5545), as described above in `add()`.
 
 Some arithmetic operations may be ambiguous, e.g. because months have different lengths.
 For example, subtracting one month from October 31 would result in September 31, which doesn't exist.
@@ -1018,14 +1000,14 @@ earlierHours.since(zdt, { largestUnit: 'hour' }).hours; // => -24
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time after `zonedDateTime` and until `other`.
 
 This method computes the difference between the two times represented by `zonedDateTime` and `other`, optionally rounds it, and returns it as a `Temporal.Duration` object.
 If `other` is earlier than `zonedDateTime` then the resulting duration will be negative.
-The returned `Temporal.Duration`, when added to `zonedDateTime` with the same `options`, will yield `other`.
+If using the default `options`, adding the returned `Temporal.Duration` to `zonedDateTime` will yield `other`.
 
 The `largestUnit` option controls how the resulting duration is expressed.
 The returned `Temporal.Duration` object will not have any nonzero fields that are larger than the unit in `largestUnit`.
@@ -1056,8 +1038,8 @@ To calculate the difference between calendar dates only, use `.toPlainDate().unt
 To calculate the difference between clock times only, use `.toPlainTime().until(other.toPlainTime())`.
 
 If the other `Temporal.ZonedDateTime` is in a different time zone, then the same days can be different lengths in each time zone, e.g. if only one of them observes DST.
-Therefore, a `RangeError` will be thrown if `largestUnit` is `'day'` or larger and the two instances' time zones have different `id` fields.
-To work around this limitation, transform one of the instances to the other's time zone using `.withTimeZone(other.timeZone)` and then calculate the same-timezone difference.
+Therefore, a `RangeError` will be thrown if `largestUnit` is `'day'` or larger and the two instances' time zones are not equal, using the same equality algorithm as `Temporal.ZonedDateTime.prototype.equals`.
+To work around this same-time-zone requirement, transform one of the instances to the other's time zone using `.withTimeZone(other.timeZone)` and then calculate the same-timezone difference.
 Because of the complexity and ambiguity involved in cross-timezone calculations involving days or larger units, `'hour'` is the default for `largestUnit`.
 
 Take care when using milliseconds, microseconds, or nanoseconds as the largest unit.
@@ -1114,7 +1096,7 @@ jan1.until(mar1, { largestUnit: 'day' }); // => P60D
   - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
     The default is 1.
   - `roundingMode` (string): How to handle the remainder, if rounding.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`, which truncates any remainder towards zero.
 
 **Returns:** a `Temporal.Duration` representing the elapsed time before `zonedDateTime` and since `other`.
@@ -1123,8 +1105,7 @@ This method computes the difference between the two times represented by `zonedD
 If `other` is later than `zonedDateTime` then the resulting duration will be negative.
 
 This method is similar to `Temporal.ZonedDateTime.prototype.until()`, but reversed.
-The returned `Temporal.Duration`, when subtracted from `zonedDateTime` using the same `options`, will yield `other`.
-Using default options, `zdt1.since(zdt2)` yields the same result as `zdt1.until(zdt2).negated()`, but results may differ with options like `{ largestUnit: 'day' }`.
+If using the default `options`, subtracting the returned `Temporal.Duration` from `zonedDateTime` will yield `other`, and `zdt1.since(zdt2)` will yield the same result as `zdt1.until(zdt2).negated()`.
 
 Usage example:
 
@@ -1134,24 +1115,28 @@ zdt2 = Temporal.ZonedDateTime.from('2019-01-31T15:30+05:30[Asia/Kolkata]');
 zdt2.since(zdt1); // => PT202956H5M29.9999965S
 ```
 
-### zonedDateTime.**round**(_options_: object) : Temporal.ZonedDateTime
+### zonedDateTime.**round**(_roundTo_: string | object) : Temporal.ZonedDateTime
 
 **Parameters:**
 
-- `options` (object): An object which may have some or all of the following properties:
-  - `smallestUnit` (required string): The unit to round to.
+- `roundTo` (string | object): A required string or object to control the operation.
+  - If a string is provided, the resulting `Temporal.ZonedDateTime` object will be rounded to that unit.
     Valid values are `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
-  - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
-    The default is 1.
-  - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'halfExpand'`, `'ceil'`, `'trunc'`, and `'floor'`.
-    The default is `'halfExpand'`.
+    A string parameter is treated the same as an object whose `smallestUnit` property value is that string.
+  - If an object is passed, the following properties are recognized:
+    - `smallestUnit` (required string): The unit to round to.
+      Valid values are `'day'`, `'hour'`, `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
+    - `roundingIncrement` (number): The granularity to round to, of the unit given by `smallestUnit`.
+      The default is 1.
+    - `roundingMode` (string): How to handle the remainder.
+      Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
+      The default is `'halfExpand'`.
 
-**Returns:** a new `Temporal.ZonedDateTime` object which is `zonedDateTime` rounded to `roundingIncrement` of `smallestUnit`.
+**Returns:** a new `Temporal.ZonedDateTime` object which is `zonedDateTime` rounded to `roundTo` (if a string parameter is used) or `roundingIncrement` of `smallestUnit` (if an object parameter is used).
 
 Rounds `zonedDateTime` to the given unit and increment, and returns the result as a new `Temporal.ZonedDateTime` object.
 
-The `smallestUnit` option determines the unit to round to.
+The `smallestUnit` option (or the value of `roundTo` if a string parameter is used) determines the unit to round to.
 For example, to round to the nearest minute, use `smallestUnit: 'minute'`.
 This option is required.
 
@@ -1167,11 +1152,19 @@ If `smallestUnit` is `'day'`, then 1 is the only allowed value for `roundingIncr
 
 The `roundingMode` option controls how the rounding is performed.
 
-- `'ceil'`: Always round up, towards the end of time.
+- `'ceil'`, `'expand'`: Always round up, towards the end of time.
 - `'floor'`, `'trunc'`: Always round down, towards the beginning of time.
-  (These two modes behave the same, but are both included for consistency with `Temporal.Duration.prototype.round()`, where they are not the same.)
-- `'halfExpand'`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
+- `'halfCeil'`, `'halfExpand'`: Round to the nearest of the values allowed by `roundingIncrement` and `smallestUnit`.
   When there is a tie, round up, like `'ceil'`.
+- `'halfFloor'`, `'halfTrunc'`: Round to the nearest of the allowed values, like `'halfExpand'`, but when there is a tie, round down, like `'floor'`.
+- `'halfEven'`: Round to the nearest of the allowed values, but when there is a tie, round towards the value that is an even multiple of `roundingIncrement`.
+  For example, with a `roundingIncrement` of 2, the number 7 would round up to 8 instead of down to 6, because 8 is an even multiple of 2 (2 × 4 = 8, and 4 is even), whereas 6 is an odd multiple (2 × 3 = 6, and 3 is odd).
+
+Several pairs of modes behave the same as each other, but are both included for consistency with `Temporal.Duration.round()`, where they are not the same.
+
+The default rounding mode is `'halfExpand'` to match how rounding is often taught in school.
+Note that this is different than the `'trunc'` default used by `until` and `since` options because rounding up would be an unexpected default for those operations.
+Other properties behave identically between these methods.
 
 Example usage:
 
@@ -1191,6 +1184,76 @@ zdt.round({ roundingIncrement: 30, smallestUnit: 'minute', roundingMode: 'floor'
 ```
 <!-- prettier-ignore-end -->
 
+### zonedDateTime.**startOfDay**() : Temporal.ZonedDateTime
+
+**Returns:** A new `Temporal.ZonedDateTime` instance representing the earliest valid local clock time during the current calendar day and time zone of `zonedDateTime`.
+
+This method returns a new `Temporal.ZonedDateTime` indicating the start of the day.
+The local time of the result is almost always `00:00`, but in rare cases it could be a later time e.g. if DST skips midnight in a time zone. For example:
+
+```javascript
+const zdt = Temporal.ZonedDateTime.from('2015-10-18T12:00-02:00[America/Sao_Paulo]');
+zdt.startOfDay(); // => 2015-10-18T01:00:00-02:00[America/Sao_Paulo]
+```
+
+When the same day starts twice (due to an offset transition), the earlier time is used for `startOfDay`. For example, the `America/St_Johns` time zone transitioned from offset `-02:30` to offset `-03:30` on 2010-11-07:
+
+```javascript
+const zdt = Temporal.ZonedDateTime.from('2010-11-07T23:00:00-03:30[America/St_Johns]');
+zdt.startOfDay(); // 2010-11-07T00:00:00-02:30[America/St_Johns]
+```
+
+Usage example:
+
+<!-- prettier-ignore-start -->
+```javascript
+zdt = Temporal.ZonedDateTime.from('2020-01-01T12:00-08:00[America/Los_Angeles]').startOfDay();
+  // => 2020-01-01T00:00:00-08:00[America/Los_Angeles]
+zdt = Temporal.ZonedDateTime.from('2018-11-04T12:00-02:00[America/Sao_Paulo]').startOfDay();
+  // => 2018-11-04T01:00:00-02:00[America/Sao_Paulo]
+  // Note the 1:00AM start time because the first clock hour was skipped due to DST transition
+  // that started at midnight.
+```
+<!-- prettier-ignore-end -->
+
+### zonedDateTime.**getTimeZoneTransition**(direction: string | object) : Temporal.ZonedDateTime | null
+
+**Parameters:**
+
+- `direction` (string | object): A required string or object to control the operation.
+  A string parameter is treated the same as an object whose `direction` property value is that string.
+  If an object is passed, the following properties are recognized:
+    - `direction` (required string): The direction in which to search for the closest UTC offset transition.
+      Valid values are `'next'` and `'previous'`.
+
+**Returns:** A `Temporal.ZonedDateTime` object representing the following UTC offset transition in `zonedDateTime`'s time zone in the given direction, or `null` if no transitions farther than `zonedDateTime` could be found.
+
+This method is used to calculate the closest past or future UTC offset transition from `zonedDateTime` for its time zone.
+A "transition" is a point in time where the UTC offset of a time zone changes, for example when Daylight Saving Time starts or stops.
+Transitions can also be caused by other political changes like a country permanently changing the UTC offset of its time zone.
+
+The returned `Temporal.ZonedDateTime` will represent the first nanosecond where the newer UTC offset is used, not the last nanosecond where the previous UTC offset is used.
+
+When no more transitions are expected in the given directoin, this method will return `null`.
+Some time zones (e.g., `Etc/GMT+5` or `-05:00`) have no offset transitions.
+If `zonedDateTime` has one of these time zones, this method will always return `null`.
+
+Example usage:
+
+```javascript
+// How long until the next offset change from now, in the current location?
+tz = Temporal.Now.timeZoneId();
+now = Temporal.Now.zonedDateTimeISO(tz);
+nextTransition = now.getTimeZoneTransition('next');
+duration = nextTransition.since(now);
+duration.toLocaleString(); // output will vary
+
+// How long until the previous offset change from now, in the current location?
+previousTransition = now.getTimeZoneTransition('previous');
+duration = now.since(previousTransition);
+duration.toLocaleString(); // output will vary
+```
+
 ### zonedDateTime.**equals**(_other_: Temporal.ZonedDateTime) : boolean
 
 **Parameters:**
@@ -1204,7 +1267,7 @@ Compares two `Temporal.ZonedDateTime` objects for equality.
 This function exists because it's not possible to compare using `zonedDateTime == other` or `zonedDateTime === other`, due to ambiguity in the primitive representation and between Temporal types.
 
 If you don't need to know the order in which two events occur, then this function is easier to use than `Temporal.ZonedDateTime.compare`.
-But both methods do the same thing, so a `0` returned from `compare` implies a `true` result from `equals`, and vice-versa.
+However, there are subtle differences between the two methods—a `true` result from `equals` includes comparison of calendar and time zone, and is therefore stronger than a `0` result from compare (which ignores calendar and time zone).
 
 Note that two `Temporal.ZonedDateTime` instances can have the same clock time, time zone, and calendar but still be unequal, e.g. when a clock hour is repeated after DST ends in the Fall.
 In this case, the two instances will have different `offsetNanoseconds` field values.
@@ -1221,6 +1284,27 @@ To ignore both time zones and calendars, compare the instants of both:
 zdt.toInstant().equals(other.toInstant());
 ```
 
+To compare time zone IDs directly, compare two ZonedDateTimes with the same instant and calendar:
+
+```javascript
+zdt.withTimeZone(id1).equals(zdt.withTimeZone(id2));
+```
+
+The time zones of _zonedDateTime_ and _other_ are considered equivalent by the following algorithm:
+
+- If both time zone identifiers are Zone or Link names in the [IANA Time Zone Database](https://www.iana.org/time-zones), and they resolve to the same Zone name, the time zones are equivalent.
+  This resolution is case-insensitive.
+- If both identifiers are numeric offset time zone identifiers like "+05:30", and they represent the same offset, the time zones are equivalent.
+- Otherwise, the time zones are not equivalent.
+
+Note that "resolve to the same Zone name" noted above is behavior that can vary between ECMAScript and other consumers of the IANA Time Zone Database.
+ECMAScript implementations generally do not allow identifiers to be equivalent if they represent different <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 Alpha-2</a> country codes.
+However, non-ECMAScript platforms may merge Zone names across country boundaries.
+See [above](#variation-between-ecmascript-and-other-consumers-of-the-iana-time-zone-database) to learn more about this variation.
+
+Time zones that resolve to different Zones in the IANA Time Zone Database are not equivalent, even if those Zones always use the same offsets.
+Offset time zones and IANA time zones are also never equivalent.
+
 Example usage:
 
 ```javascript
@@ -1228,6 +1312,21 @@ zdt1 = Temporal.ZonedDateTime.from('1995-12-07T03:24:30.000003500+01:00[Europe/P
 zdt2 = Temporal.ZonedDateTime.from('1995-12-07T03:24:30.000003500+01:00[Europe/Brussels]');
 zdt1.equals(zdt2); // => false (same offset but different time zones)
 zdt1.equals(zdt1); // => true
+
+// To compare time zone IDs, use withTimeZone() with each ID on the same
+// ZonedDateTime instance, and use equals() to compare
+kolkata = zdt1.withTimeZone('Asia/Kolkata');
+kolkata.equals(zdt.withTimeZone('Asia/Calcutta')); // => true
+
+// Offset time zones are never equivalent to named time zones
+kolkata.equals(zdt.withTimeZone('+05:30')); // => false
+zeroOffset = zdt1.withTimeZone('+00:00');
+zeroOffset.equals(zdt1.withTimeZone('UTC'));  // => false
+
+// For offset time zones, any valid format is accepted
+zeroOffset.equals(zdt1.withTimeZone('+00:00')); // => true
+zeroOffset.equals(zdt1.withTimeZone('+0000')); // => true
+zeroOffset.equals(zdt1.withTimeZone('+00')); // => true
 ```
 
 ### zonedDateTime.**toString**(_options_?: object) : string
@@ -1240,10 +1339,10 @@ zdt1.equals(zdt1); // => true
     Valid values are `'auto'` and `'never'`.
     The default is `'auto'`.
   - `timeZoneName` (string): Whether to show the time zone name annotation in the return value.
-    Valid values are `'auto'` and `'never'`.
+    Valid values are `'auto'`, `'never'`, and `'critical'`.
     The default is `'auto'`.
   - `calendarName` (string): Whether to show the calendar annotation in the return value.
-    Valid values are `'auto'`, `'always'`, and `'never'`.
+    Valid values are `'auto'`, `'always'`, `'never'`, and `'critical'`.
     The default is `'auto'`.
   - `fractionalSecondDigits` (number or string): How many digits to print after the decimal point in the output string.
     Valid values are `'auto'`, 0, 1, 2, 3, 4, 5, 6, 7, 8, or 9.
@@ -1252,7 +1351,7 @@ zdt1.equals(zdt1); // => true
     This option overrides `fractionalSecondDigits` if both are given.
     Valid values are `'minute'`, `'second'`, `'millisecond'`, `'microsecond'`, and `'nanosecond'`.
   - `roundingMode` (string): How to handle the remainder.
-    Valid values are `'ceil'`, `'floor'`, `'trunc'`, and `'halfExpand'`.
+    Valid values are `'ceil'`, `'floor'`, `'expand'`, `'trunc'`, `'halfCeil'`, `'halfFloor'`, `'halfExpand'`, `'halfTrunc'`, and `'halfEven'`.
     The default is `'trunc'`.
 
 **Returns:** a string containing an ISO 8601 date+time+offset format, a bracketed time zone suffix, and (if the calendar is not `iso8601`) a calendar suffix.
@@ -1262,7 +1361,7 @@ Examples:
 - `2011-12-03T10:15:30+01:00[Europe/Paris]`
 - `2011-12-03T10:15:30+09:00[Asia/Tokyo][u-ca=japanese]`
 
-This method overrides the `Object.prototype.toString()` method and provides a convenient, unambiguous string representation of `zonedDateTime`.
+This method overrides the `Object.prototype.toString()` method and provides a convenient string representation of `zonedDateTime`.
 The string is "round-trippable".
 This means that it can be passed to `Temporal.ZonedDateTime.from()` to create a new `Temporal.ZonedDateTime` object with the same field values as the original.
 
@@ -1274,12 +1373,15 @@ Note that rounding may change the value of other units as well.
 
 Normally, a calendar annotation is shown when `zonedDateTime`'s calendar is not the ISO 8601 calendar.
 By setting the `calendarName` option to `'always'` or `'never'` this can be overridden to always or never show the annotation, respectively.
-For more information on the calendar annotation, see [ISO string extensions](./iso-string-ext.md#calendar-systems).
+Normally not necessary, a value of `'critical'` is equivalent to `'always'` but the annotation will contain an additional `!` for certain interoperation use cases.
+For more information on the calendar annotation, see [ISO string extensions](./strings.md#calendar-systems).
 
 Likewise, passing `'never'` to the `timeZoneName` or `offset` options controls whether the time zone offset (`+01:00`) or name annotation (`[Europe/Paris]`) are shown.
+If the time zone offset is shown, it is always shown rounded to the nearest minute.
+The `timeZoneName` option can additionally be `'critical'` which will add an additional `!` to the annotation, similar to `calendarName`.
 
-The string format output by this method can be parsed by [`java.time.ZonedDateTime`](https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html) as long as the calendar annotation is not output.
-For more information on `Temporal`'s extensions to the ISO string format and the progress towards becoming a published standard, see [ISO standard extensions](./iso-string-ext.md).
+The string format output by this method can be parsed by [`java.time.ZonedDateTime`](https://docs.oracle.com/javase/8/docs/api/java/time/ZonedDateTime.html) as long as the calendar annotation is not output and `'critical'` is not used.
+For more information on `Temporal`'s extensions to the ISO 8601 / RFC 3339 string format and the progress towards becoming a published standard, see [String Parsing, Serialization, and Formatting](./strings.md).
 
 Example usage:
 
@@ -1301,9 +1403,9 @@ zdt.toString(); // => '2019-12-01T12:00:00+01:00[Africa/Lagos][u-ca=japanese]'
 
 This method overrides `Object.prototype.toLocaleString()` to provide a human-readable, language-sensitive representation of `zonedDateTime`.
 
-The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DateTimeFormat).
+The `locales` and `options` arguments are the same as in the constructor to [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat#parameters).
 
-`options.timeZone` will be automatically set from the time zone of of `zonedDateTime`.
+`options.timeZone` will be automatically set from the time zone of `zonedDateTime`.
 If a different time zone ID is provided in `options.timeZone`, a RangeError will be thrown.
 To display a `Temporal.ZonedDateTime` value in a different time zone, use `withTimeZone(timeZone).toLocaleString()`.
 
@@ -1349,8 +1451,8 @@ console.log(str);
 // {
 //   "id": 311,
 //   "name": "FictionalConf 2018",
-//   "openingZonedDateTime": "2018-07-06T10:00+05:30[Asia/Calcutta]",
-//   "closingZonedDateTime": "2018-07-08T18:15+05:30[Asia/Calcutta]"
+//   "openingZonedDateTime": "2018-07-06T10:00+05:30[Asia/Kolkata]",
+//   "closingZonedDateTime": "2018-07-08T18:15+05:30[Asia/Kolkata]"
 // }
 
 // To rebuild from the string:
@@ -1388,16 +1490,10 @@ Use `Temporal.ZonedDateTime.compare()` for this, or `zonedDateTime.equals()` for
 > However, unless you perform those operations across a time zone offset transition, it's impossible to notice the difference.
 > Therefore, be very careful when performing this conversion because subsequent results may look correct most of the time while failing around time zone transitions like when DST starts or ends.
 
-### zonedDateTime.**toPlainYearMonth**() : Temporal.PlainYearMonth
-
-**Returns:** a `Temporal.PlainYearMonth` object that is the same as the year and month of `zonedDateTime`.
-
-### zonedDateTime.**toPlainMonthDay**() : Temporal.PlainMonthDay
-
-**Returns:** a `Temporal.PlainMonthDay` object that is the same as the month and day of `zonedDateTime`.
-
-The above six methods can be used to convert `Temporal.ZonedDateTime` into a `Temporal.Instant`, `Temporal.PlainDate`, `Temporal.PlainTime`, `Temporal.PlainDateTime`, `Temporal.PlainYearMonth`, or `Temporal.PlainMonthDay` respectively.
+The above four methods can be used to convert `Temporal.ZonedDateTime` into a `Temporal.Instant`, `Temporal.PlainDate`, `Temporal.PlainTime`, or `Temporal.PlainDateTime`, respectively.
 The converted object carries a copy of all the relevant data of `zonedDateTime` (for example, in `toPlainDate()`, the `year`, `month`, and `day` properties are the same.)
+
+To convert to `Temporal.PlainYearMonth` or `Temporal.PlainMonthDay`, first use `toPlainDate()` and go from there.
 
 Usage example:
 
@@ -1406,28 +1502,7 @@ zdt = Temporal.ZonedDateTime.from('1995-12-07T03:24:30+02:00[Africa/Johannesburg
 zdt.toInstant(); // => 1995-12-07T01:24:30Z
 zdt.toPlainDateTime(); // => 1995-12-07T03:24:30
 zdt.toPlainDate(); // => 1995-12-07
-zdt.toPlainYearMonth(); // => 1995-12
-zdt.toPlainMonthDay(); // => 12-07
 zdt.toPlainTime(); // => 03:24:30
-```
-
-### zonedDateTime.**getISOFields**(): { isoYear: number, isoMonth: number, isoDay: number, hour: number, minute: number, second: number, millisecond: number, microsecond: number, nanosecond: number, offset: string, timeZone: object, calendar: object }
-
-**Returns:** a plain object with properties expressing `zonedDateTime` in the ISO 8601 calendar, including all date/time fields as well as the `calendar`, `timeZone`, and `offset` properties.
-
-This is an advanced method that's mainly useful if you are implementing a custom calendar.
-Most developers will not need to use it.
-
-Usage example:
-
-```javascript
-// get a Temporal.ZonedDateTime in `hebrew` calendar system
-zdt = Temporal.ZonedDateTime.from('2019-02-23T03:24:30.000003500[Europe/Rome]').withCalendar('hebrew');
-
-// Month in Hebrew calendar is month 6 of leap year 5779
-zdt.month; // => 6
-zdt.getISOFields().isoMonth; // => 2
-
-// Instead of calling getISOFields, the pattern below is recommended for most use cases
-zdt.withCalendar('iso8601').month; // => 2
+zdt.toPlainDate().toPlainYearMonth(); // => 1995-12
+zdt.toPlainDate().toPlainMonthDay(); // => 12-07
 ```
